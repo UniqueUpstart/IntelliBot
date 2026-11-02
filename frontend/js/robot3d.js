@@ -94,12 +94,14 @@ function init() {
   let mixer = null, model = null, motionController = null, idleAction = null, ready = false;
   let setActiveMotion = () => {};
   let clips = [], activeAction = null;
+  let basePose = null, poseMode = false, aimPaused = false;
   let playback = {clip: 'idle', state: 'loading'};
   function playClip(name, loop = false) {
     if (!ready || !mixer) throw new Error('模型尚未加载');
     if (motionController?.activeId) motionController.stop();
     const clip = THREE.AnimationClip.findByName(clips, name);
     if (!clip) throw new Error('模型没有此动画：' + name);
+    poseMode = false;
     const next = mixer.clipAction(clip);
     if (activeAction) activeAction.fadeOut(0.2);
     next.reset().setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
@@ -173,15 +175,72 @@ function init() {
   }
 
   function applyCam() {
+    if (window.__robotView && window.__robotView.step) {
+      window.__robotView.step(camY, camD);
+      return;
+    }
     camera.position.set(0, camY, camD);
     camera.lookAt(0, camY, 0);
+  }
+
+  function capturePose() {
+    const pose = new Map();
+    if (!model) return pose;
+    model.traverse((o) => {
+      if (!o.isBone) return;
+      pose.set(o, {
+        position: o.position.clone(),
+        quaternion: o.quaternion.clone(),
+        scale: o.scale.clone(),
+      });
+    });
+    return pose;
+  }
+
+  function applyPose(pose) {
+    if (!pose) return;
+    pose.forEach((value, bone) => {
+      bone.position.copy(value.position);
+      bone.quaternion.copy(value.quaternion);
+      bone.scale.copy(value.scale);
+    });
+    if (model) model.updateMatrixWorld(true);
+  }
+
+  function freezePose() {
+    if (!ready || !mixer || poseMode) return;
+    if (motionController?.activeId) motionController.stop();
+    const currentPose = capturePose();
+    mixer.stopAllAction();
+    activeAction = null;
+    applyPose(currentPose);
+    poseMode = true;
+    playback = {clip: 'pose', state: 'paused'};
+    window.dispatchEvent(new CustomEvent('robot-playback', {detail: {...playback}}));
+  }
+
+  function resetPose() {
+    if (!ready || !mixer) return;
+    if (motionController?.activeId) motionController.stop();
+    if (!poseMode) mixer.stopAllAction();
+    activeAction = null;
+    applyPose(basePose);
+    poseMode = true;
+    playback = {clip: 'apose', state: 'paused'};
+    window.dispatchEvent(new CustomEvent('robot-playback', {detail: {...playback}}));
+    if (REDUCED) renderer.render(scene, camera);
+  }
+
+  function setPointerAimPaused(paused) {
+    aimPaused = !!paused;
+    if (!aimPaused) aim();
   }
 
   if (!REDUCED) {
     window.addEventListener('pointermove', (e) => {
       nx = (e.clientX / window.innerWidth - 0.5) * 2;
       ny = (e.clientY / window.innerHeight - 0.5) * 2;
-      aim();
+      if (!aimPaused) aim();
     }, { passive: true });
     document.documentElement.addEventListener('pointerleave', () => { tYaw = 0; tPitch = 0; });
   }
@@ -217,7 +276,7 @@ function init() {
 
     yaw += (tYaw - yaw) * kR;
     pitch += (tPitch - pitch) * kR;
-    rig.rotation.y = f.baseYaw + yaw + Math.sin(t * 0.28) * f.breathe;
+    rig.rotation.y = f.baseYaw + yaw + (aimPaused ? 0 : Math.sin(t * 0.28) * f.breathe);
     rig.rotation.x = pitch;
 
     /* 表情约 20 帧重画一次：眨眼、点阵推进这类动作够顺，
@@ -330,6 +389,7 @@ function init() {
     model.position.z -= center.z;
     model.position.y -= box.min.y;
     rig.add(model);
+    basePose = capturePose();
 
     if (gltf.animations && gltf.animations.length) {
       clips = gltf.animations;
@@ -344,7 +404,8 @@ function init() {
       idleAction.setLoop(THREE.LoopRepeat, Infinity);
       idleAction.play();
       activeAction = idleAction;
-      if (REDUCED) mixer.update(0.5);
+      mixer.update(0.5);
+      basePose = capturePose();
     }
 
     motionController = createHomeMotionController(
@@ -386,6 +447,7 @@ function init() {
   setActiveMotion = mountHomeMotionControls((id) => {
     if (!motionController) return;
     if (activeAction && activeAction !== idleAction) activeAction.stop();
+    poseMode = false;
     activeAction = idleAction;
     motionController.play(id);
   });
@@ -397,6 +459,13 @@ function init() {
     get clips() { return clips.map(c => c.name); },
     get playback() { return {...playback}; },
     playClip,
+    get mixer() { return mixer; },
+    get action() { return activeAction; },
+    get poseMode() { return poseMode; },
+    get viewHeading() { return FRAMES[frame].baseYaw; },
+    freezePose,
+    resetPose,
+    setPointerAimPaused,
     get framing() { return frame; },
     get mood() { return moodId(); },
     /* 外部（比如接上聊天状态）直接调这个换表情，底栏那排缩略图会跟着点亮 */

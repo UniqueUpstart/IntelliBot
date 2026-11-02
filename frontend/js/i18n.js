@@ -6,6 +6,7 @@ const I18N = {
   en: {
     "nav.camera": "Camera",
     "nav.modal": "Modal",
+    "nav.view": "Adjust View",
     "nav.preference": "Preference",
     "nav.advance": "Advance",
     "nav.settings": "Settings",
@@ -101,6 +102,7 @@ const I18N = {
   zh: {
     "nav.camera": "相机",
     "nav.modal": "模态",
+    "nav.view": "视角调整",
     "nav.preference": "偏好",
     "nav.advance": "高级",
     "nav.settings": "设置",
