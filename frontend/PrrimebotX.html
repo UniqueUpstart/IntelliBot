@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primebot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+/* 明暗模式在首帧之前定下来。色值全挂在 :root 的那套变量上，
+   晚一步再改 data-theme 会先按浅色画一遍、再整屏跳到深色。
+   键名与 Settings 弹窗里的 px.mode 一致，没存过就走 <html> 上的初始值 day */
+(function () {
+  try {
+    var v = localStorage.getItem('px.mode');
+    if (v === 'night') document.documentElement.setAttribute('data-theme', 'dark');
+    else if (v === 'day') document.documentElement.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();
+</script>
+<script src="js/i18n.js?v=2"></script>
+  <link rel="stylesheet" href="css/base.css?v=2">
+  <link rel="stylesheet" href="css/topbar.css?v=3">
+  <link rel="stylesheet" href="css/rail.css?v=10">
+  <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/cards.css?v=16">
+  <link rel="stylesheet" href="css/modal.css?v=19">
+  <link rel="stylesheet" href="css/chat.css?v=17">
+  <!-- Q1 管理联调（MOCK 浮层）已停用，改用 Advance 里的 MuJoCo 仿真面板。
+       两个文件保留在仓库里，需要回退时把下面两行放回来即可 -->
+  <!-- <link rel="stylesheet" href="css/integration.css"> -->
+  <link rel="stylesheet" href="css/sim.css?v=58">
+  <link rel="stylesheet" href="css/robot.css?v=4">
+</head>
+<body>
+
+<!-- ===================== Topbar ===================== -->
+<header class="topbar">
+  <a class="brand" href="#" aria-label="Primebot">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <polygon fill="#2d2d2d" points="5.59 8.59 5.59 12.43 9.17 16.73 12.6 11.24 9.43 8.59 5.59 8.59"/>
+      <polygon fill="#2d2d2d" points="15.61 24.45 19.74 29.41 26.41 29.41 26.41 22.74 21.01 18.24 15.61 24.45"/>
+      <polygon fill="#91d7cd" points="5.59 25.46 5.59 29.41 9.27 29.41 26.41 9.41 26.41 2.59 19.88 2.59 5.59 25.46"/>
+    </svg>
+  </a>
+
+  <nav class="nav" aria-label="主导航">
+    <div class="group" role="group" aria-label="Camera">
+      <button class="pill is-active" type="button" aria-pressed="true"><span class="pill__label" data-i18n="nav.camera">Camera</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="pill" type="button" aria-pressed="false"><span class="pill__label" data-i18n="nav.modal">Modal</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+    </div>
+
+    <div class="group" role="group" aria-label="Control">
+      <button class="pill" type="button" aria-pressed="false" data-modal="Connect"><span class="pill__label" data-i18n="nav.connect">Connect</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="pill" type="button" aria-pressed="false" data-modal="Preference"><span class="pill__label" data-i18n="nav.preference">Preference</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="pill" type="button" aria-pressed="false" data-modal="Advance"><span class="pill__label" data-i18n="nav.advance">Advance</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+    </div>
+
+    <div class="user" id="account">
+      <div class="user__surface">
+        <button class="avatar" type="button" aria-label="更改头像" aria-expanded="false" tabindex="-1"></button>
+        <!-- 头像选择区：点头像就地展开，贴在头像下方（96 起，高 40）。
+             四张默认图 + 一个上传钮，上传走隐藏的 file input -->
+        <div class="avatar__tray" role="group" aria-label="头像选择">
+          <button class="avatar__opt" type="button" data-avatar="a1" aria-label="默认头像一" aria-pressed="true"></button>
+          <button class="avatar__opt" type="button" data-avatar="a2" aria-label="默认头像二" aria-pressed="false"></button>
+          <button class="avatar__opt" type="button" data-avatar="a3" aria-label="默认头像三" aria-pressed="false"></button>
+          <button class="avatar__opt" type="button" data-avatar="a4" aria-label="默认头像四" aria-pressed="false"></button>
+          <button class="avatar__up" type="button" aria-label="上传头像" aria-pressed="false">
+            <svg class="avatar__plus" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 10v12M10 16h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
+          <input class="avatar__file" type="file" accept="image/*" hidden>
+        </div>
+        <span class="user__name">TestUser_11</span>
+        <div class="user__menu" role="group" aria-label="Account menu">
+        <button class="pill" type="button" aria-pressed="false" data-modal="Settings"><span class="pill__label" data-i18n="nav.settings">Settings</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+        <button class="pill" type="button" aria-pressed="false" data-modal="Privacy"><span class="pill__label" data-i18n="nav.privacy">Privacy</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+        <button class="pill" type="button" aria-pressed="false" data-modal="Contact"><span class="pill__label" data-i18n="nav.contact">Contact</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+        </div>
+        <button class="user__trigger" type="button" aria-expanded="false" aria-label="Account"></button>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ===================== Stage ===================== -->
+<main class="stage" aria-hidden="true"><canvas class="bgfx" id="bgfx"></canvas></main>
+
+<!-- ===================== 左侧：Shortcuts ===================== -->
+<aside class="rail rail--left" id="rail-shortcuts" aria-label="Shortcuts">
+  <div class="rail__surface">
+  <div class="rail__bar">
+    <div class="rail__items">
+      <button class="item" type="button" data-panel="Pinned" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.pinned">Pinned</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Action" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.action">Action</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Dialog" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.dialog">Dialog</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Tendance" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.tendance">Tendance</span>
+      </button>
+
+      <!-- 编辑入口：和上面四个一样是左栏自己的图标项，
+           点开就是本栏左侧那块面板，面板里切到 data-view="edit" 显示表单 -->
+      <button class="item item--edit" type="button" data-panel="Edit"
+              aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.edit">Edit</span>
+      </button>
+    </div>
+  </div>
+
+  <section class="rail__panel" id="panel-shortcuts" aria-live="polite">
+    <span class="frost frost--top" aria-hidden="true"></span>
+    <!-- 底部那条渐隐遮罩按需求删掉：面板底沿直接露出内容，不再做化开 -->
+    <div class="panel__body" data-panel-body data-view="pinned">
+      <!-- 一张都没钉时的空态：两段之间留一行空行，整块在面板里居中，见 .panel__empty -->
+      <div class="panel__empty">
+        <span data-i18n="rail.left.empty">暂无已标记卡片</span>
+        <span data-i18n="rail.left.empty.hint">请点击 动作 / 语言 / 照护类 卡片左下角的标记按钮以添加</span>
+      </div>
+
+      <!-- 编辑页：左栏 Edit 钮把本面板切到 data-view="edit" 时出现。
+           先选类型（对应下面三组卡片），再填名字与简介；提交后追加到该组末尾，
+           编号自动续，绑定与持久化见 js/rails.js 的卡片那段 -->
+      <div class="edit" data-edit-only>
+        <div class="edit__fields">
+          <div class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.type">Type</span>
+            <div class="edit__types" role="group" aria-label="Card type">
+              <button class="edit__type is-active" type="button" data-edit-type="action" aria-pressed="true">
+                <span class="edit__label" data-i18n="rail.left.action">Action</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+              <button class="edit__type" type="button" data-edit-type="dialog" aria-pressed="false">
+                <span class="edit__label" data-i18n="rail.left.dialog">Dialog</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+              <button class="edit__type" type="button" data-edit-type="tendance" aria-pressed="false">
+                <span class="edit__label" data-i18n="rail.left.tendance">Tendance</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <label class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.name">Name</span>
+            <input class="edit__input" data-edit-name type="text" placeholder="Card name"
+                   maxlength="24" autocomplete="off" data-i18n-placeholder="rail.left.name">
+          </label>
+          <label class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.intro">Intro</span>
+            <input class="edit__input" data-edit-brief type="text" placeholder="One-line intro"
+                   maxlength="40" autocomplete="off" data-i18n-placeholder="rail.left.intro">
+          </label>
+        </div>
+        <div class="edit__acts">
+          <button class="edit__reset" data-edit-reset type="button">
+            <span class="edit__label" data-i18n="rail.left.reset">Reset</span>
+            <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+          </button>
+          <button class="edit__add" data-edit-add type="button">
+            <span class="edit__label" data-i18n="rail.left.add">Add</span>
+            <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+          </button>
+        </div>
+      </div>
+      <section class="sc-group sc-group--action">
+        <h3 class="sc-group__title" data-i18n="rail.left.group.action">Action</h3>
+        <div class="sc-grid">
+          <div class="sc"><span class="sc__id">01</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">02</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">03</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">04</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+        </div>
+      </section>
+
+      <section class="sc-group sc-group--dialog">
+        <h3 class="sc-group__title" data-i18n="rail.left.group.dialog">Dialog</h3>
+        <div class="sc-grid">
+          <div class="sc"><span class="sc__id">01</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">02</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">03</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">04</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+        </div>
+      </section>
+
+      <section class="sc-group sc-group--tendance">
+        <h3 class="sc-group__title" data-i18n="rail.left.group.tendance">Tendance</h3>
+        <div class="sc-grid">
+          <div class="sc"><span class="sc__id">01</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">02</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">03</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+          <div class="sc"><span class="sc__id">04</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span><button class="sc__pin" type="button" aria-pressed="false" aria-label="Pin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 1-1V2H6v1a1 1 0 0 0 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg></button></div>
+        </div>
+      </section>
+    </div>
+  </section>
+  </div>
+
+</aside>
+
+<!-- 唤出/收起箭头挂在栏体外：它的位置由 CSS 自己平滑过渡，栏体的弹性传不到它身上 -->
+<button class="rail__toggle" type="button" aria-label="Hide panel" data-rail="left">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
+</button>
+
+<!-- ===================== 右侧：Tools ===================== -->
+<aside class="rail rail--right" id="rail-tools" aria-label="Tools">
+  <div class="rail__surface">
+  <div class="rail__bar">
+    <div class="rail__items">
+      <button class="item" type="button" data-panel="Chat" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.right.chat">Chat</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Log" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.right.log">Log</span>
+      </button>
+    </div>
+  </div>
+
+  <section class="rail__panel" id="panel-tools" aria-live="polite">
+    <span class="frost frost--top" aria-hidden="true"></span>
+    <!-- 聊天页底部的渐变：复用同一套 frost--bottom（色阶与曲线同左栏那条，方向朝上），
+         挂 chat__frost 借它的参数与显隐（Log 页连它一起收掉）；消息从输入条下面
+         滚过时在面板底沿化开。z 序在输入条（z2）之下 —— 输入条自身带底色，不被糊 -->
+    <span class="frost frost--bottom chat__frost" aria-hidden="true"></span>
+    <!-- 聊天页顶部的渐变：整套参数继承 .rail__panel 的 --frost-*，
+         与左边栏顶部那条完全同一枚（16 平台 + 32 渐隐）。挂在不滚动的 .rail__panel 上，
+         消息从它下面滚过时被糊开；不放在 .panel__body 里是因为它的
+         backdrop-filter 在那里采不到滚动内容 -->
+    <span class="frost frost--top chat__frost" aria-hidden="true"></span>
+    <div class="panel__body" data-panel-body>
+      <!-- Chat 页：历史钮悬在左上角，消息区滚动，输入条贴底。
+           消息由尾部脚本按发送内容生成，这里只留空壳 -->
+      <div class="chat" data-chat data-chat-only>
+        <button class="chat__btn chat__btn--history" type="button" aria-label="History">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="6" width="16" height="2.6" rx="1.3"/>
+            <rect x="4" y="10.7" width="16" height="2.6" rx="1.3"/>
+            <rect x="4" y="15.4" width="16" height="2.6" rx="1.3"/>
+          </svg>
+        </button>
+        <div class="chat__log" data-chat-log></div>
+
+        <div class="chat__composer">
+          <input class="chat__input" data-chat-input type="text"
+                 data-i18n-placeholder="rail.right.message" placeholder="Message" aria-label="Message" autocomplete="off">
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+</aside>
+
+<button class="rail__toggle" type="button" aria-label="Hide panel" data-rail="right">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
+</button>
+
+<!-- ===================== 底部：控制面板 =====================
+     半页宽、高度由内容撑开的面板，默认只露高度的 1/8；上方 8px 那枚箭头管升 / 降，
+     它与面板同处一个 .dock 里，跟着整块一起上下走。
+     面板里三块并列：左列 Gestures、正中九宫格、右列 Emotions。
+     九宫格是八向箭头围着一枚播放键，圆钮与左右栏同尺寸（48），间距一律 8；
+     两列各铺若干张圆角矩形空卡（一行四张、上下可滚），卡片由尾部脚本注入 -->
+<section class="dock is-open" aria-label="Playback controls">
+  <button class="dock__toggle" type="button" aria-label="Collapse panel" aria-expanded="true">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
+  </button>
+
+  <div class="dock__surface">
+    <div class="dock__body">
+      <!-- 左右两列动作卡片：左 Gestures、右 Emotions。
+           九宫格留在正中，两列各占剩余宽度的一半，谁也不压谁；
+           卡片由尾部脚本按 12 张（三行 × 四列）铺成空白占位 -->
+      <div class="dock__col">
+        <span class="frost frost--top" aria-hidden="true"></span>
+        <div class="dock__scroll">
+          <div class="dock__title" data-i18n="dock.gestures">Gestures</div>
+          <div class="dock__grid" data-dock-grid="gestures"></div>
+        </div>
+      </div>
+    <div class="dock__pad">
+      <button class="dock__btn" type="button" data-dir="up-left" aria-label="Up left">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="dock__btn" type="button" data-dir="up" aria-label="Up">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="dock__btn" type="button" data-dir="up-right" aria-label="Up right">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+
+      <button class="dock__btn" type="button" data-dir="left" aria-label="Left">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="dock__btn dock__btn--play" type="button" aria-label="Play" aria-pressed="false">
+        <svg class="dock__ico dock__ico--play" viewBox="0 0 32 32" aria-hidden="true"><path d="M12.2,8.6c-.9-.55-2.1.09-2.1,1.15v12.5c0,1.06,1.2,1.7,2.1,1.15l10.7-6.25c.88-.52.88-1.79,0-2.31L12.2,8.6Z"/></svg>
+        <svg class="dock__ico dock__ico--pause" viewBox="0 0 32 32" aria-hidden="true"><rect x="10.4" y="8.6" width="3.7" height="14.8" rx="1.85"/><rect x="17.9" y="8.6" width="3.7" height="14.8" rx="1.85"/></svg>
+      </button>
+      <button class="dock__btn" type="button" data-dir="right" aria-label="Right">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+
+      <button class="dock__btn" type="button" data-dir="down-left" aria-label="Down left">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="dock__btn" type="button" data-dir="down" aria-label="Down">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="dock__btn" type="button" data-dir="down-right" aria-label="Down right">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+    </div>
+      <div class="dock__col">
+        <span class="frost frost--top" aria-hidden="true"></span>
+        <div class="dock__scroll">
+          <div class="dock__title dock__title--end" data-i18n="dock.emotions">Emotions</div>
+          <div class="dock__grid" data-dock-grid="emotions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 左下角参数 HUD：电量 / 信号一行，设备名 / 可用情况一行。
+     电量画成参考图那枚的三段结构：浅调空槽 + 按比例的液位 + 槽内数字（svg text，接数据源时改 text、液位宽与类名）；
+     信号直接画五格竖条，亮几格就是几格（现在是 3/5，后两格压到 .28 透明度）。
+     两枚图标等高 20。设备名与可用情况的数值当前写死，状态换 hud__state--* 类 -->
+<div class="hud" aria-label="Device status">
+  <div class="hud__row">
+    <span class="hud__metric">
+      <!-- 参考微信那枚电池图标的三段结构：
+           空槽 = 电量色的浅调（hud__batt-empty，40% 透明压在页面底上），
+           液位 = 电量色从左按电量比例填（56% → 壳宽 30 填 17，clip 用壳体同一圆角矩形裁形，
+           液位直接贴住电池边框、不留内衬空隙），
+           数字 = 不描边、真镂空：文字画在 mask 里填黑，整组形状过 mask 后
+           数字处被抠掉，透出页面背景；56 > 20 挂 ok 档，跌到 20% 及以下换 hud__batt--low -->
+      <svg class="hud__ico hud__batt--ok" viewBox="0 0 38 20" width="38" height="20" aria-hidden="true">
+        <defs>
+          <clipPath id="hud-batt-clip"><rect x="1" y="1.5" width="30" height="17" rx="4"/></clipPath>
+          <mask id="hud-batt-hole">
+            <rect width="38" height="20" fill="#fff"/>
+            <text class="hud__batt-num" x="16" y="14.9" text-anchor="middle" fill="#000">56</text>
+          </mask>
+        </defs>
+        <g mask="url(#hud-batt-hole)">
+          <rect x="1" y="1.5" width="30" height="17" rx="4" class="hud__batt-empty"/>
+          <rect data-hud-batt-level x="1" y="1.5" width="17" height="17" fill="currentColor" clip-path="url(#hud-batt-clip)"/>
+          <rect x="32.5" y="6.5" width="3.5" height="7" rx="1.75" class="hud__batt-empty"/>
+        </g>
+      </svg>
+    </span>
+    <span class="hud__metric">
+      <!-- 五格竖条贴底对齐，格高 8/12/16/20/24；前 3 格全亮表示 3/5，
+           3 > 2 挂 ok 档（hint）；跌到 2 格及以下换 hud__sig--low（warning）。
+           与电池同高：viewBox 30×24 按 20 高出图，宽 25 -->
+      <svg class="hud__ico hud__sig--ok" viewBox="0 0 30 24" width="25" height="20" aria-hidden="true">
+        <rect x="0" y="16" width="4" height="8" rx="2" fill="currentColor"/>
+        <rect x="6.25" y="12" width="4" height="12" rx="2" fill="currentColor"/>
+        <rect x="12.5" y="8" width="4" height="16" rx="2" fill="currentColor"/>
+        <rect x="18.75" y="4" width="4" height="20" rx="2" fill="currentColor" opacity=".28"/>
+        <rect x="25" y="0" width="4" height="24" rx="2" fill="currentColor" opacity=".28"/>
+      </svg>
+    </span>
+  </div>
+  <div class="hud__row">
+    <!-- 设备名由弹窗脚本按 Connect 的「已确认机型」写入（data-hud-device），
+         这里的占位值只在脚本没跑到时兜底；超宽时限宽循环滚动 -->
+    <span class="hud__item hud__name"><span class="hud__name-track" data-hud-device>Q1_RandomName</span></span>
+    <span class="hud__item hud__state--ready" data-i18n="hud.ready">Ready</span>
+  </div>
+</div>
+
+<script src="js/hud.js"></script>
+
+<script src="js/rails.js?v=9"></script>
+
+<!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
+<script src="js/avatar.js?v=3"></script>
+
+<!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
+<script src="lib/gsap.min.js"></script>
+<!-- 滚动驱动：ScrollTrigger 与 GSAP 同版本，组标题的交接淡出挂在这上面 -->
+<script src="lib/ScrollTrigger.min.js"></script>
+<script src="js/press.js?v=6"></script>
+
+<script src="js/panels.js"></script>
+
+<script src="js/magnet.js?v=3"></script>
+
+<script src="js/sticky.js?v=1"></script>
+
+<!-- 居中弹窗：Connect / Preference / Advance / Settings / Privacy / Contact 六枚胶囊共用。
+     3:2、高比侧栏矮 48、内边距 16。
+     Preference 只有标题区；Connect 另有机型列表与页脚；Advance 装仿真面板；
+     Settings 是左区标题与目录 + 右区选项页；Privacy / Contact 是一段纯文本（.doc） -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Connect">
+    <!-- 顶部 64 为标题区：左列标题 + 说明，右列标题 + 说明；
+         文案由尾部脚本按所点的胶囊写入，这里放 Connect 一套做初始值。
+         Connect 的三个工具按钮（搜索 / 新增 / 刷新）挂在左列标题下方，
+         所以它一出现这一列就比右列高，标题区改成由内容撑高 -->
+    <div class="modal__head">
+      <div class="modal__col">
+        <div class="modal__title" data-modal-title data-i18n="modal.connect.title">Connect</div>
+        <div class="modal__sub" data-modal-sub data-i18n="modal.connect.available">2 available</div>
+        <!-- 三个 32 方形紧密相接、贴标题左基线；无底色，hover 只换图标颜色。
+             只在 Connect 里出现，其余弹窗由脚本按 data-connect-only 收掉 -->
+        <div class="modal__tools" data-model-tools data-connect-only hidden></div>
+      </div>
+      <div class="modal__col modal__col--end" data-head-end>
+        <div class="modal__title" data-modal-title>Q1_RandomName</div>
+        <div class="modal__sub" data-modal-sub data-i18n="modal.connect.current">current</div>
+      </div>
+      <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义，
+           放这里比塞进下面那排工具按钮更醒目。其余弹窗由脚本按 data-advance-only 收掉 -->
+      <div class="modal__act" data-advance-only hidden>
+        <button class="modal__act-btn" type="button" data-sim-connect>连接仿真</button>
+      </div>
+    </div>
+
+    <!-- 机型列表：外层只负责占位与裁剪，里层 .modal__list 才是滚动容器。
+         工具条已移到标题区，这里只剩列表本体 -->
+    <div class="modal__body" data-connect-only hidden>
+      <div class="modal__list" data-model-list></div>
+    </div>
+
+    <!-- Advance：MuJoCo 仿真联调的全部操作都在这里，页面上不再有右下角浮层。
+         结构只摆位，事件与轮询由 js/sim.js 绑定；与机型列表、Settings 互斥，
+         脚本按 data-advance-only 切 hidden -->
+    <div class="modal__body adv" data-advance-only hidden>
+      <div class="adv__grid">
+        <figure class="adv__stage">
+          <div class="adv__viewport" data-sim-viewport>
+            <img class="adv__frame" data-sim-frame alt="MuJoCo 仿真画面" draggable="false" data-offline>
+          </div>
+        </figure>
+        <div class="adv__side">
+          <p class="adv__empty" data-sim-empty data-i18n="sim.empty">请先连接仿真</p>
+          <!-- 速度置顶、不随分区切换：它同时缩放四个分区的操作快慢
+               （关节滑块的跟随速度、姿态过渡、动作与步态的相位） -->
+          <div class="adv__speed">
+            <span class="adv__row-lab" data-i18n="sim.speed">速度</span>
+            <input type="range" min="0.3" max="2.5" step="0.1" value="1" data-sim-speed>
+            <b data-sim-speed-val>1.0x</b>
+          </div>
+          <!-- 联动与三个关节分组并列：点它，下方内容区从关节滑块换成
+               姿态 / 动作 / 步态三行胶囊，宽度和滑块区一致，不再挤在侧栏底部 -->
+          <div class="adv__tabs" role="tablist" aria-label="调节分组">
+            <button class="adv__tab is-sel" type="button" role="tab" aria-selected="true" data-joint-group="arm">
+              <span class="adv__label" data-i18n="sim.tab.arm">手臂</span>
+              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="waist">
+              <span class="adv__label" data-i18n="sim.tab.waist">腰</span>
+              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="leg">
+              <span class="adv__label" data-i18n="sim.tab.leg">腿</span>
+              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="link">
+              <span class="adv__label" data-i18n="sim.tab.link">联动</span>
+              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+          </div>
+          <div class="adv__joints" data-sim-joints></div>
+          <div class="adv__link" data-sim-link hidden>
+            <div class="adv__row">
+              <span class="adv__row-lab" data-i18n="sim.row.posture">姿态</span>
+              <div class="adv__chips" data-sim-presets></div>
+            </div>
+            <div class="adv__row">
+              <span class="adv__row-lab" data-i18n="sim.row.gesture">动作</span>
+              <div class="adv__chips" data-sim-gestures></div>
+            </div>
+            <div class="adv__row">
+              <span class="adv__row-lab" data-i18n="sim.row.gait">步态</span>
+              <div class="adv__chips" data-sim-gaits></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 参数实时显示：挂在面板外侧右边（绝对定位到 left:100%），
+         高度与面板齐平，逐行一项；最底部那条是操作提示 -->
+    <div class="modal__stats" role="group" aria-label="仿真参数" data-advance-only hidden>
+      <div class="adv__stats-list" data-sim-state></div>
+      <p class="adv__msg" role="status" data-sim-message data-i18n="sim.hint">先启动 sim/mujoco_bridge.py，再点连接仿真。</p>
+    </div>
+
+    <!-- 工具按钮：与右侧参数栏同尺寸的底板，挂在面板左边框外 8px。
+         一行一个，未 hover 时无底色无描边 -->
+    <!-- 工具按钮：文字包在 .adv__label 里、另带一枚 .adv__arrow，
+         为的是复用顶栏胶囊那套 hover 文字动画（字右滑、箭头左侧浮出），
+         所以 sim.js 改写文案时写的是 .adv__label，不能直接写按钮的 textContent -->
+    <div class="adv__rail" data-advance-only hidden>
+      <button class="adv__btn" type="button" data-sim-mode><span class="adv__label" data-i18n="sim.mode.dynamic">动力学模式</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-reset><span class="adv__label" data-i18n="sim.reset_pose">重置姿态</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-cam-reset><span class="adv__label" data-i18n="sim.reset_cam">重置视角</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-turn="-0.8"><span class="adv__label" data-i18n="sim.turn_left">左转</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-turn="0.8"><span class="adv__label" data-i18n="sim.turn_right">右转</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-stop><span class="adv__label" data-i18n="sim.stop">停止</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      <button class="adv__btn" type="button" data-sim-shot><span class="adv__label" data-i18n="sim.save_frame">保存当前帧</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+    </div>
+
+    <!-- Privacy：条款体例的隐私政策。每条 = 序号 + 小标题 + 正文，序号取主题色。
+         顺序按「定义 → 范围 → 信息类型 → 目的依据 → 单项说明 → 存储期限 →
+         对外提供 → 安全 → 权利 → 未成年人 → 变更」排，是隐私声明的常规编法；
+         措辞用「仅」「不会」「无法」这类限定表述，把本服务真正做到的事与
+         做不到的事分开写，不做承诺式描述。
+         条数按内容定，不压成固定几条：放不下时由 .doc__body 自己上下滚，
+         顶部不加任何遮罩 —— 停在顶端也好、滚到中间也好，第一行始终是完整可读的 -->
+    <div class="doc" data-privacy-only hidden>
+      <div class="doc__body">
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">01</span>定义</div>
+          <p class="doc__text">本政策中，「本服务」指 PrimebotX 项目的浏览器端界面及其姿态控制、动作演示与本地仿真联动功能；「本地存储」指浏览器提供的 localStorage 机制；「你」指访问并使用本服务的自然人。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">02</span>适用范围</div>
+          <p class="doc__text">本政策适用于你访问本服务并使用上述功能的全过程。本服务不提供账号注册、云端同步、在线支付与广告投放，涉及此类场景的处理规则不适用本政策；本服务之外的外部网站适用其各自的隐私政策。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
+          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入三项界面偏好：<span class="doc__code">px.mode</span>（显示模式）、<span class="doc__code">px.bg</span>（背景样式）、<span class="doc__code">primebot:avatar</span>（所选头像）。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
+          <p class="doc__text">上述偏好的唯一用途是在你下次访问时还原界面状态，处理依据为你对相应设置的主动选择。本服务不基于上述信息开展用户画像、个性化推荐、广告投放或自动化决策，也不将其用于模型训练或与服务无关的任何用途。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">05</span>头像信息的处理</div>
+          <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换，结果以 dataURL 形式写入上述存储项。原始文件不会被二次读取、不会被复制到其他位置，也不经网络传输；你可随时替换或清除该头像。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">06</span>仿真数据的传输范围</div>
+          <p class="doc__text">页面与仿真桥之间的关节参数、动作指令与画面帧仅经本机回环地址传输，不经过任何外部服务器。本服务不将仿真过程写入日志或持久化存储，连接断开后相关数据不在任何位置留存。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">07</span>存储位置与留存期限</div>
+          <p class="doc__text">上述数据仅存于你的终端设备，不设固定留存期限，保存至你主动清除为止。你可通过浏览器设置清除该站点的数据，或在开发者工具中移除对应键值；删除后相关偏好恢复初始状态。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">08</span>对外提供与共享</div>
+          <p class="doc__text">本服务不会出售、出租、转让或公开披露你的信息。唯一例外是你主动点击本服务中的外部链接：点击后你即离开本服务，该网站对其自身的处理行为负责，本服务不承担责任，亦不向其提供任何数据。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">09</span>安全措施与风险提示</div>
+          <p class="doc__text">本服务通过限制对外请求、不持久化敏感数据等方式降低风险。但请理解，任何本地存储都可能因设备共用、浏览器漏洞或恶意扩展而被他人读取，请在共享设备上谨慎保存个人信息，并在使用后及时清除。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">10</span>你的权利</div>
+          <p class="doc__text">在适用法律允许的范围内，你有权知悉、访问、更正与删除上述数据。由于本服务不持有你的数据副本，上述权利均通过你的浏览器直接行使；我们无法代为查阅、导出、更正或删除。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">11</span>未成年人保护</div>
+          <p class="doc__text">本服务不面向未成年人单独提供，也不主动收集其年龄或身份信息。若监护人认为未成年人存在不当使用情形，可通过下方所列联系方式告知，我们将在核实后作出处理。</p>
+        </section>
+        <section class="doc__sec">
+          <div class="doc__name"><span class="doc__no">12</span>政策变更与联系方式</div>
+          <p class="doc__text">本政策可能随功能调整而更新，更新版本在本页面发布并自发布之日起生效；涉及处理方式实质变化的，将在弹窗内以显著方式提示。对本政策有任何疑问、异议或投诉，可通过 Contact 页所列仓库地址与我们联系。</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Contact：整块只留一个仓库入口，所以直接摊在滚动区里居中 ——
+         没有小标题、没有铺垫的一句说明，链接本身就是全部内容。
+         链接做成胶囊，颜色跟主题走，新标签页打开，rel 里带 noopener 避免反向拿窗口 -->
+    <div class="doc" data-contact-only hidden>
+      <div class="doc__body doc__body--mid">
+        <a class="doc__link" href="https://github.com/HiKLPA/PrimebotX"
+           target="_blank" rel="noopener noreferrer">
+          <span class="doc__link-lab">github.com/HiKLPA/PrimebotX</span>
+          <svg class="doc__link-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Settings：左区标题与选项目录，右区放选中项对应的页面。
+         与 Connect 的机型列表、页脚互斥：脚本按弹窗名切 hidden。
+         顶部标题区（.modal__head）在 Settings 下整块收掉，标题改由 .set__title 承担 -->
+    <div class="set" data-settings-only hidden>
+      <div class="set__nav">
+        <div class="set__title" data-i18n="settings.title">Settings</div>
+        <div class="set__list" role="tablist" aria-label="Settings">
+          <button class="set__tab is-sel" type="button" role="tab"
+                  aria-selected="true" data-set-tab="appearance" data-i18n="settings.appearance">Appearance</button>
+          <button class="set__tab" type="button" role="tab"
+                  aria-selected="false" data-set-tab="language" data-i18n="settings.language">Language</button>
+        </div>
+      </div>
+      <div class="set__main">
+        <section class="set__pane" data-set-pane="appearance">
+          <!-- 明暗模式：Day 是默认这套浅色，Night 直接切到 :root[data-theme="dark"]
+               那一组参数。这里只换 <html> 上的属性，颜色一律由 CSS 变量带出来 -->
+          <div class="set__item">
+            <div class="set__name" data-i18n="settings.mode">Mode</div>
+            <div class="set__body">
+              <div class="seg" role="radiogroup" aria-label="Color mode">
+                <button class="seg__opt is-sel" type="button" role="radio"
+                        aria-checked="true" data-mode="day"><span class="seg__lab" data-i18n="settings.mode.day">Day</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt" type="button" role="radio"
+                        aria-checked="false" data-mode="night"><span class="seg__lab" data-i18n="settings.mode.night">Night</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="set__item">
+            <div class="set__name" data-i18n="settings.background">Background</div>
+            <div class="set__body">
+              <div class="seg" role="radiogroup" aria-label="Background style">
+                <button class="seg__opt" type="button" role="radio"
+                        aria-checked="false" data-bg="plain"><span class="seg__lab" data-i18n="settings.bg.plain">Plain</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt is-sel" type="button" role="radio"
+                        aria-checked="true" data-bg="magnetic"><span class="seg__lab" data-i18n="settings.bg.magnet">Magnet</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt" type="button" role="radio"
+                        aria-checked="false" data-bg="wave"><span class="seg__lab" data-i18n="settings.bg.wave">Wave</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="set__pane" data-set-pane="language" hidden>
+          <div class="set__item">
+            <div class="set__name" data-i18n="settings.language">Language</div>
+            <div class="set__body">
+              <div class="seg" role="radiogroup" aria-label="Language">
+                <button class="seg__opt is-sel" type="button" role="radio"
+                        aria-checked="true" data-lang="en"><span class="seg__lab" data-i18n="settings.lang.en">English</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt" type="button" role="radio"
+                        aria-checked="false" data-lang="zh"><span class="seg__lab" data-i18n="settings.lang.zh">简体中文</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+              </div>
+            </div>
+          <!-- 机器人显示范围：Body 是现在的上半身（腰压在画面底边），
+               Head 是头部特写，镜头拉近到头部、转头范围放宽到屏幕两侧各 30° -->
+          <div class="set__item">
+            <div class="set__name" data-i18n="settings.robot">Robot</div>
+            <div class="set__body">
+              <div class="seg" role="radiogroup" aria-label="Robot framing">
+                <button class="seg__opt is-sel" type="button" role="radio"
+                        aria-checked="true" data-bot="body"><span class="seg__lab" data-i18n="settings.robot.body">Body</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77,.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt" type="button" role="radio"
+                        aria-checked="false" data-bot="head"><span class="seg__lab" data-i18n="settings.robot.head">Head</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77,.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 页脚只在 Connect 弹窗出现：脚本按当前弹窗名切 hidden。
+         左 Cancel 只退出，不保存；右 Confirm 默认就填主题色（is-active） -->
+    <div class="modal__foot" data-modal-foot data-connect-only hidden>
+      <button class="pill" type="button" data-act="cancel">
+        <span class="pill__label" data-i18n="modal.cancel">CANCEL</span>
+        <svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+      <button class="pill" type="button" data-act="confirm">
+        <span class="pill__label" data-i18n="modal.confirm">CONFIRM</span>
+        <svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/modal.js?v=16"></script>
+
+<script src="js/models.js?v=2"></script>
+
+<script src="js/chat.js"></script>
+
+<!-- ===================== 背景动效 ===================== -->
+<script src="js/background.js"></script>
+<!-- Q1 管理联调面板（MOCK）已停用：它的浮层、机型拉取与 /status 轮询都交给下面的
+     sim.js 与 models.js。需要回退时取消下一行注释，并恢复上面的 integration.css -->
+<!-- <script src="js/integration.js"></script> -->
+<!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
+<script src="js/sim.js?v=21"></script>
+
+<!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
+     three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；
+     模型 6.4MB，加载完才淡入，取不到就只留点阵背景，不影响任何交互 -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three/three.module.js",
+    "three/addons/": "./lib/three/addons/"
+  }
+}
+</script>
+<script type="module" src="js/robot3d.js?v=10"></script>
+
+</body>
+</html>

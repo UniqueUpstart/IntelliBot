@@ -1,0 +1,83 @@
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+
+# 本地环境与日志
+node_modules/
+*.log
+.env
+.env.local
+
+# AI 工具本地数据（不同步给团队）
+.workbuddy/
+
+# 本地备份
+*.backup*.html
+
+# Management backend build and credentials
+# Build outputs, whether built inside this repository or copied from workspace
+build/
+backend-build/
+backend-build-*/
+install/
+log/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Testing/
+compile_commands.json
+*.o
+*.a
+*.so
+*.so.*
+*.exe
+
+# Python / editor / OS caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Credentials and local configuration; examples may be committed
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+.git-credentials
+config/local.*
+
+# Backups, virtual disks, and generated runtime data
+*.tar
+*.tar.gz
+*.zip
+*.vhdx
+*.db
+*.sqlite*
+*.log
+evidence/
+# Curated docs/*-evidence.txt intentionally remain trackable.
+
+# Frontend personal tool history
+.workbuddy/
+
+# 本地依赖与模型：用 scripts/fetch_deps.sh 与 scripts/fetch_model.sh 拉取，
+# 不进 git（模型 25 MB 网格 + 两个第三方头文件仓库）
+third_party/
+sim/assets/q1-urdf/
+.tmp_preview/
+
+# Local archives and migration leftovers
+back/
