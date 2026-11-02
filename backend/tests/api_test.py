@@ -4,7 +4,7 @@ from uuid import uuid4
 
 with socket.socket() as sock:
     sock.bind(('127.0.0.1', 0)); port=sock.getsockname()[1]
-process=subprocess.Popen([sys.argv[1], '--port', str(port)], stdout=subprocess.PIPE)
+process=subprocess.Popen([sys.argv[1], '--legacy-dev', '--port', str(port)], stdout=subprocess.PIPE)
 base=f'http://127.0.0.1:{port}/api/v1'
 def call(method,path,data=None,key=None,raw=None):
     body=raw if raw is not None else (json.dumps(data).encode() if data is not None else None)

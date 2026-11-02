@@ -91,6 +91,22 @@ function init() {
   scene.add(rig);
 
   let mixer = null, model = null, ready = false;
+  let clips = [], activeAction = null;
+  let playback = {clip: 'idle', state: 'loading'};
+  function playClip(name, loop = false) {
+    if (!ready || !mixer) throw new Error('模型尚未加载');
+    const clip = THREE.AnimationClip.findByName(clips, name);
+    if (!clip) throw new Error('模型没有此动画：' + name);
+    const next = mixer.clipAction(clip);
+    if (activeAction) activeAction.fadeOut(0.2);
+    next.reset().setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+    next.clampWhenFinished = true;
+    next.fadeIn(0.2).play();
+    activeAction = next;
+    playback = {clip: name, state: 'playing'};
+    window.dispatchEvent(new CustomEvent('robot-playback', {detail: {...playback}}));
+    if (REDUCED) renderer.setAnimationLoop(tick);
+  }
   let yaw = 0, pitch = 0, tYaw = 0, tPitch = 0;
   /* 面罩那张贴图：512 × 584 差不多是面罩本身的宽高比（0.082 : 0.096），
      头部特写下放大到屏上也不至于糊 */
@@ -311,16 +327,25 @@ function init() {
     rig.add(model);
 
     if (gltf.animations && gltf.animations.length) {
+      clips = gltf.animations;
       mixer = new THREE.AnimationMixer(model);
+      mixer.addEventListener('finished', (event) => {
+        if (event.action !== activeAction) return;
+        playback = {clip: event.action.getClip().name, state: 'completed'};
+        window.dispatchEvent(new CustomEvent('robot-playback', {detail: {...playback}}));
+      });
       const clip = THREE.AnimationClip.findByName(gltf.animations, CLIP) || gltf.animations[0];
       const action = mixer.clipAction(clip);
       action.setLoop(THREE.LoopRepeat, Infinity);
       action.play();
+      activeAction = action;
       if (REDUCED) mixer.update(0.5);
     }
 
     fit(true);
     ready = true;
+    playback = {clip: 'idle', state: 'playing'};
+    window.dispatchEvent(new Event('robot-ready'));
     wrap.classList.add('is-ready');
 
     if (REDUCED) {
@@ -348,6 +373,10 @@ function init() {
   window.robot3d = {
     scene, camera, renderer, rig,
     get model() { return model; },
+    get ready() { return ready; },
+    get clips() { return clips.map(c => c.name); },
+    get playback() { return {...playback}; },
+    playClip,
     get framing() { return frame; },
     get mood() { return moodId(); },
     /* 外部（比如接上聊天状态）直接调这个换表情，底栏那排缩略图会跟着点亮 */

@@ -37,7 +37,7 @@ else
 fi
 
 echo "== 启动仿真桥 :$SIM_PORT（$SIM_MODE）"
-"$PYTHON" "$ROOT/sim/mujoco_bridge.py" --port "$SIM_PORT" "${BRIDGE_FLAGS[@]}" &
+"$PYTHON" "$ROOT/sim/mujoco_bridge.py" --legacy-dev --port "$SIM_PORT" "${BRIDGE_FLAGS[@]}" &
 BRIDGE_PID=$!
 cleanup() { kill "$BRIDGE_PID" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
@@ -60,4 +60,4 @@ fi
 echo "== 仿真桥就绪，启动后端 :$PORT"
 echo "== 打开 http://127.0.0.1:$PORT/ui/IntelliBot.html ，点顶栏 Advance 里的「连接仿真」"
 
-"$BIN" --port "$PORT" --web-root "$ROOT/frontend" --sim-url "http://127.0.0.1:$SIM_PORT"
+"$BIN" --legacy-dev --port "$PORT" --web-root "$ROOT/frontend" --sim-url "http://127.0.0.1:$SIM_PORT"

@@ -142,6 +142,7 @@ class Sim:
         self.base_dz = 0.0             # 预设姿态带来的机身升降，仅 kinematic 生效
         self.speed = 1.0               # 动作倍率，影响手势/步态相位与关节限速
         self.last_cmd_at = time.time()
+        self.last_base_cmd_at = time.monotonic()
         self.sim_time = 0.0
         self.step_count = 0
         self.frame: bytes | None = None
@@ -360,7 +361,8 @@ class Sim:
         self.base_cmd[:] = 0.0
         self.gesture = None
         self.gait = None
-        self.base_dz = 0.0
+        if self.free_qadr is not None:
+            self.base_dz = float(self.data.qpos[self.free_qadr + 2]) - self.home_z
         self.target = {n: float(self.data.qpos[a]) for n, a in self.hinge_qadr.items()}
         self.last_cmd_at = time.time()
 
@@ -370,7 +372,7 @@ class Sim:
         with STATE_LOCK:
             # 底盘速度不做持久化：页面每 100ms 续一次，断流就自己停。
             # 关标签页、切网络、后端崩掉都不会让机器人一直走。
-            if time.time() - self.last_cmd_at > self.args.watchdog_s and not np.allclose(self.base_cmd, 0.0):
+            if time.monotonic() - self.last_base_cmd_at > self.args.watchdog_s and not np.allclose(self.base_cmd, 0.0):
                 self.base_cmd[:] = 0.0
             if self.gesture is not None:
                 t = (time.time() - self.gesture["t0"]) * self.speed
@@ -966,6 +968,7 @@ class Handler(BaseHTTPRequestHandler):
                         float(body.get("wz", 0.0)),
                     ]
                     self.sim.last_cmd_at = time.time()
+                    self.sim.last_base_cmd_at = time.monotonic()
                     sent = [round(float(v), 3) for v in self.sim.base_cmd[:3]]
                 self._json(200, {"ok": True, "vx": sent[0], "vy": sent[1], "wz": sent[2]})
             elif path == "/cmd/stop":

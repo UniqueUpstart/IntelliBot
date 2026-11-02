@@ -63,7 +63,7 @@ set "MODE_FLAG=--headless"
 if /i "%SIM_MODE%"=="viewer" set "MODE_FLAG="
 
 echo [sim] bridge :%SIM_PORT% (%SIM_MODE%), log in the minimized window
-start "IntelliBot sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --port %SIM_PORT% %MODE_FLAG%
+start "IntelliBot sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --legacy-dev --port %SIM_PORT% %MODE_FLAG%
 
 echo [sim] waiting for the bridge to come up...
 set "READY="
@@ -73,7 +73,7 @@ if not defined READY goto :bridge_timeout
 echo [sim] backend :%PORT%
 echo [sim] open http://127.0.0.1:%PORT%/ui/IntelliBot.html and press "连接仿真" in the Advance dialog
 echo.
-"%BIN%" --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%"
+"%BIN%" --legacy-dev --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%"
 rem backend stopped: take the bridge window down with it
 "%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot sim bridge*" /T /F >nul 2>&1
 echo [sim] backend stopped, bridge closed.

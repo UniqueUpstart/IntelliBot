@@ -26,4 +26,4 @@ else
   exit 2
 fi
 
-exec "$bin" --port "${PORT:-8080}" --web-root "$project_dir/frontend" ${extra[@]+"${extra[@]}"}
+exec "$bin" --legacy-dev --port "${PORT:-8080}" --web-root "$project_dir/frontend" ${extra[@]+"${extra[@]}"}

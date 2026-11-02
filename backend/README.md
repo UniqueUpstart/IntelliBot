@@ -1,36 +1,49 @@
-# IntelliBot 后端 0.1.0
+# IntelliBot 后端
 
-C++17 HTTP 后端，只做仿真：把浏览器请求校验后转发给 MuJoCo 桥，并在桥不可用时如实报错。
-不连接 ROS 2、真机或任何外部服务。
+C++17 + cpp-httplib + nlohmann/json；SQLite 保存账号和会话，libsodium 提供 Argon2id 密码哈希。默认只监听 `127.0.0.1`。
 
-依赖随仓库提供（`third_party/`），运行只需构建好的 `backend-build/intellibot_backend.exe`。
+## 启动与测试
 
-```powershell
-# 构建（使用仓库内 .venv 的 cmake / ninja）
-.venv\Scripts\cmake.exe -S backend -B backend-build -G Ninja `
-  -DCMAKE_MAKE_PROGRAM="$PWD\.venv\Scripts\ninja.exe" `
-  -DPython3_EXECUTABLE="$PWD\.venv\Scripts\python.exe"
-.venv\Scripts\cmake.exe --build backend-build
+在仓库根目录执行；Ubuntu依赖：`sudo apt install build-essential cmake pkg-config libcpp-httplib-dev nlohmann-json3-dev libsqlite3-dev libsodium-dev python3`。
 
-# 测试
-.venv\Scripts\ctest.exe --test-dir backend-build --output-on-failure
-
-# 运行
-.\backend-build\intellibot_backend.exe --port 8080 --web-root frontend --sim-url http://127.0.0.1:8090
+```bash
+bash scripts/run_web.sh
+# 另一个终端：
+ctest --test-dir backend-build --output-on-failure
 ```
 
-不带 `--sim-url` 时是纯 mock：`/api/v1/sim/*`、`/api/v1/motion/*`、`/api/v1/control/*` 一律 422。
+打开 http://localhost:8080/ui/experience.html 。默认数据库为 `~/primebot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path` 指定配置。
 
-仅监听 `127.0.0.1`。每次进程重启，模拟状态、操作记录和日志清空。
+## 接口
 
-```powershell
-curl http://127.0.0.1:8080/api/v1/health
-curl -X POST http://127.0.0.1:8080/api/v1/connections -H 'Content-Type: application/json' -H 'Idempotency-Key: sim-1' -d '{"mode":"sim"}'
-curl -X POST http://127.0.0.1:8080/api/v1/tts -H 'Content-Type: application/json' -H 'Idempotency-Key: tts-1' -d '{"text":"你好，IntelliBot","interrupt":false}'
-curl http://127.0.0.1:8080/api/v1/logs
-```
+统一前缀 `/api/v1`，JSON响应为 `{request_id,data,error}`；失败时 `error` 包含 `code`、`message`。除注册、登录、健康检查外，下列接口需携带 `Authorization: Bearer <token>`，无需 `Idempotency-Key`。
 
-每个新操作使用新的 `Idempotency-Key`；重复同键同内容返回原结果。
-返回 `simulated` / `sim_executed=false` 表示只在内存里记录，没有驱动仿真模型。
+| 方法与路径 | 用途 |
+| --- | --- |
+| `POST /auth/register` | username、password、可选 display_name；成功201，不自动登录 |
+| `POST /auth/login` | username、password；返回 access_token、expires_in、user |
+| `GET /auth/me` | 返回当前 user |
+| `POST /auth/logout` | 作废当前登录及其页面会话 |
+| `GET /browser/actions` | 返回公共动作目录 items |
+| `POST /browser/sessions` | 创建独立页面，返回 session_id |
+| `GET /browser/sessions/{id}` | 查询该页面最后一次授权动作 |
+| `DELETE /browser/sessions/{id}` | 释放页面会话 |
+| `POST /browser/sessions/{id}/actions` | 接收 action_id，返回 playback（clip、loop） |
 
-接口与界面说明见 [docs/仿真联调.md](../docs/仿真联调.md)。
+用户名3～24位字母、数字或下划线，统一小写；密码8～64位可见ASCII字符，允许空格且不自动裁剪；昵称1～32字符。令牌有效8小时，退出立即失效；数据库仅保存令牌摘要。注册与登录有请求限流。
+
+常见错误：400参数错误、401未登录或凭据错误、404页面会话不存在、409用户名重复、429请求过频。
+
+## 前端接入
+
+登录令牌保存在 `sessionStorage`，401时清理并返回登录页。每次页面加载创建新的 session_id，不共享页面会话；每个登录最多保留20个页面会话，可主动DELETE释放。
+
+动作请求示例：`{"action_id":"raise_hand"}`。后端只授权并返回动画信息（status=authorized、robot_executed=false），浏览器调用 `window.robot3d.playClip(clip,loop)`；`robot-playback` 事件报告 playing/completed。后端查询结果不是实际播放进度。
+
+## 开发模式与限制
+
+`--legacy-dev` 保留原共享 mock / MuJoCo 接口，关闭认证，业务写请求仍需 Idempotency-Key。仿真启动脚本已使用该参数，仅供本机开发；普通网页模式禁止调用共享控制接口。
+
+当前无找回密码、邮箱验证、私人动作库或大模型接入。公网部署需HTTPS及部署配置；Windows构建未验证。
+
+自动测试覆盖API、仿真适配、认证持久化与会话隔离。可选浏览器验收：安装Playwright及Chromium后，运行 `python backend/tests/browser_test.py <后端程序绝对路径>`。

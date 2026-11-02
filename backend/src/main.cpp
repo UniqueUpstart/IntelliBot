@@ -1,4 +1,6 @@
 #include <httplib.h>
+#include "primebot/web_system.h"
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <chrono>
@@ -16,11 +18,15 @@ using Clock = std::chrono::steady_clock;
 // Simulation only: no ROS/robot links and no hardware commands are issued.
 int main(int argc, char** argv) {
   int port = 8080;
+  bool legacy_dev=false;
+  std::string db_path="data/intellibot.db";
   std::string web_root;
   std::string sim_url;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
-    if (arg == "--port" && i + 1 < argc) {
+    if (arg == "--legacy-dev") legacy_dev=true;
+    else if (arg == "--db-path" && i+1<argc) db_path=argv[++i];
+    else if (arg == "--port" && i + 1 < argc) {
       try {
         std::string value = argv[++i]; size_t end = 0;
         port = std::stoi(value, &end);
@@ -28,7 +34,7 @@ int main(int argc, char** argv) {
       } catch (...) { return 2; }
     } else if (arg == "--web-root" && i + 1 < argc) web_root = argv[++i];
       else if (arg == "--sim-url" && i + 1 < argc) sim_url = argv[++i];
-    else { std::cerr << "Usage: intellibot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090]\n"; return 2; }
+    else { std::cerr << "Usage: intellibot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090] [--db-path data/intellibot.db] [--legacy-dev]\n"; return 2; }
   }
   if (port < 1 || port > 65535) return 2;
 
@@ -50,6 +56,11 @@ int main(int argc, char** argv) {
     } catch (...) { std::cerr << "--sim-url 端口非法\n"; return 2; }
     if (sim_port < 1 || sim_port > 65535) { std::cerr << "--sim-url 端口越界\n"; return 2; }
   }
+  std::unique_ptr<primebot::WebSystem> web;
+  if (!legacy_dev) {
+    try { web=std::make_unique<primebot::WebSystem>(db_path); }
+    catch(const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
+  }
   httplib::Server server;
   /* 静态资源带 no-cache：浏览器每次拿 If-Modified-Since 回来问一次，文件没改走 304、
      改了就立刻生效。调页面时最容易被旧 CSS/JS 骗到，这条省掉反复强刷 */
@@ -60,8 +71,8 @@ int main(int argc, char** argv) {
     if (!server.set_mount_point("/ui", web_root)) {
       std::cerr << "Invalid frontend directory\n"; return 2;
     }
-    server.Get("/", [](const httplib::Request&, httplib::Response& res) {
-      res.set_redirect("/ui/IntelliBot.html");
+    server.Get("/", [&](const httplib::Request&, httplib::Response& res) {
+      res.set_redirect(legacy_dev ? "/ui/IntelliBot.html" : "/ui/experience.html");
     });
   }
   std::mutex mutex;
@@ -123,6 +134,7 @@ int main(int argc, char** argv) {
   };
   auto handle = [&](const httplib::Request& req, httplib::Response& res) {
     allow_origin(req, res);
+    if(web && web->handle(req,res)) return;
     /* 状态与画面是高频只读转发，刻意放在全局锁外：
        否则仿真一卡，一帧请求就能把整个页面拖住。 */
     if (sim_enabled && req.method == "GET" &&
@@ -331,7 +343,7 @@ int main(int argc, char** argv) {
   server.Options(R"(/api/v1/.*)", [&](const httplib::Request& req, httplib::Response& res) {
     allow_origin(req, res);
     res.set_header("Access-Control-Allow-Methods","GET, POST, PUT, DELETE, OPTIONS");
-    res.set_header("Access-Control-Allow-Headers","Content-Type, Idempotency-Key");
+    res.set_header("Access-Control-Allow-Headers","Content-Type, Idempotency-Key, Authorization");
     res.set_header("Access-Control-Max-Age","600");
     res.status = 204;
   });

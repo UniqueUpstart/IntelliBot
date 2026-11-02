@@ -81,3 +81,8 @@ sim/assets/q1-urdf/
 
 # Local archives and migration leftovers
 back/
+
+# Authentication runtime data
+data/
+*.db-wal
+*.db-shm
