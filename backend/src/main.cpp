@@ -1,5 +1,5 @@
 #include <httplib.h>
-#include "primebot/web_system.h"
+#include "intellibot/web_system.h"
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <atomic>
@@ -56,9 +56,9 @@ int main(int argc, char** argv) {
     } catch (...) { std::cerr << "--sim-url 端口非法\n"; return 2; }
     if (sim_port < 1 || sim_port > 65535) { std::cerr << "--sim-url 端口越界\n"; return 2; }
   }
-  std::unique_ptr<primebot::WebSystem> web;
+  std::unique_ptr<intellibot::WebSystem> web;
   if (!legacy_dev) {
-    try { web=std::make_unique<primebot::WebSystem>(db_path); }
+    try { web=std::make_unique<intellibot::WebSystem>(db_path); }
     catch(const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
   }
   httplib::Server server;

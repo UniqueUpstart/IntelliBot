@@ -2,7 +2,7 @@
 #include <httplib.h>
 #include <memory>
 #include <string>
-namespace primebot {
+namespace intellibot {
 class WebSystem {
  public:
   explicit WebSystem(const std::string& path);

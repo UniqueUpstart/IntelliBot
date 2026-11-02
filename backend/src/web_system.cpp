@@ -1,4 +1,4 @@
-#include "primebot/web_system.h"
+#include "intellibot/web_system.h"
 #include <nlohmann/json.hpp>
 #include <sodium.h>
 #include <sqlite3.h>
@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <unordered_map>
 using J=nlohmann::json;
-namespace primebot {
+namespace intellibot {
 namespace {
 long long now(){return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();}
 std::string random_token(){unsigned char b[32]; randombytes_buf(b,sizeof b); char h[65]; sodium_bin2hex(h,sizeof h,b,sizeof b);return h;}

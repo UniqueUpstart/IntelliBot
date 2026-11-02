@@ -12,7 +12,7 @@ bash scripts/run_web.sh
 ctest --test-dir backend-build --output-on-failure
 ```
 
-打开 http://localhost:8080/ui/experience.html 。默认数据库为 `~/primebot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path` 指定配置。
+打开 http://localhost:8080/ui/experience.html 。默认数据库为 `~/intellibot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path` 指定配置。
 
 ## 接口
 
