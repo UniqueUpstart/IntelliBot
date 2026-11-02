@@ -9,7 +9,7 @@
   var root = document.getElementById('modal');
   if (!root || !window.gsap) return;
   var panel = root.querySelector('.modal__panel');
-  var NAMES = ['Connect', 'Preference', 'Advance', 'Settings', 'Privacy', 'Contact'];
+  var NAMES = ['Preference', 'Advance', 'Settings', 'Privacy', 'Contact'];
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   /* ---------- 面板外挂的两块底板 ---------- */
@@ -131,67 +131,19 @@
     });
   }
 
-  /* 六枚胶囊各自那套标题区文案。左列 = 弹窗标题 + 一行说明，
-     右列 = 一行标题 + 一行说明；除 Connect 的两行是实指，其余是占位，
+  /* 五枚胶囊各自那套标题区文案。左列 = 弹窗标题 + 一行说明；
      接上真实数据源时替换这里的字符串即可 */
   var META = {
-    Connect:    { sub: '2 available', right: 'Q1_RandomName', rightSub: 'current' },
-    Preference: { sub: '3 available', right: 'Q1_RandomName', rightSub: 'current' },
+    Preference: { sub: '3 available' },
     Advance:    { sub: 'MuJoCo simulation' },
-    /* Settings 左列只有标题和当前选项；右列（已确认的机型）与它无关，整列收掉 */
     Settings:   { sub: 'Appearance' },
-    /* 账号菜单里那两枚也是这套弹窗，右列同样无关（它们不讲某台机器）。
-       说明行讲的是各自的内容，不是占位 */
+    /* 账号菜单里那两枚也是这套弹窗。说明行讲的是各自的内容，不是占位 */
     Privacy:    { sub: '隐私政策' },
     Contact:    { sub: '联系与反馈' }
   };
   var titleL = panel.querySelectorAll('[data-modal-title]');
   var subL   = panel.querySelectorAll('[data-modal-sub]');
-  var foot   = panel.querySelector('[data-modal-foot]');
   var head   = panel.querySelector('.modal__head');
-  var headEnd = panel.querySelector('[data-head-end]');
-  /* 左下角 HUD 的设备名：connect 的「当前设备」落到哪里，它就跟到哪里。
-     HUD 在脚本跑之前就已入 DOM，这里直接抓，抓不到（结构改动）就静默跳过 */
-  var hudDevice = document.querySelector('[data-hud-device]');
-  /* 限宽跑马灯：名字放得下就还原成单份；放不下就复制一份拼成
-     「名字 空隙 名字 空隙」，整条轨道向左平移一份的宽度——动画走完
-     正好回到起点，接缝两侧间距一致，读起来是无缝循环。
-     时长按 32px/s 的速度随宽度走，宽名字转得慢、节奏不变 */
-  window.hudName = function (name) {
-    var box = document.querySelector('.hud__name');
-    var track = hudDevice;
-    if (!box || !track) return;
-    /* is-loop 挂在外层盒上，CSS 的选择器是 .hud__name.is-loop .hud__name-track；
-       挂到 track 自己身上选择器永远匹配不上，动画就不会启动 */
-    box.classList.remove('is-loop');
-    track.style.animationDuration = '';
-    track.textContent = name || '';
-    if (track.scrollWidth <= box.clientWidth) return;
-    /* 循环态：两份都用同一款 hud__name-copy（各自带 16px 右距）拼装，
-       轨道两半严格等宽 —— translateX(-50%) 恰好平移一份的宽度，
-       接缝两侧间距一致，周期跳回起点时画面完全重合，不会顿一下。
-       之前只有副本带右距，两半不等宽：名字之间没间隔、周期末还会跳帧 */
-    track.textContent = '';
-    var copy = document.createElement('span');
-    copy.className = 'hud__name-copy';
-    copy.textContent = name;
-    var ghost = copy.cloneNode(true);
-    ghost.setAttribute('aria-hidden', 'true');
-    track.appendChild(copy);
-    track.appendChild(ghost);
-    box.classList.add('is-loop');
-    track.style.animationDuration = (track.scrollWidth / 2 / 32).toFixed(2) + 's';
-  };
-  function paintDevice(name) {
-    titleL[1].textContent = name;
-    if (window.hudName) window.hudName(name);
-    else if (hudDevice) hudDevice.textContent = name;
-  }
-
-  /* 右上的主题色标题是「已确认」的机型，不是「正在选」的那一行：
-     选别的行只改左侧高亮，右上要等 Confirm 才换。
-     confirmed 为 null 表示还没确认过任何一次，此时取初始选中行当现状 */
-  var confirmed = null;
 
   /* 把「当前弹窗对应的那枚胶囊」标成激活（data-open），
      文件尾部的按压脚本读到它就不再给这枚胶囊压弹 ——
@@ -205,7 +157,6 @@
   }
 
   var TITLE_KEY = {
-    Connect: 'modal.connect.title',
     Preference: 'modal.preference.title',
     Advance: 'modal.advance.title',
     Settings: 'settings.title',
@@ -213,7 +164,6 @@
     Contact: 'modal.contact.title'
   };
   var SUB_KEY = {
-    Connect: 'modal.connect.available',
     Preference: 'modal.preference.available',
     Advance: 'modal.advance.sub',
     Settings: 'settings.appearance',
@@ -225,27 +175,12 @@
     var m = META[name] || {};
     titleL[0].textContent = TITLE_KEY[name] ? t(TITLE_KEY[name]) : name;
     subL[0].textContent   = SUB_KEY[name] ? t(SUB_KEY[name]) : (m.sub || '');
-    if (confirmed === null && m.right) {
-      var sel0 = document.querySelector('[data-model-list] .mrow.is-sel');
-      confirmed = (sel0 && sel0.dataset.model) || m.right;
-    }
-    /* Advance 没有「当前设备」这一列：整列跳过，别把 confirmed 初始化成空串，
-       否则先开一次 Advance 就会把 HUD 上的机型名一起刷空 */
-    if (m.right !== undefined) {
-      paintDevice(confirmed);
-      subL[1].textContent = m.rightSub || '';
-    }
     panel.setAttribute('aria-label', name);
     /* 从一个弹窗直接换到另一个时，先把上一个胶囊那组还原：
-       不然从 Settings 切到 Connect、再关窗，Settings 那枚会一直亮着。
+       不然从 Settings 切到别的弹窗、再关窗，Settings 那枚会一直亮着。
        同名重播（再点一次当前这枚）不能还原，否则按钮会先灭一下 */
     restorePills(name);
     markPill(name);
-    /* 机型列表与页脚都只属于 Connect：换到别的弹窗时整块收掉，
-       别留一条空白按钮区或一片空列表 */
-    Array.prototype.forEach.call(panel.querySelectorAll('[data-connect-only]'), function (el) {
-      el.hidden = name !== 'Connect';
-    });
     /* Advance 只装仿真面板（结构在 HTML 里，事件由 js/sim.js 绑），
        换到别的弹窗时整块收掉，连画面轮询也会跟着停。
        两块外挂底板走自己的收放，这里跳过 */
@@ -276,15 +211,6 @@
     Array.prototype.forEach.call(panel.querySelectorAll('[data-contact-only]'), function (el) {
       el.hidden = name !== 'Contact';
     });
-    /* 右上那列讲的是当前机型：Settings 用不上，Advance 里那一位已经让给
-       「连接仿真」按钮，Privacy / Contact 也不讲某台机器，都用不上。
-       hidden 之外再把两行字清空 —— 只靠 hidden 的话，
-       CSS 还没重新加载（浏览器缓存住旧 modal.css）时那一列会照旧显示 */
-    headEnd.hidden = isSet || name === 'Advance' || name === 'Privacy' || name === 'Contact';
-    if (name === 'Advance') {
-      titleL[1].textContent = '';
-      subL[1].textContent = '';
-    }
   }
 
   /* cubic-bezier(x1,y1,x2,y2) → x 到 y 的查表函数；y 允许越出 0~1（过冲就靠它） */
@@ -339,7 +265,7 @@
   var SH_BACK   = BACK_DUR; /* 落回常态的时长，与缩放同时结束 */
   var SH_CLOSE  = SH_CLOSE_DUR;   /* 收回时归位，与栏体同值 .2 */
 
-  var tl = null, shown = false, closing = false;
+  var tl = null, shown = false;
 
   /* 弹窗胶囊的选中态只活到弹窗关掉为止。
      开窗前的 pointerdown 先记下那一组本来选中的是哪一枚（相机与 Modal 那组、
@@ -389,7 +315,6 @@
 
   function show() {
     shown = true;
-    closing = false;              /* 新一轮打开，页脚的「只触发一次」放行 */
     root.style.visibility = 'visible';
     root.setAttribute('aria-hidden', 'false');
     if (tl) tl.kill();
@@ -465,42 +390,6 @@
     });
   });
 
-  /* 页脚两枚：Cancel 只关闭；Confirm 只落定，不关窗 ——
-     把列表里当前选中的机型记成 confirmed、换上右上的主题色名字，
-     再派一个 modal:confirm（detail 里带弹窗名和机型名），面板留在原地。
-     Cancel 的收回时机提前到 pointerdown —— click 要等抬起，按下的那一刻面板就该开始收，
-     这样按钮的按压回弹和面板的收回是并行的，不会出现「按钮弹完了窗还开着」。
-     click 只留给键盘（Enter / Space 的 click 其 detail 为 0），
-     指针那次已被 closing 标志挡掉，同一次操作不会跑两遍 */
-  function fire(btn) {
-    if (btn.dataset.act === 'confirm') {
-      var sel = document.querySelector('[data-model-list] .mrow.is-sel');
-      if (sel && sel.dataset.model) {
-        confirmed = sel.dataset.model;
-        paintDevice(confirmed);
-      }
-      root.dispatchEvent(new CustomEvent('modal:confirm', {
-        detail: { name: panel.getAttribute('aria-label'), model: confirmed }
-      }));
-      return;   /* 不 hide()：确认后面板继续开着，还能接着改选 */
-    }
-    if (closing) return;
-    closing = true;
-    hide();
-  }
-  if (foot) {
-    foot.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      var btn = e.target.closest && e.target.closest('[data-act]');
-      if (btn) fire(btn);
-    });
-    foot.addEventListener('click', function (e) {
-      if (e.detail !== 0) return;   /* 指针的 click 已在 pointerdown 里处理过 */
-      var btn = e.target.closest && e.target.closest('[data-act]');
-      if (btn) fire(btn);
-    });
-  }
-
   /* 点面板外 / Esc 收回；落在胶囊上的点击交给胶囊自己，避免「刚开就关」 */
   document.addEventListener('pointerdown', function (e) {
     if (!shown) return;
@@ -510,14 +399,6 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') hide();
-  });
-
-  /* 就地改名若改的正是已确认的那台机型，confirmed 与两处展示
-     （connect 右上、左下角 HUD）一起跟过去；model:rename 从列表带
-     bubbles 派发，document 上接得住 */
-  document.addEventListener('model:rename', function (e) {
-    var d = e.detail || {};
-    if (confirmed !== null && confirmed === d.from) paintDevice(d.to);
   });
 
   /* ---------- Settings 内部 ---------- */
@@ -550,7 +431,7 @@
      变量带出来，night 就是预留给深色的那一组。首帧之前 <head> 里已经按存下的选择
      设过一次，这里只负责按钮状态与记住选择；背景画布的底色和点阵色阶由背景脚本
      监听同一个属性自己重铺，不用在这里通知它 */
-  var MODE_KEY = 'px.mode';
+  var MODE_KEY = 'aloria.mode';
   var modeSegs = panel.querySelectorAll('.seg__opt[data-mode]');
   var modeVt = null;   /* 上一次还没播完的视图过渡，连点时先掐掉再起新的 */
 
@@ -603,7 +484,7 @@
   /* 背景样式：三选一，写进背景脚本（window.Bgfx）并记住选择。
      背景脚本自己也会读同一个键，所以刷新后一进页面就是上次那一种，不用等这里来对齐。
      旧版存过 matrix 的，读进来一律当 plain（旧 plain 那种纯静态点阵已经删掉） */
-  var BG_KEY = 'px.bg';
+  var BG_KEY = 'aloria.bg';
   var segs = panel.querySelectorAll('.seg__opt[data-bg]');
   function pickBg(key) {
     if (key !== 'plain' && key !== 'wave') key = 'magnetic';
@@ -637,7 +518,7 @@
   /* 机器人显示范围：body（上半身）/ head（头部特写），写进 px.bot 并通知 3D 模块。
      3D 模块自己也读同一个键，所以刷新后直接就是上次那一档；
      这里调用时它可能还没加载完，那就只存键，等它起来自己认 */
-  var BOT_KEY = 'px.bot';
+  var BOT_KEY = 'aloria.bot';
   var botSegs = panel.querySelectorAll('.seg__opt[data-bot]');
   function pickBot(key) {
     if (key !== 'head') key = 'body';

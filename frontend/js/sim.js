@@ -1,5 +1,5 @@
 /* MuJoCo 仿真联调，挂在 Advance 弹窗里（页面上不再有右下角浮层）。
-   连上 q1-sim 后：滑块改关节、按钮触发姿态/手势/步态、左侧九宫格驱动底盘、
+   连上仿真桥后：滑块改关节、按钮触发姿态/手势/步态、左侧九宫格驱动底盘、
    画面上拖动可转视角、滚轮缩放，键盘 WASD 也能走。
    所有请求走同源 /api/v1，写操作带 Idempotency-Key；
    桥没起时只在面板里报错，不伪造成功。 */
@@ -73,10 +73,10 @@
   /* 打开方式不对时，接口请求根本到不了后端，先在面板里说清楚，
      省得点下去只看到一句空响应 */
   if (location.protocol === 'file:') {
-    say('页面是用 file:// 打开的，接口请求到不了后端。请改为访问 http://127.0.0.1:8080/ui/PrrimebotX.html');
+    say('页面是用 file:// 打开的，接口请求到不了后端。请改为访问 http://127.0.0.1:8080/ui/Aloria.html');
   } else if (API === '/api/v1' && location.port !== '8080') {
     say('当前页面来自 ' + location.host + '，不是后端的 8080。' +
-        '要么直接开 http://127.0.0.1:8080/ui/PrrimebotX.html，' +
+        '要么直接开 http://127.0.0.1:8080/ui/Aloria.html，' +
         '要么在地址后加 ?api=http://127.0.0.1:8080/api/v1');
   }
 
@@ -403,7 +403,7 @@
     if (!connected) return;
     var link = document.createElement('a');
     link.href = API + '/sim/frame?t=' + Date.now();
-    link.download = 'q1-sim-' + new Date().toISOString().replace(/[:.]/g, '-') + '.jpg';
+    link.download = 'aloria-sim-' + new Date().toISOString().replace(/[:.]/g, '-') + '.jpg';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -495,7 +495,7 @@
     busy = true; controls();
     var step = '连接';
     try {
-      await api('/connections', 'POST', { robot_id: 'q1-sim', mode: 'sim' });
+      await api('/connections', 'POST', { mode: 'sim' });
       step = '读取关节表';
       var table = await api('/sim/joints');
       joints = table.joints;
@@ -506,7 +506,7 @@
       hoverCut = false;
       renderJoints();
       buildActions(table);
-      say('已连接 q1-sim（nq=' + table.nq + '，关节 ' + table.joints.length + ' 个）。' +
+      say('已连接仿真桥（nq=' + table.nq + '，关节 ' + table.joints.length + ' 个）。' +
           '右侧切手臂/腰/腿/联动，画面可拖动旋转，键盘 WASD 走路。');
       pollState();
       pollFrame();
@@ -715,8 +715,7 @@
   window.addEventListener('blur', function () { held = {}; stopHold(true); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') stopHold(true); });
 
-  /* HUD 那个连接状态原先由 js/integration.js 轮询 /status 统一写，那套 mock 联调
-     已经停用，这里接手同一块文本：只写状态，电量与信号保持页面里的占位值 */
+  /* HUD 的连接状态由这一处统一写：只写状态，电量与信号保持页面里的占位值 */
   var hudStateEl = document.querySelector('.hud__state--ready, [data-api-state]');
   function hudState(text) { if (hudStateEl) hudStateEl.textContent = text; }
 

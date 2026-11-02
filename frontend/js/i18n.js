@@ -1,4 +1,4 @@
-/* PrimebotX 国际化引擎：纯原生 JS，无依赖。
+/* Aloria 国际化引擎：纯原生 JS，无依赖。
  * 用法：HTML 元素加 data-i18n="key"，JS 里调用 t('key')。
  * 新增语言只需在 I18N 里加一组字典，页面文字自动跟随。 */
 
@@ -6,7 +6,6 @@ const I18N = {
   en: {
     "nav.camera": "Camera",
     "nav.modal": "Modal",
-    "nav.connect": "Connect",
     "nav.preference": "Preference",
     "nav.advance": "Advance",
     "nav.settings": "Settings",
@@ -40,11 +39,6 @@ const I18N = {
 
     "hud.ready": "Ready",
 
-    "modal.connect.title": "Connect",
-    "modal.connect.available": "2 available",
-    "modal.connect.current": "current",
-    "modal.cancel": "CANCEL",
-    "modal.confirm": "CONFIRM",
     "modal.preference.title": "Preference",
     "modal.preference.available": "3 available",
     "modal.advance.title": "Advance",
@@ -107,7 +101,6 @@ const I18N = {
   zh: {
     "nav.camera": "相机",
     "nav.modal": "模态",
-    "nav.connect": "连接",
     "nav.preference": "偏好",
     "nav.advance": "高级",
     "nav.settings": "设置",
@@ -141,11 +134,6 @@ const I18N = {
 
     "hud.ready": "就绪",
 
-    "modal.connect.title": "连接",
-    "modal.connect.available": "2 台可用",
-    "modal.connect.current": "当前",
-    "modal.cancel": "取消",
-    "modal.confirm": "确认",
     "modal.preference.title": "偏好",
     "modal.preference.available": "3 台可用",
     "modal.advance.title": "高级",
@@ -206,7 +194,7 @@ const I18N = {
   },
 };
 
-const I18N_KEY = "px.lang";
+const I18N_KEY = "aloria.lang";
 
 function getLang() {
   try {

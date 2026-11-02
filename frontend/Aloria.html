@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Primebot</title>
+<title>Aloria</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
 /* 明暗模式在首帧之前定下来。色值全挂在 :root 的那套变量上，
    晚一步再改 data-theme 会先按浅色画一遍、再整屏跳到深色。
-   键名与 Settings 弹窗里的 px.mode 一致，没存过就走 <html> 上的初始值 day */
+   键名与 Settings 弹窗里的 aloria.mode 一致，没存过就走 <html> 上的初始值 day */
 (function () {
   try {
-    var v = localStorage.getItem('px.mode');
+    var v = localStorage.getItem('aloria.mode');
     if (v === 'night') document.documentElement.setAttribute('data-theme', 'dark');
     else if (v === 'day') document.documentElement.setAttribute('data-theme', 'light');
   } catch (e) {}
@@ -27,9 +27,7 @@
   <link rel="stylesheet" href="css/cards.css?v=16">
   <link rel="stylesheet" href="css/modal.css?v=19">
   <link rel="stylesheet" href="css/chat.css?v=17">
-  <!-- Q1 管理联调（MOCK 浮层）已停用，改用 Advance 里的 MuJoCo 仿真面板。
-       两个文件保留在仓库里，需要回退时把下面两行放回来即可 -->
-  <!-- <link rel="stylesheet" href="css/integration.css"> -->
+  <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
 </head>
@@ -37,7 +35,7 @@
 
 <!-- ===================== Topbar ===================== -->
 <header class="topbar">
-  <a class="brand" href="#" aria-label="Primebot">
+  <a class="brand" href="#" aria-label="Aloria">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <polygon fill="#2d2d2d" points="5.59 8.59 5.59 12.43 9.17 16.73 12.6 11.24 9.43 8.59 5.59 8.59"/>
       <polygon fill="#2d2d2d" points="15.61 24.45 19.74 29.41 26.41 29.41 26.41 22.74 21.01 18.24 15.61 24.45"/>
@@ -52,7 +50,6 @@
     </div>
 
     <div class="group" role="group" aria-label="Control">
-      <button class="pill" type="button" aria-pressed="false" data-modal="Connect"><span class="pill__label" data-i18n="nav.connect">Connect</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
       <button class="pill" type="button" aria-pressed="false" data-modal="Preference"><span class="pill__label" data-i18n="nav.preference">Preference</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
       <button class="pill" type="button" aria-pressed="false" data-modal="Advance"><span class="pill__label" data-i18n="nav.advance">Advance</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
     </div>
@@ -394,9 +391,8 @@
     </span>
   </div>
   <div class="hud__row">
-    <!-- 设备名由弹窗脚本按 Connect 的「已确认机型」写入（data-hud-device），
-         这里的占位值只在脚本没跑到时兜底；超宽时限宽循环滚动 -->
-    <span class="hud__item hud__name"><span class="hud__name-track" data-hud-device>Q1_RandomName</span></span>
+    <!-- 仿真系统没有可切换的机型，设备名固定为项目名；状态由 js/sim.js 写入 -->
+    <span class="hud__item hud__name"><span class="hud__name-track" data-hud-device>Aloria</span></span>
     <span class="hud__item hud__state--ready" data-i18n="hud.ready">Ready</span>
   </div>
 </div>
@@ -420,42 +416,27 @@
 
 <script src="js/sticky.js?v=1"></script>
 
-<!-- 居中弹窗：Connect / Preference / Advance / Settings / Privacy / Contact 六枚胶囊共用。
+<!-- 居中弹窗：Preference / Advance / Settings / Privacy / Contact 五枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
-     Preference 只有标题区；Connect 另有机型列表与页脚；Advance 装仿真面板；
+     Preference 只有标题区；Advance 装仿真面板；
      Settings 是左区标题与目录 + 右区选项页；Privacy / Contact 是一段纯文本（.doc） -->
 <div class="modal" id="modal" aria-hidden="true">
-  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Connect">
-    <!-- 顶部 64 为标题区：左列标题 + 说明，右列标题 + 说明；
-         文案由尾部脚本按所点的胶囊写入，这里放 Connect 一套做初始值。
-         Connect 的三个工具按钮（搜索 / 新增 / 刷新）挂在左列标题下方，
-         所以它一出现这一列就比右列高，标题区改成由内容撑高 -->
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Advance">
+    <!-- 顶部 64 为标题区：左列标题 + 说明；
+         文案由尾部脚本按所点的胶囊写入，这里放 Advance 一套做初始值 -->
     <div class="modal__head">
       <div class="modal__col">
-        <div class="modal__title" data-modal-title data-i18n="modal.connect.title">Connect</div>
-        <div class="modal__sub" data-modal-sub data-i18n="modal.connect.available">2 available</div>
-        <!-- 三个 32 方形紧密相接、贴标题左基线；无底色，hover 只换图标颜色。
-             只在 Connect 里出现，其余弹窗由脚本按 data-connect-only 收掉 -->
-        <div class="modal__tools" data-model-tools data-connect-only hidden></div>
+        <div class="modal__title" data-modal-title data-i18n="modal.advance.title">Advance</div>
+        <div class="modal__sub" data-modal-sub data-i18n="modal.advance.sub">MuJoCo simulation</div>
       </div>
-      <div class="modal__col modal__col--end" data-head-end>
-        <div class="modal__title" data-modal-title>Q1_RandomName</div>
-        <div class="modal__sub" data-modal-sub data-i18n="modal.connect.current">current</div>
-      </div>
-      <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义，
-           放这里比塞进下面那排工具按钮更醒目。其余弹窗由脚本按 data-advance-only 收掉 -->
+      <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义。
+           其余弹窗由脚本按 data-advance-only 收掉 -->
       <div class="modal__act" data-advance-only hidden>
         <button class="modal__act-btn" type="button" data-sim-connect>连接仿真</button>
       </div>
     </div>
 
-    <!-- 机型列表：外层只负责占位与裁剪，里层 .modal__list 才是滚动容器。
-         工具条已移到标题区，这里只剩列表本体 -->
-    <div class="modal__body" data-connect-only hidden>
-      <div class="modal__list" data-model-list></div>
-    </div>
-
-    <!-- Advance：MuJoCo 仿真联调的全部操作都在这里，页面上不再有右下角浮层。
+    <!-- Advance：MuJoCo 仿真联调的全部操作都在这里，页面上不再有额外浮层。
          结构只摆位，事件与轮询由 js/sim.js 绑定；与机型列表、Settings 互斥，
          脚本按 data-advance-only 切 hidden -->
     <div class="modal__body adv" data-advance-only hidden>
@@ -546,7 +527,7 @@
       <div class="doc__body">
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">01</span>定义</div>
-          <p class="doc__text">本政策中，「本服务」指 PrimebotX 项目的浏览器端界面及其姿态控制、动作演示与本地仿真联动功能；「本地存储」指浏览器提供的 localStorage 机制；「你」指访问并使用本服务的自然人。</p>
+          <p class="doc__text">本政策中，「本服务」指 Aloria 项目的浏览器端界面及其姿态控制、动作演示与本地仿真联动功能；「本地存储」指浏览器提供的 localStorage 机制；「你」指访问并使用本服务的自然人。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">02</span>适用范围</div>
@@ -554,7 +535,7 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
-          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入三项界面偏好：<span class="doc__code">px.mode</span>（显示模式）、<span class="doc__code">px.bg</span>（背景样式）、<span class="doc__code">primebot:avatar</span>（所选头像）。</p>
+          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入三项界面偏好：<span class="doc__code">aloria.mode</span>（显示模式）、<span class="doc__code">aloria.bg</span>（背景样式）、<span class="doc__code">aloria:avatar</span>（所选头像）。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
@@ -600,16 +581,15 @@
          链接做成胶囊，颜色跟主题走，新标签页打开，rel 里带 noopener 避免反向拿窗口 -->
     <div class="doc" data-contact-only hidden>
       <div class="doc__body doc__body--mid">
-        <a class="doc__link" href="https://github.com/HiKLPA/PrimebotX"
+        <a class="doc__link" href="https://github.com/UniqueUpstart/-"
            target="_blank" rel="noopener noreferrer">
-          <span class="doc__link-lab">github.com/HiKLPA/PrimebotX</span>
+          <span class="doc__link-lab">github.com/UniqueUpstart/-</span>
           <svg class="doc__link-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
         </a>
       </div>
     </div>
 
     <!-- Settings：左区标题与选项目录，右区放选中项对应的页面。
-         与 Connect 的机型列表、页脚互斥：脚本按弹窗名切 hidden。
          顶部标题区（.modal__head）在 Settings 下整块收掉，标题改由 .set__title 承担 -->
     <div class="set" data-settings-only hidden>
       <div class="set__nav">
@@ -678,35 +658,17 @@
         </section>
       </div>
     </div>
-
-    <!-- 页脚只在 Connect 弹窗出现：脚本按当前弹窗名切 hidden。
-         左 Cancel 只退出，不保存；右 Confirm 默认就填主题色（is-active） -->
-    <div class="modal__foot" data-modal-foot data-connect-only hidden>
-      <button class="pill" type="button" data-act="cancel">
-        <span class="pill__label" data-i18n="modal.cancel">CANCEL</span>
-        <svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="pill" type="button" data-act="confirm">
-        <span class="pill__label" data-i18n="modal.confirm">CONFIRM</span>
-        <svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-    </div>
   </div>
 </div>
 
-<script src="js/modal.js?v=16"></script>
-
-<script src="js/models.js?v=2"></script>
+<script src="js/modal.js?v=17"></script>
 
 <script src="js/chat.js"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js"></script>
-<!-- Q1 管理联调面板（MOCK）已停用：它的浮层、机型拉取与 /status 轮询都交给下面的
-     sim.js 与 models.js。需要回退时取消下一行注释，并恢复上面的 integration.css -->
-<!-- <script src="js/integration.js"></script> -->
 <!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
-<script src="js/sim.js?v=21"></script>
+<script src="js/sim.js?v=22"></script>
 
 <!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
      three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；

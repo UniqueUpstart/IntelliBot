@@ -1,4 +1,4 @@
-"""End-to-end behavior tests against a real local HTTP process; no Q1 required."""
+"""End-to-end behavior tests against a real local HTTP process; simulation only."""
 import json, socket, subprocess, sys, time, urllib.request, urllib.error
 from uuid import uuid4
 
@@ -20,14 +20,17 @@ try:
             if call('GET','/health')[0]==200:break
         except OSError:time.sleep(.05)
     else:raise AssertionError('server did not start')
-    assert call('GET','/health')[1]['data']['ros2_implemented'] is False
+    health=call('GET','/health')[1]['data']
+    assert health['service']=='aloria_backend' and health['mode']=='mock'
+    assert 'ros2_implemented' not in health
     assert call('POST','/tts',{'text':'test'})[0]==503
-    assert call('POST','/connections',{'robot_id':'q1-mock','mode':'ros2'})[0]==422
-    assert call('POST','/connections',{'robot_id':'q1-mock','mode':'mock'})[0]==200
+    assert call('POST','/connections',{'mode':'ros2'})[0]==422 # 硬件连接已移除
+    assert call('GET','/robots')[0]==404 # 设备档案接口随真机连接一并移除
+    assert call('POST','/connections',{'mode':'mock'})[0]==200
     assert call('GET','/status')[1]['data']['battery']['source']=='mock'
     key=str(uuid4()); payload={'text':'你好，启元机器人','interrupt':False}
     a=call('POST','/tts',payload,key); b=call('POST','/tts',payload,key)
-    assert a==b and a[1]['data']['robot_executed'] is False
+    assert a==b and a[1]['data']['sim_executed'] is False
     op=a[1]['data']['operation_id']
     assert call('GET','/operations/'+op)[1]['data']['state']=='simulated'
     assert call('POST','/tts',{'text':'changed'},key)[0]==409
@@ -48,12 +51,12 @@ try:
     assert call('POST','/control/joints',{'joints':{'left_elbow_joint':0.1}})[0]==422
     for path in ('/sim/preset','/sim/gait','/sim/camera','/sim/speed'): # 新增的仿真操作同样不能假装可用
         assert call('POST',path,{'name':'walk','speed':1.2,'azimuth':120})[0]==422
-    assert call('POST','/connections',{'robot_id':'q1-sim','mode':'sim'})[0]==422
+    assert call('POST','/connections',{'mode':'sim'})[0]==422
     assert call('GET','/cameras')[0]==422
     assert call('DELETE','/connection')[0]==200
     assert call('GET','/status')[1]['data']['battery'] is None
     assert call('POST','/actions',{'action_id':'q1.wave'})[0]==503
-    print('PASS: API lifecycle, mock labeling, validation, idempotency, logs, unsupported robot controls')
+    print('PASS: API lifecycle, mock labeling, validation, idempotency, logs, simulation-only guards')
 finally:
     process.terminate()
     try:process.wait(timeout=5)

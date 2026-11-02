@@ -92,7 +92,7 @@ def sample_foot_clearance(chain: "Chain", seconds: float) -> float | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="PrimebotX ↔ MuJoCo 全链路验收")
+    parser = argparse.ArgumentParser(description="Aloria ↔ MuJoCo 全链路验收")
     parser.add_argument("--backend", default="http://127.0.0.1:8080")
     args = parser.parse_args()
     chain = Chain(args.backend)
@@ -110,15 +110,12 @@ def main() -> int:
         print("\n后端没准备好，后面的检查没有意义，先解决上面这条。")
         return 1
 
-    print("\n2. 机型列表与仿真连接")
-    status, body = chain.call("GET", "/robots")
-    ids = [r.get("robot_id") for r in body.get("data", [])]
-    chain.step("列表里有 q1-sim", "q1-sim" in ids, str(ids))
-    status, body = chain.call("POST", "/connections", {"robot_id": "q1-sim", "mode": "sim"})
+    print("\n2. 仿真连接")
+    status, body = chain.call("POST", "/connections", {"mode": "sim"})
     op = (body.get("data") or {})
     chain.step(
         "建立仿真连接",
-        status == 200 and op.get("state") == "applied" and op.get("robot_executed") is True,
+        status == 200 and op.get("state") == "applied" and op.get("sim_executed") is True,
         f"HTTP {status} {op.get('error') or op.get('state')}",
     )
 
@@ -263,7 +260,7 @@ def main() -> int:
     chain.call("POST", "/sim/reset", {})
 
     print("\n11. 网页静态资源")
-    page = args.backend.rstrip("/") + "/ui/PrrimebotX.html"
+    page = args.backend.rstrip("/") + "/ui/Aloria.html"
     try:
         with urllib.request.urlopen(page, timeout=5) as response:
             html = response.read().decode("utf-8", "replace")
@@ -278,7 +275,7 @@ def main() -> int:
     if chain.failures:
         print(f"结果：{len(chain.failures)} 项未通过 → " + "；".join(chain.failures))
         return 1
-    print("结果：全链路通过。打开 http://127.0.0.1:8080/ui/PrrimebotX.html 点顶栏 Advance。")
+    print("结果：全链路通过。打开 http://127.0.0.1:8080/ui/Aloria.html 点顶栏 Advance。")
     return 0
 
 

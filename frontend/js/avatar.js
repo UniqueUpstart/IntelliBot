@@ -1,6 +1,6 @@
 /* 头像：点头像就地展开选择区 —— 四张默认图任选其一，也可以传本地图片。
    选中的结果写在 .avatar 的内联 background-image 上，同时存进 localStorage
-   （primebot:avatar：a1 / a2 / a3 / a4 / dataURL），刷新后还是上次那张。
+   （aloria:avatar：a1 / a2 / a3 / a4 / dataURL），刷新后还是上次那张。
    上传的图先缩到 160 见方再转 dataURL：原图直接塞进去很容易把 5MB 的配额顶爆。
    --------------------------------------------------------------- */
 (function () {
@@ -13,7 +13,7 @@
   var opts = Array.prototype.slice.call(user.querySelectorAll('.avatar__opt'));
   if (!avatar || !up || !file) return;
 
-  var KEY = 'primebot:avatar';
+  var KEY = 'aloria:avatar';
   /* 文档在 frontend/ 根下，所以这里不能照抄 CSS 的 ../icon/ */
   var PRESET = {
     a1: 'icon/default_avatar.png',

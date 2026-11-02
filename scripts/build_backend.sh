@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 构建 primebot_backend。
+# 构建 aloria_backend。
 #   Linux         直接用系统 cmake + make
 #   Windows(MSYS) 用 VS2022 自带 cmake/ninja，并显式拼 MSVC + Windows SDK 的
 #                 PATH/INCLUDE/LIB。不调 vcvars64.bat：它内部会用 reg.exe 探测
@@ -25,7 +25,7 @@ case "$(uname -s)" in
     fi
     MSVC_WIN="$(cygpath -w "${MSVC_DIR%/}")"
     SDK_WIN="$(cygpath -w "$SDK_BIN_ROOT")"
-    TMP_BAT="$(mktemp -d)/build_primebot.bat"
+    TMP_BAT="$(mktemp -d)/build_aloria.bat"
     {
       echo "@echo off"
       echo "set \"PATH=$(cygpath -w "${MSVC_DIR%/}")\\bin\\Hostx64\\x64;$SDK_WIN\\bin\\$SDK_VER\\x64;$(cygpath -w "$NINJA_DIR");%PATH%\""
@@ -35,13 +35,13 @@ case "$(uname -s)" in
       echo "\"$(cygpath -w "$CMAKE")\" --build \"$(cygpath -w "$BUILD")\" || exit /b 1"
     } > "$TMP_BAT"
     cmd //c "$(cygpath -w "$TMP_BAT")"
-    echo "== 产物：$BUILD/primebot_backend.exe"
+    echo "== 产物：$BUILD/aloria_backend.exe"
     ;;
   *)
     echo "== 配置（Unix Makefiles）"
     cmake -S "$SRC" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
     echo "== 编译"
     cmake --build "$BUILD" -j"$(nproc 2>/dev/null || echo 2)"
-    echo "== 产物：$BUILD/primebot_backend"
+    echo "== 产物：$BUILD/aloria_backend"
     ;;
 esac

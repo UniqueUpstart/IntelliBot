@@ -13,7 +13,7 @@
 using json = nlohmann::json;
 using Clock = std::chrono::steady_clock;
 
-// Deliberately mock-only: no ROS, sockets to Q1, or motor commands are issued.
+// Simulation only: no ROS/robot links and no hardware commands are issued.
 int main(int argc, char** argv) {
   int port = 8080;
   std::string web_root;
@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
       } catch (...) { return 2; }
     } else if (arg == "--web-root" && i + 1 < argc) web_root = argv[++i];
       else if (arg == "--sim-url" && i + 1 < argc) sim_url = argv[++i];
-    else { std::cerr << "Usage: primebot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090]\n"; return 2; }
+    else { std::cerr << "Usage: aloria_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090]\n"; return 2; }
   }
   if (port < 1 || port > 65535) return 2;
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
       std::cerr << "Invalid frontend directory\n"; return 2;
     }
     server.Get("/", [](const httplib::Request&, httplib::Response& res) {
-      res.set_redirect("/ui/PrrimebotX.html");
+      res.set_redirect("/ui/Aloria.html");
     });
   }
   std::mutex mutex;
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   std::unordered_map<std::string, json> operations;
   struct Cached { std::string fingerprint; int status; std::string body; Clock::time_point at; };
   std::unordered_map<std::string, Cached> cache;
-  bool sim_session = false;
+  bool sim_session = false;   /* sim: MuJoCo 桥；mock: 纯内存模拟 */
   std::atomic<unsigned long long> sim_serial{0};
 
   /* 仿真桥是独立进程，这里只转发、不缓存、不重试：
@@ -173,12 +173,12 @@ int main(int argc, char** argv) {
       catch(...) { fail(400,"INVALID_JSON","请求体必须为JSON对象"); return; }
     }
     /* executed=true 只用于仿真：桥真的改了 qpos。mock 分支保持原文案，
-       现有测试断言 state=simulated / robot_executed=false 不受影响。 */
+       现有测试断言 state=simulated / sim_executed=false 不受影响。 */
     auto operation = [&](const std::string& kind, const json& parameters,
                          const std::string& mode = "mock", bool executed = false) {
       auto id="op-"+std::to_string(serial);
       const std::string state = executed ? "applied" : "simulated";
-      json op{{"operation_id",id},{"kind",kind},{"state",state},{"mode",mode},{"parameters",parameters},{"robot_executed",executed}};
+      json op{{"operation_id",id},{"kind",kind},{"state",state},{"mode",mode},{"parameters",parameters},{"sim_executed",executed}};
       if(operations.size()>=1000) operations.clear();
       operations[id]=op;
       logs.push_back(json{{"id",serial},{"operation_id",id},{"kind",kind},{"mode",mode},{"state",state}});
@@ -188,35 +188,28 @@ int main(int argc, char** argv) {
     const auto& path=req.path;
     try {
       if(req.method=="GET" && path=="/api/v1/health")
-        response(res,200,request_id,{{"service","primebot_backend"},{"version","0.1.0"},{"mode",sim_enabled?"sim":"mock"},{"ros2_implemented",false},{"sim_enabled",sim_enabled}});
-      else if(req.method=="GET" && path=="/api/v1/robots") {
-        json list=json::array({{{"robot_id","q1-mock"},{"name","Q1 模拟设备"},{"mode","mock"}}});
-        if(sim_enabled) list.push_back({{"robot_id","q1-sim"},{"name","Q1 仿真设备 · MuJoCo"},{"mode","sim"}});
-        response(res,200,request_id,list);
-      } else if(req.method=="POST" && path=="/api/v1/connections") {
+        response(res,200,request_id,{{"service","aloria_backend"},{"version","0.1.0"},{"mode",sim_enabled?"sim":"mock"},{"sim_enabled",sim_enabled}});
+      else if(req.method=="POST" && path=="/api/v1/connections") {
         const auto mode=input.value("mode",std::string());
-        const auto robot=input.value("robot_id",std::string());
         if(mode=="sim") {
           std::string out; int status=0;
           if(!sim_enabled) fail(422,"SIM_NOT_CONFIGURED","未启用仿真：启动后端时加 --sim-url");
-          else if(robot!="q1-sim") fail(404,"ROBOT_NOT_FOUND","仿真设备档案固定为 q1-sim");
           else if(!sim_call("GET","/health","",status,out)) fail(502,"SIM_UNAVAILABLE","仿真桥未响应，请先启动 mujoco_bridge.py");
           else { connected=true; sim_session=true; operation("connect",input,"sim",true); }
-        } else if(mode!="mock") fail(422,"ROS2_NOT_IMPLEMENTED","当前版本仅模拟与仿真模式，不会连接真机");
-        else if(robot!="q1-mock") fail(404,"ROBOT_NOT_FOUND","未知设备档案");
-        else { connected=true; sim_session=false; operation("connect",input); }
+        } else if(mode=="mock") { connected=true; sim_session=false; operation("connect",input); }
+        else fail(422,"INVALID_MODE","mode 只能是 sim 或 mock");
       } else if(req.method=="DELETE" && path=="/api/v1/connection") {
         connected=false; sim_session=false;
         if(sim_enabled) { std::string out; int status=0; sim_call("POST","/cmd/stop","{}",status,out); }
         operation("disconnect",json::object());
       } else if(req.method=="GET" && path=="/api/v1/connection")
-        response(res,200,request_id,{{"state",connected?"ready":"disconnected"},{"mode",sim_session?"sim":"mock"},{"robot_executed",sim_session}});
+        response(res,200,request_id,{{"state",connected?"ready":"disconnected"},{"mode",sim_session?"sim":"mock"},{"sim_executed",sim_session}});
       else if(req.method=="GET" && path=="/api/v1/status") {
         json battery=connected?json{{"percent",56},{"source",sim_session?"sim":"mock"},{"stale",false}}:json(nullptr);
         response(res,200,request_id,{{"connection_state",connected?"ready":"disconnected"},{"mode",sim_session?"sim":"mock"},{"battery",battery},{"signal_rssi_dbm",nullptr},{"motion_available",sim_session},{"control_session",sim_session?"exclusive":"none"}});
       } else if(req.method=="GET" && path=="/api/v1/capabilities") {
         json list=json::array();
-        for(const auto& [id,n]:actions) list.push_back({{"id",id},{"sdk_constant",n},{"category","action"},{"mode",sim_session?"sim":"mock"},{"verified_on_robot",false},{"enabled",connected}});
+        for(const auto& [id,n]:actions) list.push_back({{"id",id},{"sdk_constant",n},{"category","action"},{"mode",sim_session?"sim":"mock"},{"enabled",connected}});
         response(res,200,request_id,{{"actions",list},{"emotions",json::array()},{"motion",sim_session},{"camera",sim_session},{"chat",false},{"gestures",sim_session?json::array({"wave","heart","cheer"}):json::array()}});
       } else if(req.method=="GET" && path=="/api/v1/logs") {
         unsigned long long after=0;
@@ -245,7 +238,7 @@ int main(int argc, char** argv) {
                  path=="/api/v1/sim/reset" || path=="/api/v1/sim/mode" ||
                  path=="/api/v1/sim/preset" || path=="/api/v1/sim/gait" ||
                  path=="/api/v1/sim/camera" || path=="/api/v1/sim/speed")) {
-        if(!connected) fail(503,"ROBOT_NOT_READY","请先建立仿真连接");
+        if(!connected) fail(503,"NOT_CONNECTED","请先建立仿真连接");
         else {
           const auto clampv=[](double v){ return v<-0.5?-0.5:(v>0.5?0.5:v); };
           const auto clampw=[](double v){ return v<-1.0?-1.0:(v>1.0?1.0:v); };
@@ -305,7 +298,7 @@ int main(int argc, char** argv) {
       else if(path.rfind("/api/v1/motion",0)==0 || path.rfind("/api/v1/control",0)==0 || path.rfind("/api/v1/cameras",0)==0 || path.rfind("/api/v1/chat",0)==0 || path=="/api/v1/emotions")
         fail(422,"NOT_IMPLEMENTED","此能力尚未实现，不会向机器人下发指令");
       else if((path=="/api/v1/tts" && req.method=="POST") || (path=="/api/v1/actions" && req.method=="POST") || (path=="/api/v1/audio" && (req.method=="GET" || req.method=="PUT"))) {
-        if(!connected) fail(503,"ROBOT_NOT_READY","请先建立模拟连接");
+        if(!connected) fail(503,"NOT_CONNECTED","请先建立模拟连接");
         else if(path=="/api/v1/tts") {
           auto text=input.at("text").get<std::string>();
           size_t count=0; bool visible=false;
@@ -347,6 +340,6 @@ int main(int argc, char** argv) {
   server.Put(R"(/api/v1/.*)",handle);
   server.Delete(R"(/api/v1/.*)",handle);
   if (sim_enabled) std::cout << "SIM MODE: http://127.0.0.1:" << port << " -> mujoco bridge " << sim_host << ":" << sim_port << std::endl;
-  else std::cout << "MOCK ONLY: http://127.0.0.1:" << port << " (no robot connection)" << std::endl;
+  else std::cout << "MOCK ONLY: http://127.0.0.1:" << port << " (in-memory simulation)" << std::endl;
   return server.listen("127.0.0.1",port)?0:1;
 }
