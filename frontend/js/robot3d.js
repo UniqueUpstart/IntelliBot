@@ -22,8 +22,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createScreen, onMood, moodId, setMood } from './faces.js?v=3';
-import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=6';
+import { createScreen, onMood, moodId, setMood } from './faces.js?v=4';
+import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=7';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */

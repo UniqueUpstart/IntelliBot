@@ -19,18 +19,17 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=3"></script>
-  <link rel="stylesheet" href="css/base.css?v=2">
+<script src="js/i18n.js?v=4"></script>
+  <link rel="stylesheet" href="css/base.css?v=4">
   <link rel="stylesheet" href="css/topbar.css?v=3">
-  <link rel="stylesheet" href="css/rail.css?v=10">
-  <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/rail.css?v=12">
   <link rel="stylesheet" href="css/cards.css?v=16">
-  <link rel="stylesheet" href="css/modal.css?v=19">
-  <link rel="stylesheet" href="css/chat.css?v=17">
+  <link rel="stylesheet" href="css/modal.css?v=22">
+  <link rel="stylesheet" href="css/chat.css?v=24">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=6">
+<link rel="stylesheet" href="css/viewtool.css?v=7">
 </head>
 <body>
 
@@ -45,18 +44,6 @@
   </a>
 
   <nav class="nav" aria-label="主导航">
-    <div class="group" role="group" aria-label="Camera">
-      <button class="pill is-active" type="button" aria-pressed="true"><span class="pill__label" data-i18n="nav.camera">Camera</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="pill" type="button" aria-pressed="false"><span class="pill__label" data-i18n="nav.modal">Modal</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-    </div>
-
-    <div class="group" role="group" aria-label="View adjustment">
-      <button class="pill view-adjust-trigger" type="button" aria-pressed="false" aria-expanded="false" aria-controls="robot-view-panel">
-        <span class="pill__label" data-i18n="nav.view">视角调整</span>
-        <svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16Zm13 5a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/></svg>
-      </button>
-    </div>
-
     <div class="group" role="group" aria-label="Control">
       <button class="pill" type="button" aria-pressed="false" data-modal="Preference"><span class="pill__label" data-i18n="nav.preference">Preference</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
       <button class="pill" type="button" aria-pressed="false" data-modal="Advance"><span class="pill__label" data-i18n="nav.advance">Advance</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
@@ -231,55 +218,46 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<!-- ===================== 右侧：Tools ===================== -->
+<!-- ===================== 右侧：Gestures / Emotions =====================
+     原来这里是 Chat / Log 两个占位页，现在两页都由动作卡填满：
+     手势页铺 8 张、表情页铺 16 张，一行四张（卡片由 js/rails.js 注入，
+     动作名来自 js/homepage_motions.js、表情屏来自 js/faces.js） -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
-      <button class="item" type="button" data-panel="Chat" aria-expanded="false" aria-controls="panel-tools">
+      <button class="item" type="button" data-panel="Gestures" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12.1 3.6c-.9 0-1.6.7-1.6 1.6v10.2l-1.8-2.4c-.5-.7-1.5-.9-2.2-.4-.7.5-.8 1.4-.4 2.1l4.6 6.9c1.1 1.7 3 2.7 5 2.7h3.4c2.9 0 5.2-2.3 5.2-5.2v-6.7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v2.9h-.6V8.5c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v6.4h-.6V7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v8h-.6V5.2c0-.9-.7-1.6-1.6-1.6Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.right.chat">Chat</span>
+        <span class="item__label" data-i18n="dock.gestures">Gestures</span>
       </button>
 
-      <button class="item" type="button" data-panel="Log" aria-expanded="false" aria-controls="panel-tools">
+      <button class="item" type="button" data-panel="Emotions" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M16 3.2a12.8 12.8 0 1 0 0 25.6 12.8 12.8 0 0 0 0-25.6Zm0 2.6a10.2 10.2 0 1 1 0 20.4 10.2 10.2 0 0 1 0-20.4Z"/><circle cx="12.2" cy="14.2" r="1.8"/><circle cx="19.8" cy="14.2" r="1.8"/><path d="M10.6 19.4c1.4 1.9 3.3 2.9 5.4 2.9s4-1 5.4-2.9c.4-.5.2-1.2-.4-1.3-.3-.1-.6 0-.8.2-1.1 1.4-2.5 2.1-4.2 2.1s-3.1-.7-4.2-2.1c-.2-.2-.5-.3-.8-.2-.6.1-.8.8-.4 1.3Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.right.log">Log</span>
+        <span class="item__label" data-i18n="dock.emotions">Emotions</span>
       </button>
     </div>
   </div>
 
   <section class="rail__panel" id="panel-tools" aria-live="polite">
+    <!-- 上下两条雾化遮罩：整套参数继承 .rail__panel 的 --frost-*，
+         与左栏顶部那条同源（16 平台 + 32 渐隐）。标题挂在卡片之上，
+         卡片从遮罩下面滚过去时被糊开、标题始终清楚 -->
     <span class="frost frost--top" aria-hidden="true"></span>
-    <!-- 聊天页底部的渐变：复用同一套 frost--bottom（色阶与曲线同左栏那条，方向朝上），
-         挂 chat__frost 借它的参数与显隐（Log 页连它一起收掉）；消息从输入条下面
-         滚过时在面板底沿化开。z 序在输入条（z2）之下 —— 输入条自身带底色，不被糊 -->
-    <span class="frost frost--bottom chat__frost" aria-hidden="true"></span>
-    <!-- 聊天页顶部的渐变：整套参数继承 .rail__panel 的 --frost-*，
-         与左边栏顶部那条完全同一枚（16 平台 + 32 渐隐）。挂在不滚动的 .rail__panel 上，
-         消息从它下面滚过时被糊开；不放在 .panel__body 里是因为它的
-         backdrop-filter 在那里采不到滚动内容 -->
-    <span class="frost frost--top chat__frost" aria-hidden="true"></span>
-    <div class="panel__body" data-panel-body>
-      <!-- Chat 页：历史钮悬在左上角，消息区滚动，输入条贴底。
-           消息由尾部脚本按发送内容生成，这里只留空壳 -->
-      <div class="chat" data-chat data-chat-only>
-        <button class="chat__btn chat__btn--history" type="button" aria-label="History">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="6" width="16" height="2.6" rx="1.3"/>
-            <rect x="4" y="10.7" width="16" height="2.6" rx="1.3"/>
-            <rect x="4" y="15.4" width="16" height="2.6" rx="1.3"/>
-          </svg>
-        </button>
-        <div class="chat__log" data-chat-log></div>
-
-        <div class="chat__composer">
-          <input class="chat__input" data-chat-input type="text"
-                 data-i18n-placeholder="rail.right.message" placeholder="Message" aria-label="Message" autocomplete="off">
-        </div>
+    <span class="frost frost--bottom" aria-hidden="true"></span>
+    <div class="panel__body" data-panel-body data-view="gestures">
+      <!-- 两页共用这一块滚动区，按 data-view 显隐：点图标时 rails.js 写
+           data-view="gestures" / "emotions"，CSS 只留对应的那一页 -->
+      <div class="rail__view" data-rail-view="gestures">
+        <div class="rail__title" data-i18n="dock.gestures">Gestures</div>
+        <div class="rail__grid" data-rail-grid="gestures"></div>
+      </div>
+      <div class="rail__view" data-rail-view="emotions">
+        <div class="rail__title" data-i18n="dock.emotions">Emotions</div>
+        <div class="rail__grid" data-rail-grid="emotions"></div>
       </div>
     </div>
   </section>
@@ -291,123 +269,7 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<!-- ===================== 底部：控制面板 =====================
-     半页宽、高度由内容撑开的面板，默认只露高度的 1/8；上方 8px 那枚箭头管升 / 降，
-     它与面板同处一个 .dock 里，跟着整块一起上下走。
-     面板里三块并列：左列 Gestures、正中九宫格、右列 Emotions。
-     九宫格是八向箭头围着一枚播放键，圆钮与左右栏同尺寸（48），间距一律 8；
-     两列各铺若干张圆角矩形空卡（一行四张、上下可滚），卡片由尾部脚本注入 -->
-<section class="dock is-open" aria-label="Playback controls">
-  <button class="dock__toggle" type="button" aria-label="Collapse panel" aria-expanded="true">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
-  </button>
-
-  <div class="dock__surface">
-    <div class="dock__body">
-      <!-- 左右两列动作卡片：左 Gestures、右 Emotions。
-           九宫格留在正中，两列各占剩余宽度的一半，谁也不压谁；
-           卡片由尾部脚本按 12 张（三行 × 四列）铺成空白占位 -->
-      <div class="dock__col">
-        <span class="frost frost--top" aria-hidden="true"></span>
-        <div class="dock__scroll">
-          <div class="dock__title" data-i18n="dock.gestures">Gestures</div>
-          <div class="dock__grid" data-dock-grid="gestures"></div>
-        </div>
-      </div>
-    <div class="dock__pad">
-      <button class="dock__btn" type="button" data-dir="up-left" aria-label="Up left">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="dock__btn" type="button" data-dir="up" aria-label="Up">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="dock__btn" type="button" data-dir="up-right" aria-label="Up right">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-
-      <button class="dock__btn" type="button" data-dir="left" aria-label="Left">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="dock__btn dock__btn--play" type="button" aria-label="Play" aria-pressed="false">
-        <svg class="dock__ico dock__ico--play" viewBox="0 0 32 32" aria-hidden="true"><path d="M12.2,8.6c-.9-.55-2.1.09-2.1,1.15v12.5c0,1.06,1.2,1.7,2.1,1.15l10.7-6.25c.88-.52.88-1.79,0-2.31L12.2,8.6Z"/></svg>
-        <svg class="dock__ico dock__ico--pause" viewBox="0 0 32 32" aria-hidden="true"><rect x="10.4" y="8.6" width="3.7" height="14.8" rx="1.85"/><rect x="17.9" y="8.6" width="3.7" height="14.8" rx="1.85"/></svg>
-      </button>
-      <button class="dock__btn" type="button" data-dir="right" aria-label="Right">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-
-      <button class="dock__btn" type="button" data-dir="down-left" aria-label="Down left">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="dock__btn" type="button" data-dir="down" aria-label="Down">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-      <button class="dock__btn" type="button" data-dir="down-right" aria-label="Down right">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-      </button>
-    </div>
-      <div class="dock__col">
-        <span class="frost frost--top" aria-hidden="true"></span>
-        <div class="dock__scroll">
-          <div class="dock__title dock__title--end" data-i18n="dock.emotions">Emotions</div>
-          <div class="dock__grid" data-dock-grid="emotions"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 左下角参数 HUD：电量 / 信号一行，设备名 / 可用情况一行。
-     电量画成参考图那枚的三段结构：浅调空槽 + 按比例的液位 + 槽内数字（svg text，接数据源时改 text、液位宽与类名）；
-     信号直接画五格竖条，亮几格就是几格（现在是 3/5，后两格压到 .28 透明度）。
-     两枚图标等高 20。设备名与可用情况的数值当前写死，状态换 hud__state--* 类 -->
-<div class="hud" aria-label="Device status">
-  <div class="hud__row">
-    <span class="hud__metric">
-      <!-- 参考微信那枚电池图标的三段结构：
-           空槽 = 电量色的浅调（hud__batt-empty，40% 透明压在页面底上），
-           液位 = 电量色从左按电量比例填（56% → 壳宽 30 填 17，clip 用壳体同一圆角矩形裁形，
-           液位直接贴住电池边框、不留内衬空隙），
-           数字 = 不描边、真镂空：文字画在 mask 里填黑，整组形状过 mask 后
-           数字处被抠掉，透出页面背景；56 > 20 挂 ok 档，跌到 20% 及以下换 hud__batt--low -->
-      <svg class="hud__ico hud__batt--ok" viewBox="0 0 38 20" width="38" height="20" aria-hidden="true">
-        <defs>
-          <clipPath id="hud-batt-clip"><rect x="1" y="1.5" width="30" height="17" rx="4"/></clipPath>
-          <mask id="hud-batt-hole">
-            <rect width="38" height="20" fill="#fff"/>
-            <text class="hud__batt-num" x="16" y="14.9" text-anchor="middle" fill="#000">56</text>
-          </mask>
-        </defs>
-        <g mask="url(#hud-batt-hole)">
-          <rect x="1" y="1.5" width="30" height="17" rx="4" class="hud__batt-empty"/>
-          <rect data-hud-batt-level x="1" y="1.5" width="17" height="17" fill="currentColor" clip-path="url(#hud-batt-clip)"/>
-          <rect x="32.5" y="6.5" width="3.5" height="7" rx="1.75" class="hud__batt-empty"/>
-        </g>
-      </svg>
-    </span>
-    <span class="hud__metric">
-      <!-- 五格竖条贴底对齐，格高 8/12/16/20/24；前 3 格全亮表示 3/5，
-           3 > 2 挂 ok 档（hint）；跌到 2 格及以下换 hud__sig--low（warning）。
-           与电池同高：viewBox 30×24 按 20 高出图，宽 25 -->
-      <svg class="hud__ico hud__sig--ok" viewBox="0 0 30 24" width="25" height="20" aria-hidden="true">
-        <rect x="0" y="16" width="4" height="8" rx="2" fill="currentColor"/>
-        <rect x="6.25" y="12" width="4" height="12" rx="2" fill="currentColor"/>
-        <rect x="12.5" y="8" width="4" height="16" rx="2" fill="currentColor"/>
-        <rect x="18.75" y="4" width="4" height="20" rx="2" fill="currentColor" opacity=".28"/>
-        <rect x="25" y="0" width="4" height="24" rx="2" fill="currentColor" opacity=".28"/>
-      </svg>
-    </span>
-  </div>
-  <div class="hud__row">
-    <!-- 仿真系统没有可切换的机型，设备名固定为项目名；状态由 js/sim.js 写入 -->
-    <span class="hud__item hud__name"><span class="hud__name-track" data-hud-device>IntelliBot</span></span>
-    <span class="hud__item hud__state--ready" data-i18n="hud.ready">Ready</span>
-  </div>
-</div>
-
-<script src="js/hud.js"></script>
-
-<script src="js/rails.js?v=10"></script>
+<script src="js/rails.js?v=11"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
 <script src="js/avatar.js?v=3"></script>
@@ -416,11 +278,11 @@
 <script src="lib/gsap.min.js"></script>
 <!-- 滚动驱动：ScrollTrigger 与 GSAP 同版本，组标题的交接淡出挂在这上面 -->
 <script src="lib/ScrollTrigger.min.js"></script>
-<script src="js/press.js?v=6"></script>
+<script src="js/press.js?v=7"></script>
 
 <script src="js/panels.js"></script>
 
-<script src="js/magnet.js?v=3"></script>
+<script src="js/magnet.js?v=4"></script>
 
 <script src="js/sticky.js?v=1"></script>
 
@@ -586,13 +448,13 @@
 
     <!-- Contact：整块只留一个仓库入口，所以直接摊在滚动区里居中 ——
          没有小标题、没有铺垫的一句说明，链接本身就是全部内容。
-         链接做成胶囊，颜色跟主题走，新标签页打开，rel 里带 noopener 避免反向拿窗口 -->
+         链接就是一行 24 号主题色文字（无胶囊、无底色、无描边、无箭头），
+         新标签页打开，rel 里带 noopener 避免反向拿窗口 -->
     <div class="doc" data-contact-only hidden>
       <div class="doc__body doc__body--mid">
         <a class="doc__link" href="https://github.com/UniqueUpstart/IntelliBot"
            target="_blank" rel="noopener noreferrer">
           <span class="doc__link-lab">github.com/UniqueUpstart/IntelliBot</span>
-          <svg class="doc__link-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
         </a>
       </div>
     </div>
@@ -669,14 +531,24 @@
   </div>
 </div>
 
-<script src="js/modal.js?v=17"></script>
+<!-- ===================== 底部 AI 输入胶囊 =====================
+     悬浮在视口底边正中：距底 64，默认一行 48 高、宽占页面 1/4。
+     宽度和高度由 js/composer.js 按内容逐键改写：一行装不下先横向长到
+     半页宽，再装不下纵向长到四行，超过四行转成滚动。
+     底片与聚焦描边沿用左栏编辑表单的输入框，见 css/chat.css 末尾 -->
+<div class="composer">
+  <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
+            data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
+            placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
+</div>
 
-<script src="js/chat.js"></script>
+<script src="js/modal.js?v=17"></script>
+<script src="js/composer.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js"></script>
 <!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
-<script src="js/sim.js?v=22"></script>
+<script src="js/sim.js?v=23"></script>
 
 <!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
      three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；
@@ -689,8 +561,8 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=20"></script>
-<script type="module" src="js/view-control.js?v=14"></script>
+<script type="module" src="js/robot3d.js?v=21"></script>
+<script type="module" src="js/view-control.js?v=16"></script>
 
 </body>
 </html>

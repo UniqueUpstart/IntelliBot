@@ -129,7 +129,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 }
 
 export function mountHomeMotionControls(play) {
-  const grid = document.querySelector('[data-dock-grid="gestures"]');
+  const grid = document.querySelector('[data-rail-grid="gestures"]');
   if (!grid) return () => {};
   const cards = Array.from(grid.children);
 

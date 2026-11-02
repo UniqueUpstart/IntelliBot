@@ -629,13 +629,8 @@
       .catch(function (e) { say('速度设置失败：' + e.message); });
   });
 
-  /* ---------- 底盘（页面上九宫格方向键 + 面板里左右转 + 键盘） ---------- */
+  /* ---------- 底盘（面板里左右转 + 键盘；页面九宫格方向键已删除） ---------- */
 
-  var DIRS = {
-    'up': [0.3, 0, 0], 'down': [-0.3, 0, 0], 'left': [0, 0.3, 0], 'right': [0, -0.3, 0],
-    'up-left': [0.3, 0.3, 0], 'up-right': [0.3, -0.3, 0],
-    'down-left': [-0.3, 0.3, 0], 'down-right': [-0.3, -0.3, 0]
-  };
   var holdTimer = null, holdSource = null;
 
   /* 按住期间每 100ms 续一次；桥那边 0.5s 收不到指令就自动清零，
@@ -672,16 +667,6 @@
     if (!wasHolding) return;
     api('/motion/base', 'POST', { vx: 0, vy: 0, wz: 0 }).catch(function () {});
   }
-
-  document.querySelectorAll('.dock__btn[data-dir]').forEach(function (button) {
-    var vec = DIRS[button.dataset.dir];
-    button.addEventListener('pointerdown', function () { startHold(vec, button); });
-    /* 包一层再传 button：直接挂 stopHold 会把事件对象当进 force 参数，
-       每次 pointerleave 都发急停 */
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (event) {
-      button.addEventListener(event, function () { stopHold(false, button); });
-    });
-  });
 
   rail.querySelectorAll('[data-sim-turn]').forEach(function (button) {
     var wz = parseFloat(button.dataset.simTurn);

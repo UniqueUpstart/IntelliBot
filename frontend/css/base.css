@@ -20,6 +20,10 @@
   --panel:            rgba(250,250,250,.75);   /* panel_fill_light，半透明才能透出背景模糊 */
   --border:           #ffffff;   /* border_light */
   --card:             rgba(255,255,255,.5);   /* 指令卡片底：比面板再亮一点，靠白描边分开 */
+  /* 同色的不透明版本：把 --card 按 50% 压到 --bg 上算出来的合成色。
+     需要「不能透出机器人 / 背景点阵」的表面用它 —— 底部那枚对话胶囊就是，
+     半透明底会让模型从输入框里穿过去 */
+  --card-solid:       #f8f8f8;
   --blur:             16px;      /* 面板与按钮的背景高斯模糊半径 */
 
   --text-primary:     #1c1c1c;
@@ -70,19 +74,7 @@
      收起态宽 80、缩到 0.95，右沿落在 0：edge + 0.95 × rail-w；再扣掉
      translate 里那半宽补偿 (1 - s) × 50% × w，即 0.025w，合计 0.975w */
   --rail-hide: calc(var(--edge) + var(--rail-w) * 0.975);
-  /* 底部控制面板：面板本身不再有定宽定高，尺寸完全交给内部撑开。
-     下面这几个数只描述「里面的东西有多大」—— 卡片尺寸、九宫格按钮、
-     间隔与内边距；面板的宽高由它们相加后自动得出，改任何一个，
-     面板自己会跟着长，不用再反推总宽总高 */
-  --dock-gap: 8px;
-  --dock-pad: 8px;
-  --dock-btn: var(--btn);
-  /* 左右两列动作卡片：正方形 64×64，列间与行间都是 8，和九宫格同一档节奏。
-     一列就是 4 × 64 + 3 × 8 = 280，两列加中间九宫格与间隔就是面板宽度 */
-  --card-w: 64px;
-  --card-h: 64px;
-  --card-gap: 8px;
-  --dock-col-w: calc(var(--card-w) * 4 + var(--card-gap) * 3);
+  /* 侧栏圆钮：图标列与栏内按钮共用同一枚尺寸 */
   --btn: 48px;
   --ease: cubic-bezier(.22,.61,.36,1);
   --dur: .34s;
@@ -117,7 +109,6 @@
 .group,
 .rail__surface,
 .user__surface,
-.dock__surface,
 .sc{
   --sh: 16px;
   --sh-a: .1;
@@ -132,6 +123,8 @@
   --panel: rgba(73,73,73,.80);
   --border:#545454;
   --card:  rgba(255,255,255,.06);
+  /* 深色底上的同一枚合成色：6% 白压到 #2d2d2d 上约等于 #3a3a3a */
+  --card-solid: #3a3a3a;
   --text-primary:   #fafafa;
   --text-secondary: #e6e6e6;
   --text-reduced:   #cdcdcd;

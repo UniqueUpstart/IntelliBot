@@ -100,167 +100,46 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 
 /* ============================================================
-   Dock —— 底部控制面板
-   宽高都不写死：面板是 fixed + 宽度 auto，由两列 64 的正方形卡与
-   中间九宫格撑出自身尺寸，所以改按钮、改卡片、改间隔，面板自动跟上。
-   页面打开时就是展开态（HTML 上带 is-open），点上方那枚箭头收起来，
-   只把高度的 1/8 露在底边外。
-   位移与缩放和左右栏共用同一对通道（--hide-s / --hide-d），
-   脚本补的也是同一组弹性参数
+   右栏动作卡 —— Gestures / Emotions
+   栏体展开后，内容区 = 601（--rail-expanded）− 80（图标列）− 1（分割线）
+   − 32（左右内边距）≈ 488；一行四张方格、间隔 8：
+   (488 − 24) / 4 ≈ 116。边长交给 1fr，窄屏（78vw）时四张一起缩，
+   始终四列不折行
    ============================================================ */
-.dock{
-  position:fixed;
-  left:50%; bottom:var(--edge);
-  width:auto; height:auto;
-  z-index:18;
-  /* 原点取底边中点：缩小时底边钉住不动、只有上沿往下走，
-     translate 写百分比的部分是自宽的 -50%，负责横向居中；
-     纵向那段由 --hide-d 补间。
-     展开后底边离视口底 --edge，和左右栏的左右边距是同一个值 */
-  /* 下面这两条是收起态的值：页面默认带 is-open，那条规则会把它们
-     覆盖成展开态，所以首屏看到的是整块升起的面板；
-     这里留着是为了无脚本时点箭头切类也有正确的几何 */
-  --hide-s:.95;
-  /* 收起位移 = 缩放压低的 (.95h) 再减去要留在屏内的 h/8，
-     还要加上底边本身让出的 --edge —— 面板不再贴死视口底，
-     整个坐标起点抬高了这一段，不多让就多露一截。
-     高度是 auto，写不出 px，所以用百分比：translate 的纵向百分比
-     正好对着元素自身高度，.825h + edge 与脚本按 offsetHeight 算的
-     那个像素值等价，内容一变两边一起变 */
-  --hide-d:calc(82.5% + var(--edge));
-  /* 开合形变与栏体同一套：--sx/--sy 由 pop() 补到 1.02 再弹回 1，
-     乘在整体缩量上，两轴同值就是等比胀开 */
-  --sx:1;
-  --sy:1;
-  translate:-50% var(--hide-d);
-  scale:calc(var(--sx) * var(--hide-s)) calc(var(--sy) * var(--hide-s));
-  transform-origin:50% 100%;
-  /* 位移与缩放都交给 GSAP 逐帧写，这里不再挂过渡 */
-  transition:none;
-}
-/* 展开：缩量回到 1、位移归零，底边落回 --edge。
-   收起态那组数不是随手取的比例：缩放把上沿压低了 (1 − .95) × 高，
-   位移取 .95h − h/8 = .825h 正好把这压低的一段补回去，
-   再加上底边让出的 --edge，留在视口里的仍恰好是原高的 1/8。
-   高度是 auto，所以上面那条兜底写成高度的百分比；脚本接管后
-   按 offsetHeight 换成像素，两边的换算完全一致 */
-.dock.is-open{ --hide-s:1; --hide-d:0px }
+/* 两页共用一块滚动区，只显示 data-view 对应的那一页；
+   没点过图标就展开（无脚本兜底）时先给手势页 */
+.rail__view{display:none}
+[data-panel-body][data-view="gestures"] [data-rail-view="gestures"],
+[data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
+[data-panel-body]:not([data-view]) [data-rail-view="gestures"]{display:block}
 
-/* 面板表面：承载底色、圆角与投影，和栏体同一层意思。
-   层级压在栏体（20）之下 —— 它只在底部中间，不该盖过两侧展开的栏。
-   自身不设尺寸，宽高都从 .dock__body 透上来：max-content 让宽度
-   严格按内部三段相加，不被视口或父级拉伸 */
-.dock__surface{
-  position:relative;
-  width:max-content; height:auto;
-  display:flex;
-  background:var(--panel);
-  border-radius:var(--rail-r);
-  overflow:hidden;
-  overflow:clip;
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-}
-
-/* 面板内容：左 Gestures、中九宫格、右 Emotions。
-   两列各按 --dock-col-w 定宽（四张 64 的卡 + 三道 8），九宫格按自身 160
-   定宽不参与伸缩；面板宽度就是这三段加上间隔与内边距的和，所以两列不需要
-   再靠 1fr 去分剩下的宽度 —— 分了反而会把 280 缩成 276.99 之类的小数，
-   末一张卡的圆角被裁掉一丝。
-   这里同样不写宽高：横向由三段加间隔撑出，纵向由九宫格撑出 ——
-   align-items:stretch 让两列跟着最后一行的内容高等高。
-   纵向不留内边距：两列从面板上沿一直到下沿，滚动区正好贴住上下边界；
-   九宫格靠自身的上下外边距把那 8 让出来，视觉上仍离边 8 */
-.dock__body{
-  display:flex; align-items:stretch;
-  gap:var(--dock-gap);
-  padding:0 var(--dock-pad);
-  min-width:0;
-}
-/* 一列 = 顶部雾带 + 一条滚动区。雾带照左栏的做法挂在**不滚动**的那层
-   （.dock__col，position:relative）上，拖进滚动容器就会跟着内容一起滚走。
-   参数与左栏 .rail__panel 同一组：平台 16、渐隐 32、模糊 16、浓度 .9、
-   外扩 2（贴边放置时避免 backdrop 采样被边界切断） */
-.dock__col{
-  position:relative;   /* 雾带与滚动区的定位基准 */
-  --frost-h:32px;
-  --frost-head:16px;
-  --frost-blur:16px;
-  --frost-a:.9;
-  --frost-over:2px;
-  flex:0 0 var(--dock-col-w);
-  width:var(--dock-col-w); min-width:0;
-  /* 高度不写：靠 stretch 跟面板内高走，面板多高它就多高 */
-  display:flex; flex-direction:column;
-}
-/* 雾带要沿面板的顶边走，不能缩在列里：
-   列本身就比面板窄 8（.dock__body 的左右内边距），带子的方角落在离面板
-   边 8 的位置，而面板顶上是一段 24 的圆角 —— 弧线比带子高，带子上沿就
-   像矮了一截，看着没跟面板上端对齐。把贴面板外沿的那一侧撑出这段内边距，
-   带子一直铺到面板边上，圆角交给 .dock__surface 的 clip 裁，观感与左栏
-   那条贴住栏顶的雾带一致。内侧不动，中间九宫格那块不铺雾 */
-.dock__col:first-child .frost{left:calc(var(--dock-pad) * -1)}
-.dock__col:last-child .frost{right:calc(var(--dock-pad) * -1)}
-/* 滚动区贴住列的上下沿：绝对定位铺满整列，卡片再多也只在自己框里滚，
-   不反过来把列撑高 —— 面板高度因此仍然只由中间九宫格决定；
-   滚动条不显示，滚到头的回弹不外传 */
-.dock__scroll{
-  position:absolute; inset:0;
-  overflow-y:auto;
-  overflow-x:clip;
-  overscroll-behavior:contain;
-  scrollbar-width:none;
-}
-.dock__scroll::-webkit-scrollbar{width:0; height:0}
-/* 分栏标题：字面与左栏的 .sc-group__title 同一套（600、text-secondary），
-   竖直方向落在雾带的中线上 —— 雾带总高 = --frost-head 16 + --frost-h 32 = 48，
-   中线 24。字 16、行高 1 时字盒 16 高，盒顶取 16 时盒心正好在中线，
-   但行高 1 的着墨区（cap 顶到基线）中心比字盒中心低 1px —— 字体的上伸部
-   比下伸部长，行盒按上下伸居中、字身却贴着基线，所以盒顶取 15 才能让字形
-   落在 24 上。
-   标题区总高取 32 而不是 40：两行卡片 64 + 8 + 64 = 136，加上 32 正好是 168，
-   面板内高 176 减掉它剩下的 8 就是面板自己的内边距 —— 初始状态下第二行
-   卡片的底边因此离面板下沿也是 8，和左右两侧一样，四周留白成同一个数。
-   下距只剩 1px 不碍事：标题底下这段本来就被雾带的渐隐盖住。
-   卡片从下面滑过时被雾带化掉，标题压在最上层（z-index 4 > 雾带 3），
-   所以这里不自己铺底色 */
-.dock__title{
-  position:sticky; top:15px; z-index:4;
-  margin:15px 0 1px;
+/* 分栏标题：字面与左栏的 .sc-group__title 同一套（600、text-secondary）。
+   吸顶位置取 .panel__body 的上内边距（--pad-y），正好与静止位置重合，
+   滚起来标题不动、卡片从它下面过；z-index 压在雾带（3）之上，
+   所以被糊开的是卡片，标题始终清楚 */
+.rail__title{
+  position:sticky; top:var(--pad-y, 20px); z-index:4;
+  margin:0 0 12px;
   font-size:var(--fs-16); line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);
 }
-/* 右列标题靠右：标题盒与卡片同宽（列内无左右内边距），
-   所以右端正好落在第四张卡片的右沿 */
-.dock__title--end{text-align:right}
-/* 卡片网格：一行四张正方形（--card-w × --card-h，64×64），列间与行间都是
-   --card-gap（8），与九宫格同一档节奏。轨道宽度写死成 --card-w，不用 1fr 去摊 ——
-   摊出来的宽度会随面板宽度变，正方形就保不住了。
-   底上补一圈 --dock-pad：滚到最后一行时，它离面板下沿也留出和左右、
-   和初始状态一样的那 8；初始位置不受影响（第三行本来就落在视口外） */
-.dock__grid{
-  flex:0 0 auto;
+/* 卡片网格：一行四张，列宽用 1fr 摊满，卡片靠 aspect-ratio 保持方格 */
+.rail__grid{
   display:grid;
-  grid-template-columns:repeat(4, var(--card-w));
-  gap:var(--card-gap);
-  align-content:start;
-  padding-bottom:var(--dock-pad);
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:8px;
 }
-/* 动作卡片：正方形圆角卡，底与指令卡同一支 --card。
-   标题区 32 + 行一 64 + 间距 8 + 行二 64 = 168，面板内高 176 还余 8：
-   初始位置里第二行卡片的下沿离面板下沿正好是 --dock-pad，
-   与左右两侧同一圈留白；第三行连同它上面那道 8 的行距都落在视口外，
-   往上滑才看到。
+/* 动作卡片：方格、圆角 16，底与指令卡同一支 --card。
    hover 的填色覆盖层照 .sc 的做法只动 opacity（合成器上做），
-   3D 悬浮交给磁吸脚本（js/magnet.js 的 .dock__card 那一条） */
-.dock__card{
+   3D 悬浮交给磁吸脚本（js/magnet.js 的 .rail__card 那一条） */
+.rail__card{
   position:relative; isolation:isolate;
-  width:var(--card-w); height:var(--card-h); min-width:0;
+  aspect-ratio:1;
   border-radius:16px;
   background:var(--card);
   overflow:hidden;
 }
-.dock__card::before{
+.rail__card::before{
   content:''; position:absolute; inset:0; z-index:0;
   border-radius:inherit;
   background:var(--theme);
@@ -269,203 +148,45 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   transition:opacity .1s linear;
   pointer-events:none;
 }
-.dock__card:hover::before{opacity:1}
+.rail__card:hover::before{opacity:1}
+/* 已选态：底片常驻，hover 不再提亮（与 .pill 那套同一条规矩） */
+.rail__card.is-on{box-shadow:inset 0 0 0 1px var(--theme)}
+.rail__card.is-on::before,
+.rail__card.is-on:hover::before{opacity:.18}
 
-.dock__card.is-motion{
-  display:grid;
-  place-items:center;
-  padding:7px;
-  border:0;
+/* 手势卡：中文标签两三个字，居中。卡片比原来底栏那版（64）大了一档，
+   字号跟着提到 14，不然一张 116 的方格里只剩两粒小字 */
+.rail__card.is-motion{
+  display:grid; place-items:center;
+  padding:10px;
   color:var(--text-primary);
   cursor:pointer;
-  font:700 12px/1.2 "Arial Narrow", "Microsoft YaHei", sans-serif;
-  letter-spacing:.02em;
-  text-align:center;
+  font-size:var(--fs-14); line-height:1.25;
+  letter-spacing:.02em; text-align:center;
 }
-.dock__card.is-motion:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+.rail__card.is-motion:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
 .motion__label{position:relative; z-index:1; pointer-events:none}
-.dock__card.is-motion.is-on .motion__label{color:var(--text-primary)}
+.rail__card.is-motion.is-on .motion__label{color:var(--text-primary)}
 
-/* Emotions 那列的表情卡：卡里嵌一块小黑屏，屏上画的就是机器人面罩上那张
-   发光脸（同一份画法，见 js/faces.js）。
-   屏要抬到 z-index 1 —— 卡片的 hover 填色是 ::before（z-index 0）铺在整卡上的，
-   不抬的话鼠标一压上去，底色就把脸盖住了；
-   高度 56 配 4 的上下留白，正好把 64 的方形卡填成一块略竖的屏 */
-.dock__card.is-mood{cursor:pointer}
-.dock__card.is-mood:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+/* 表情卡：卡里嵌一块小黑屏，屏上画的就是机器人面罩上那张发光脸
+   （同一份画法，见 js/faces.js）。
+   屏宽取卡宽的 66%，高度交给 canvas 自身的 96×112 去定 ——
+   百分比宽度总能对上一个有确定宽度的格子，栏宽变化时屏与卡的比例也不变 */
+.rail__card.is-mood{display:grid; place-items:center; cursor:pointer}
+.rail__card.is-mood:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
 .mood__scr{
   position:relative; z-index:1;
   display:block;
-  width:48px; height:56px;
-  margin:4px auto;
+  width:66%; height:auto;
   border-radius:10px;
   background:#15171a;
 }
-/* 已选态：底片常驻，hover 不再提亮（与 .pill 那套同一条规矩） */
-.dock__card.is-on{box-shadow:inset 0 0 0 1px var(--theme)}
-.dock__card.is-on::before,
-.dock__card.is-on:hover::before{opacity:.18}
 
-/* 升降箭头：展开时贴面板上沿 4。它放在 .dock 里，跟着整块一起上下走，
-   不用像栏体那样另算一套位置；箭头本身只是 32 的透明钮。
-   层级要压在 .dock__surface 之上：面板 has 一圈 16–32 的投影，收起过程中
-   两者还会短暂重叠，不抬的话按钮会被面板连同投影一起盖掉 */
-.dock__toggle{
-  appearance:none; -webkit-appearance:none;
-  position:absolute;
-  left:50%; bottom:calc(100% + 4px);
-  translate:-50% 0;
-  z-index:1;
-  width:32px; height:32px;
-  display:grid; place-items:center;
-  padding:0; border:0; background:none;
-  color:var(--text-reduced);
-  cursor:pointer;
-  opacity:.5;
-  transition:opacity .1s linear, color .1s linear;
+/* 右栏面板：上内边距留给标题与雾带，标题就在这条内边距上吸住不动 */
+#panel-tools .panel__body{
+  --pad-y:20px;
+  padding-bottom:var(--panel-pad);
 }
-.dock__toggle:hover{opacity:1; color:var(--theme)}
-/* 收起后 4 这个间距仍要对准面板上沿，而那个上沿就是露在屏内的 1/8 那条带子的顶：
-   位移按 s·h − h/8 走、缩放又把上沿压低 (1 − s)·h，两边正好抵掉，带子顶落在
-   原高上方 h/8 处，与面板自己的上沿重合。所以 bottom 照旧取 100%（贴面板上沿），
-   只需把 4 除以缩放量补回被 scale 吞掉的那一成：100% + 4px/.95，落屏后仍是 4。
-   这里不再另算一套 82.5% 的位移 —— 那是「4 离视口底」的算法，
-   落点会掉进带子里，正是让按钮看着被面板吃掉的写法 */
-.dock:not(.is-open) .dock__toggle{
-  bottom:calc(100% + 4px / .95);
-}
-.dock__toggle svg{
-  width:20px; height:20px; display:block;
-  fill:currentColor;
-  /* 收起时箭头朝上（可以往上拉），展开后翻成朝下（收回去） */
-  transform:rotate(-90deg);
-  transition:transform var(--dur) var(--ease);
-}
-.dock.is-open .dock__toggle svg{transform:rotate(90deg)}
-/* 同一处光学补偿：箭头墨迹重心比包围盒中心靠后，向指向挪 1.5 个单位 */
-.dock__toggle svg path{transform:translate(1.5px, 0)}
-
-/* 九宫格：八向箭头围着一枚主按钮。
-   按钮与左右栏图标钮同尺寸（--btn），行内与行间一律 8。
-   它是面板高度的来源：3 × 48 + 2 × 8 = 160，加上上下各 8 的外边距
-   就是 176，两列跟着 stretch 到同一高度；左右不用外边距，横向由
-   .dock__body 的内边距给出那 8。按钮尺寸一变，面板高度自动跟着变 */
-.dock__pad{
-  display:grid;
-  grid-template-columns:repeat(3, var(--dock-btn));
-  grid-template-rows:repeat(3, var(--dock-btn));
-  gap:var(--dock-gap);
-  place-content:center;
-  flex:0 0 auto;          /* 定宽 160（3 × 48 + 2 × 8），不被两列分走 */
-  align-self:center;      /* 纵向按内容居中，不再靠容器的 height 撑 */
-  margin-block:var(--dock-pad);
-}
-/* 收起态整块不出现：只留面板上沿那一条。脚本接管时用同一件事的补间版
-   （pop 的内容通道把 opacity 从 0 补到 1），这里只是没有脚本时的样子。
-   作用在 .dock__body 上，九宫格、两列卡片一起淡 */
-.dock:not(.is-open) .dock__body{opacity:0}
-
-/* 圆钮：与侧栏图标钮同一套 —— 底色常驻、静止 scale 0，
-   hover 时从圆心涨满，按下交给尾部的 --press 通道压一层 */
-.dock__btn{
-  appearance:none; -webkit-appearance:none;
-  position:relative;
-  width:var(--dock-btn); height:var(--dock-btn);
-  display:grid; place-items:center;
-  padding:0; border:0; border-radius:999px;
-  background:none;
-  color:var(--text-reduced);
-  cursor:pointer;
-  transition:color .1s cubic-bezier(.7,0,.84,.16);
-}
-.dock__btn::before{
-  content:''; position:absolute; inset:0;
-  border-radius:inherit;
-  background:var(--theme);
-  pointer-events:none;
-  scale:0;
-  transform-origin:50% 50%;
-  transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
-  /* 进场先快后慢、出场取镜像，色块沿原路缩回圆心 */
-  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
-}
-.dock__btn:hover,
-.dock__btn:focus-visible{color:var(--text-invert)}
-.dock__btn:hover::before,
-.dock__btn:focus-visible::before{
-  scale:1;
-  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
-}
-.dock__btn.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
-/* 只管八向箭头那一枚；播放键的两枚图标走下面 .dock__ico 的绝对定位叠放，
-   这里若一并命中就会把它们的 position 改回 relative，两枚图标会各占一行 */
-.dock__btn > svg:not(.dock__ico){
-  position:relative;
-  /* 图标取圆钮的一半：48 的钮里放 24，和侧栏那枚 48 的图标钮一致 */
-  width:calc(var(--dock-btn) * .5);
-  height:calc(var(--dock-btn) * .5);
-  display:block;
-  fill:currentColor;
-  /* 八向箭头共用 icon/arrow.svg 那一条路径（32 网格里朝右），
-     靠 --rot 转到各自方向；45 度的斜向按半径算也还在 32 的圆里 */
-  transform:rotate(var(--rot, 0deg));
-  transition:fill .1s cubic-bezier(.7,0,.84,.16);
-}
-/* 按面积重心而不是包围盒居中：这条 chevron 的两个分支在尾部，
-   墨迹重心比包围盒中心靠后 1.5 个用户单位（24px 下约 1.1px），
-   只看包围盒会觉得箭头往尾侧缩了一截。平移写在 path 上、随 svg 的 --rot
-   一起转，所以八个方向各自沿指向补偿，斜向不用另算 */
-.dock__btn > svg:not(.dock__ico) path{transform:translate(1.5px, 0)}
-/* 播放三角是「左边一块实心、右边收成尖」，重心同样偏左，略往回带一点 */
-.dock__ico--play path{transform:translate(1px, 0)}
-.dock__btn[data-dir="up"]{--rot:-90deg}
-.dock__btn[data-dir="down"]{--rot:90deg}
-.dock__btn[data-dir="left"]{--rot:180deg}
-.dock__btn[data-dir="up-right"]{--rot:-45deg}
-.dock__btn[data-dir="down-right"]{--rot:45deg}
-.dock__btn[data-dir="down-left"]{--rot:135deg}
-.dock__btn[data-dir="up-left"]{--rot:-135deg}
-
-/* 中间那枚是主操作：底色常驻、图标反白，hover 不再是「涨出来」，
-   只剩按下那一下形变。底色跟图标走 —— 露三角（未播）用 hint，
-   露双竖条（播放中）用 warning，两态之间底色补间过去。
-   里面两枚图标叠着放，靠 is-playing 互换 */
-/* 图标固定反白，不跟 --text-invert：hint / warning 是不随主题变的实色，
-   深色模式里 --text-invert 会翻成近黑，压在 warning 上只剩 2.9:1，红底黑字读不清 */
-.dock__btn--play{color:#fafafa}
-/* 连同 hover / focus 一起写：那两条把 transition 整体重声明了一遍，
-   只写在 .dock__btn--play::before 上会被它们盖掉，底色就变成硬切 */
-.dock__btn--play::before,
-.dock__btn--play:hover::before,
-.dock__btn--play:focus-visible::before{
-  scale:1;
-  background:var(--hint);
-  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1),
-             background-color .2s var(--ease);
-}
-.dock__btn--play.is-playing::before,
-.dock__btn--play.is-playing:hover::before,
-.dock__btn--play.is-playing:focus-visible::before{background:var(--warning)}
-/* 按下那一下尾部的 .is-press 也把 transition 换成了只有 scale，
-   这里补回底色那条，免得点击刚好落在按压区间里时红绿硬切 */
-.dock__btn--play.is-press::before{
-  transition:scale .1s cubic-bezier(.7,0,.84,.16), background-color .2s var(--ease);
-}
-.dock__ico{
-  position:absolute;
-  /* 两枚图标都脱离文档流叠在一起，必须自己回到按钮中心：
-     只写 position:absolute 时它的静态位置落在网格行首，会整体上移半个图标，
-     inset:0 + margin:auto 配固定宽高才是真正按盒居中的写法 */
-  inset:0; margin:auto;
-  width:calc(var(--dock-btn) * .5);
-  height:calc(var(--dock-btn) * .5);
-  display:block;
-  fill:currentColor;
-  transition:opacity .1s linear, scale .1s cubic-bezier(.7,0,.84,.16);
-}
-.dock__ico--pause{opacity:0; scale:.7}
-.dock__btn--play.is-playing .dock__ico--pause{opacity:1; scale:1}
-.dock__btn--play.is-playing .dock__ico--play{opacity:0; scale:.7}
 
 /* 图标列（始终贴锚定侧） */
 .rail__bar{
@@ -540,6 +261,8 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item[data-panel="Action"]{--itc:var(--series-green-light)}
 .item[data-panel="Dialog"]{--itc:var(--series-blue-light)}
 .item[data-panel="Tendance"]{--itc:var(--series-pink-light)}
+.item[data-panel="Gestures"]{--itc:var(--series-blue-light)}
+.item[data-panel="Emotions"]{--itc:var(--series-pink-light)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），
    同样不带边；进场这条曲线先快后慢，尾巴慢慢贴住圆周。
    出场不在这里写，回到基态时用镜像曲线，等于原路缩回 */

@@ -1,14 +1,5 @@
 import * as THREE from 'three';
 
-const VIEWS = {
-  east:   { azimuth: 90,   elevation: 0,  label: '东', hint: '右视' },
-  south:  { azimuth: 0,    elevation: 0,  label: '南', hint: '正视' },
-  west:   { azimuth: -90,  elevation: 0,  label: '西', hint: '左视' },
-  north:  { azimuth: 180,  elevation: 0,  label: '北', hint: '后视' },
-  top:    { azimuth: 0,    elevation: 90, label: '上', hint: '俯视' },
-  bottom: { azimuth: 0,    elevation: -90,label: '下', hint: '仰视' },
-};
-
 const JOINT_CONFIGS = {
   'body1':    { axis: 'yaw', axes: ['yaw', 'pitch'], range: [-1.571, 1.571] },
   'head':     { axis: 'yaw',   range: [-1.2, 1.2] },
@@ -49,8 +40,6 @@ const SHOULDER_PITCH_ROOTS = {
   'Bone.010': 'Bone.009',
 };
 
-const DOUBLE_CLICK_MS = 350;
-const DOUBLE_CLICK_PX = 8;
 const DRAG_START_PX = 3;
 const JOINT_PIXEL_TO_RAD = 0.009;
 const ORBIT_PIXEL_TO_DEG = 0.35;
@@ -66,8 +55,6 @@ const SHOULDER_PITCH_RADIUS = 0.045;
 let robo = null;
 let wrap = null;
 let camera = null;
-let panel = null;
-let viewButton = null;
 let marker = null;
 let markerBone = null;
 let ready = false;
@@ -77,8 +64,6 @@ const jointAxisParents = new Map();
 const view = { azimuth: 0, elevation: 0, distance: 1 };
 const pointer = { x: 0, y: 0 };
 let drag = null;
-let activeView = null;
-let lastEmptyDown = null;
 let lastCamY = 0;
 let lastCamD = 1;
 let hoverTimer = 0;
@@ -134,7 +119,6 @@ function boot() {
   cacheJointAxes();
 
   createMarker();
-  buildPanel();
   bindInteractions();
   wrap.classList.add('vc-enabled');
   window.__robotView = { step };
@@ -211,138 +195,6 @@ function hideMarker() {
   markerBone = null;
 }
 
-function buildPanel() {
-  viewButton = document.querySelector('.view-adjust-trigger');
-  panel = document.createElement('section');
-  panel.className = 'viewtool';
-  panel.id = 'robot-view-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', '视角调整');
-  panel.hidden = true;
-
-  const heading = document.createElement('div');
-  heading.className = 'vt-heading';
-  heading.innerHTML = '<span>视角调整</span><button class="vt-close" type="button" aria-label="关闭视角调整面板">×</button>';
-  panel.appendChild(heading);
-
-  const directions = document.createElement('div');
-  directions.className = 'vt-directions';
-  ['east', 'south', 'west', 'north', 'top', 'bottom'].forEach((key) => {
-    const preset = VIEWS[key];
-    const button = document.createElement('button');
-    button.className = 'vt-dir';
-    button.type = 'button';
-    button.dataset.view = key;
-    button.setAttribute('aria-pressed', 'false');
-    button.innerHTML = '<span>' + preset.label + '</span><small>' + preset.hint + '</small>';
-    button.addEventListener('click', () => setPreset(key));
-    directions.appendChild(button);
-  });
-  panel.appendChild(directions);
-
-  const actions = document.createElement('div');
-  actions.className = 'vt-actions';
-  actions.appendChild(actionButton('zoom-out', '缩小', '−', () => zoom(1 / 1.12)));
-  actions.appendChild(actionButton('zoom-in', '放大', '+', () => zoom(1.12)));
-  actions.appendChild(actionButton('reset-view', '复位视角', '视角复位', resetView));
-  actions.appendChild(actionButton('reset-pose', '复位姿态', '姿态复位', resetPose));
-  panel.appendChild(actions);
-
-  document.body.appendChild(panel);
-  refreshViewButtons();
-  placePanel();
-
-  panel.querySelector('.vt-close').addEventListener('click', closePanel);
-  window.addEventListener('resize', placePanel);
-
-  if (viewButton) {
-    viewButton.setAttribute('aria-controls', panel.id);
-    viewButton.setAttribute('aria-expanded', 'false');
-    viewButton.setAttribute('aria-haspopup', 'dialog');
-    viewButton.addEventListener('click', togglePanel);
-  }
-
-  document.addEventListener('pointerdown', (event) => {
-    if (panel.hidden) return;
-    if (panel.contains(event.target) || (viewButton && viewButton.contains(event.target))) return;
-    closePanel();
-  }, true);
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !panel.hidden) closePanel();
-  });
-}
-
-function actionButton(name, label, text, handler) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'vt-action';
-  button.dataset.action = name;
-  button.setAttribute('aria-label', label);
-  button.textContent = text;
-  button.addEventListener('click', handler);
-  return button;
-}
-
-function placePanel() {
-  if (!panel || panel.hidden) return;
-  const rect = viewButton ? viewButton.getBoundingClientRect() : {left: 16, bottom: 56};
-  const width = panel.offsetWidth || 300;
-  const left = clamp(rect.left, 8, Math.max(8, window.innerWidth - width - 8));
-  panel.style.left = Math.round(left) + 'px';
-  panel.style.top = Math.round((rect.bottom || 56) + 8) + 'px';
-}
-
-function openPanel() {
-  if (!panel) return;
-  panel.hidden = false;
-  if (viewButton) {
-    viewButton.classList.add('is-active');
-    viewButton.setAttribute('aria-pressed', 'true');
-    viewButton.setAttribute('aria-expanded', 'true');
-  }
-  placePanel();
-}
-
-function closePanel() {
-  if (!panel) return;
-  panel.hidden = true;
-  if (viewButton) {
-    viewButton.classList.remove('is-active');
-    viewButton.setAttribute('aria-pressed', 'false');
-    viewButton.setAttribute('aria-expanded', 'false');
-  }
-}
-
-function togglePanel() {
-  if (panel.hidden) openPanel();
-  else closePanel();
-}
-
-function refreshViewButtons() {
-  if (!panel) return;
-  panel.querySelectorAll('[data-view]').forEach((button) => {
-    const active = button.dataset.view === activeView;
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-}
-
-function setPreset(key) {
-  const preset = VIEWS[key];
-  if (!preset || !ready) return;
-  view.azimuth = preset.azimuth;
-  view.elevation = preset.elevation;
-  view.distance = 1;
-  activeView = key;
-  robo.setPointerAimPaused(true);
-  refreshViewButtons();
-  step(lastCamY, lastCamD);
-}
-
-function resetView() {
-  setPreset('south');
-}
-
 function resetPose() {
   if (!ready || !robo.resetPose) return;
   robo.resetPose();
@@ -364,52 +216,56 @@ function bindInteractions() {
   });
   wrap.addEventListener('wheel', onWheel, { passive: false });
   wrap.addEventListener('contextmenu', (event) => event.preventDefault());
+  /* 中键在部分浏览器会触发「自动滚动」圆盘与 auxclick，
+     mousedown 这一层先按一次，pointerdown 与 auxclick 再各兜一层 */
+  wrap.addEventListener('mousedown', (event) => {
+    if (event.button === 1) event.preventDefault();
+  });
+  wrap.addEventListener('auxclick', (event) => {
+    if (event.button === 1) event.preventDefault();
+  });
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
 }
 
+/* 中键（button 1）直接在模型上拖拽环绕；左键留给关节。
+   视野调整不再走顶栏按钮 + 面板那套预设，按下就转，松开即停。 */
 function onPointerDown(event) {
-  if (event.button !== 0 || !ready) return;
-  event.preventDefault();
+  if (!ready) return;
 
-  const joint = findJointAt(event.clientX, event.clientY);
-  if (joint) {
-    lastEmptyDown = null;
-    pointer.x = event.clientX;
-    pointer.y = event.clientY;
+  if (event.button === 1) {
+    event.preventDefault();
     drag = {
-      kind: 'joint-pending',
+      kind: 'camera',
       pointerId: event.pointerId,
-      bone: joint.bone,
-      config: joint.config,
-      hit: joint.point.clone(),
-      startX: event.clientX,
-      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
     };
-    showMarker(joint.bone, false);
-    wrap.classList.add('vc-joint');
+    robo.setPointerAimPaused(true);
+    wrap.classList.add('vc-camera');
     capturePointer(event.pointerId);
     return;
   }
 
-  const now = performance.now();
-  const isDouble = !!lastEmptyDown
-    && now - lastEmptyDown.time <= DOUBLE_CLICK_MS
-    && Math.hypot(event.clientX - lastEmptyDown.x, event.clientY - lastEmptyDown.y) <= DOUBLE_CLICK_PX;
-  lastEmptyDown = { time: now, x: event.clientX, y: event.clientY };
-  if (!isDouble) return;
+  if (event.button !== 0) return;
+  event.preventDefault();
 
-  lastEmptyDown = null;
-  activeView = null;
-  refreshViewButtons();
+  const joint = findJointAt(event.clientX, event.clientY);
+  if (!joint) return;
+
+  pointer.x = event.clientX;
+  pointer.y = event.clientY;
   drag = {
-    kind: 'camera',
+    kind: 'joint-pending',
     pointerId: event.pointerId,
-    x: event.clientX,
-    y: event.clientY,
+    bone: joint.bone,
+    config: joint.config,
+    hit: joint.point.clone(),
+    startX: event.clientX,
+    startY: event.clientY,
   };
-  robo.setPointerAimPaused(true);
-  wrap.classList.add('vc-camera');
+  showMarker(joint.bone, false);
+  wrap.classList.add('vc-joint');
   capturePointer(event.pointerId);
 }
 
@@ -505,15 +361,16 @@ function onPointerUp(event) {
   drag = null;
   wrap.classList.remove('vc-camera', 'vc-dragging-joint', 'vc-joint');
 
-  if ((wasJoint || wasCamera) && !activeView) robo.setPointerAimPaused(false);
-  refreshViewButtons();
+  if (wasJoint || wasCamera) robo.setPointerAimPaused(false);
   if (!wasJoint) queueHover(pointer.x, pointer.y);
 }
 
 function onWheel(event) {
   if (!ready) return;
   event.preventDefault();
-  zoom(Math.exp(-event.deltaY * WHEEL_ZOOM_K));
+  /* 滚轮上滚（deltaY < 0）推近、下滚拉远，与仿真视角同一套方向：
+     view.distance 是相机距离，值越小画面上的机器人越大 */
+  zoom(Math.exp(event.deltaY * WHEEL_ZOOM_K));
 }
 
 function capturePointer(pointerId) {
@@ -643,12 +500,7 @@ window.viewControl = {
   get view() {
     return {azimuth: view.azimuth, elevation: view.elevation, distance: view.distance};
   },
-  get preset() { return activeView; },
   get dragging() { return drag ? drag.kind : null; },
-  openPanel,
-  closePanel,
-  setPreset,
-  resetView,
   resetPose,
 };
 

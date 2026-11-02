@@ -9,7 +9,7 @@
   /* 仿真面板里的胶囊（手臂/腰/腿/联动、姿态/动作/步态、右侧工具按钮）、
      弹窗右上角的连接按钮、左栏编辑页的类型三选与提交钮，
      同样是「底片 + --press」结构，一并接管 */
-  var SEL = '.pill, .item, .chat__btn, .seg__opt, .dock__btn,' +
+  var SEL = '.pill, .item, .seg__opt,' +
             '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn,' +
             '.edit__type, .edit__reset, .edit__add';
   var PRESS_PILL = 1.0;   // 顶栏胶囊压入档位（× --press-k 得缩放比例）
@@ -26,8 +26,7 @@
   function depth(el) {
     if (el.closest('.user__menu')) return PRESS_MENU;
     /* 侧栏圆钮、弹窗行内圆钮、聊天区圆钮同规格，压入深度也取同一档 */
-    if (el.classList.contains('item') || el.classList.contains('mrow__btn') ||
-        el.classList.contains('chat__btn') || el.classList.contains('dock__btn')) return PRESS_ITEM;
+    if (el.classList.contains('item') || el.classList.contains('mrow__btn')) return PRESS_ITEM;
     return PRESS_PILL;
   }
   /* 已经处于激活态的按钮再点一次只是取消或重复，不再重播压弹：

@@ -666,15 +666,16 @@ let lastPaint = 0;
 function loop(ts) {
   requestAnimationFrame(loop);
   if (document.hidden || ts - lastPaint < 70) return;
-  const dock = document.querySelector('.dock');
-  if (dock && !dock.classList.contains('is-open')) return;  /* 面板收着就白画了 */
+  /* 右栏收着的时候屏根本没露出来，画了也白画 */
+  const rail = document.getElementById('rail-tools');
+  if (rail && !rail.classList.contains('is-open')) return;
   lastPaint = ts;
   const t = ts / 1000;
   for (const c of cards) paint(c.ctx, THUMB_W, THUMB_H, c.dataset.mood, t);
 }
 
 function mount() {
-  const grid = document.querySelector('[data-dock-grid="emotions"]');
+  const grid = document.querySelector('[data-rail-grid="emotions"]');
   if (!grid) return;
 
   /* 卡片是 rails.js 先铺的空白占位，这里只往里面塞屏，不换节点 ——

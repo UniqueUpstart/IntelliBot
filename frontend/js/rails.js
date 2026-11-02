@@ -71,46 +71,20 @@
   });
 })();
 
-/* 底部控制面板：只有升降两态。位移与形变的补间在开合那段脚本里
-   （.is-open 一变，MutationObserver 就把整条时间轴跑起来），
-   这里只管状态、文案与中间那枚播放键的图标 */
+/* 右栏动作面板：先用空白卡占好四列的位置，手势与表情模块随后往这些节点里
+   填内容（动作名 / 表情屏），只填不换节点 —— 磁吸脚本在加载时把卡收进自己的
+   列表，换掉 DOM 就得重扫一遍。
+   手势页 8 张（两行）、表情页 16 张（四行），都是一行四张 */
 (function () {
-  var dock = document.querySelector('.dock');
-  if (!dock) return;
-  var toggle = dock.querySelector('.dock__toggle');
-  var play = dock.querySelector('.dock__btn--play');
-
-  /* 先铺卡片节点，动作与表情模块随后在这些节点中渲染内容。
-     保留节点本身，磁吸脚本只需在加载时收集一次。 */
-  dock.querySelectorAll('.dock__grid').forEach(function (grid) {
-    var rows = grid.dataset.dockGrid === 'emotions' ? 4 : 3;
-    var cols = 4, html = '';
-    for (var i = 0; i < rows * cols; i++) {
-      html += '<div class="dock__card" aria-hidden="true"></div>';
+  var COUNTS = { gestures: 8, emotions: 16 };
+  document.querySelectorAll('[data-rail-grid]').forEach(function (grid) {
+    var total = COUNTS[grid.dataset.railGrid] || 8;
+    var html = '';
+    for (var i = 0; i < total; i++) {
+      html += '<div class="rail__card" aria-hidden="true"></div>';
     }
     grid.innerHTML = html;
   });
-
-  if (toggle) {
-    toggle.addEventListener('click', function () {
-      var open = !dock.classList.contains('is-open');
-      /* 升降交给弹性补间（定义在引入 GSAP 的那段）；
-         还没就绪就直接切类，CSS 里的终值兜底，功能不受影响 */
-      if (window.dockMotion) window.dockMotion(dock, open);
-      else dock.classList.toggle('is-open', open);
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      toggle.setAttribute('aria-label', open ? 'Collapse panel' : 'Expand panel');
-    });
-  }
-
-  /* 播放 / 暂停只在两枚图标之间换，不接任何播放状态 */
-  if (play) {
-    play.addEventListener('click', function () {
-      var playing = play.classList.toggle('is-playing');
-      play.setAttribute('aria-pressed', playing ? 'true' : 'false');
-      play.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-    });
-  }
 })();
 
 /* 卡片图钉：点一下钉进 Pinned（按所在分组归位）。取钉要两步：

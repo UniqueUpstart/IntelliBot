@@ -35,6 +35,9 @@ const I18N = {
     "rail.right.log": "Log",
     "rail.right.message": "Message",
 
+    "chat.placeholder": "Ask IntelliBot…",
+    "chat.ask": "Ask IntelliBot",
+
     "dock.gestures": "Gestures",
     "dock.emotions": "Emotions",
 
@@ -130,6 +133,9 @@ const I18N = {
     "rail.right.chat": "聊天",
     "rail.right.log": "日志",
     "rail.right.message": "消息",
+
+    "chat.placeholder": "问问 IntelliBot…",
+    "chat.ask": "向 IntelliBot 提问",
 
     "dock.gestures": "手势",
     "dock.emotions": "表情",

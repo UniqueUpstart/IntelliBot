@@ -70,30 +70,27 @@
   function peakX() { return COMPACT.matches ? 1.01 : PEAK_X; }
   function peakY() { return COMPACT.matches ? 1.01 : PEAK_Y; }
 
-  /* 只在栏体与底部面板上补内容通道：账号面板的名字与菜单本来就有 CSS 位移 / 淡入，
-     再叠一层会打架。面板这一层从 .dock__pad 换成 .dock__body —— 九宫格与左右两列
-     卡片现在同一个容器里，升降时得整块一起淡、一起滑 */
+  /* 只在栏体上补内容通道：账号面板的名字与菜单本来就有 CSS 位移 / 淡入，
+     再叠一层会打架 */
   function contentOf(node) {
-    if (node.classList.contains('dock')) return node.querySelector('.dock__body');
     return node.classList.contains('rail') ? node.querySelector('.rail__panel') : null;
   }
-  /* 内容从栏根一侧滑进来：左栏从左、右栏从右，底部面板自下往上。
-     用轴名而不是写死 x，三处共用同一段补间 */
+  /* 内容从栏根一侧滑进来：左栏从左、右栏从右。用轴名而不是写死 x，
+     两栏共用同一段补间 */
   function slideOf(node) {
-    if (node.classList.contains('dock')) return { k: 'y', v: SLIDE };
     return { k: 'x', v: node.classList.contains('rail--right') ? SLIDE : -SLIDE };
   }
-  /* 投影挂在表面层上（栏体的 .rail__surface / 账号的 .user__surface / 面板的 .dock__surface），
+  /* 投影挂在表面层上（栏体的 .rail__surface / 账号的 .user__surface），
      不是被 scale 的那层，所以阴影跟着形变走、但模糊半径的补间不会和 scale 抢属性 */
   function surfaceOf(node) {
-    return node.querySelector('.rail__surface, .user__surface, .dock__surface');
+    return node.querySelector('.rail__surface, .user__surface');
   }
 
   function pop(node, on) {
     if (!node) return;
     if (node.__popTl) { node.__popTl.kill(); node.__popTl = null; }
-    /* 只收掉形变那两条：底部面板的升降（--hide-*）是另一条补间，
-       由 dockMotion 单独接管，连坐杀掉它就会卡在半路 */
+    /* 只收掉形变那两条：栏体的移入移出（--hide-*）是另一条补间，
+       由 railMotion 单独接管，连坐杀掉它就会卡在半路 */
     gsap.killTweensOf(node, '--sx,--sy');
     var el = contentOf(node);
     if (el) gsap.killTweensOf(el);
@@ -174,21 +171,11 @@
     return -(l + w * HIDE_S) - shrink;
   }
 
-  /* 底部面板收起时要往下让多远：原点在底边中点，缩放把上沿压低了
-     (1 − s) × h，位移按 s·h − h/8 走，正好把压低的那段补回来，
-     留在视口内的就是原高的 1/8。
-     另外面板底边离视口底还有一段 --edge（与左右栏的边距同值），
-     收起时整块是从那个抬高过的位置往下让，所以要多让这么多，
-     否则露出来的那条会比 1/8 多出一倍边距 */
-  function dockHide(dock) {
-    var h = dock.offsetHeight;
-    var edge = parseFloat(getComputedStyle(dock).bottom);
-    return h * HIDE_S - h / 8 + (isNaN(edge) ? 0 : edge);
-  }
-
+  /* 移入移出：位移与缩量各占一条通道，都由这里用同一条弹性曲线补间。
+     打断也要接得住 —— 先按当前计算值压实内联，再切 is-hidden，
+     否则类里的终值会先跳到位，补间等于从一个已经到位的值起步 */
   window.railMotion = function (rail, hide) {
     var dx = hideOffset(rail);
-    /* 打断也要接得住：从当前计算值起步，而不是回 0 / 1 硬起 */
     var cs = window.getComputedStyle(rail);
     var curS = parseFloat(cs.getPropertyValue('--hide-s'));
     var curD = parseFloat(cs.getPropertyValue('--hide-d'));
@@ -208,38 +195,7 @@
     });
   };
 
-  /* ---- 底部面板的升降 ----
-     与栏体同一对通道、同一组参数：缩到 .95 再让位，同一条弹性曲线。
-     差别只在方向和幅度 —— 它不整块出屏，让出 7/8、留 1/8 挂在底边。
-     写法照抄上面那条：先按当前计算值压实内联，再切类，
-     否则类里的终值会先跳到位，补间等于从一个已经到位的值起步，看不出过程 */
-  window.dockMotion = function (dock, open) {
-    var cs = window.getComputedStyle(dock);
-    var curS = parseFloat(cs.getPropertyValue('--hide-s'));
-    var curD = parseFloat(cs.getPropertyValue('--hide-d'));
-    /* 面板高度是 auto，CSS 里的兜底位移写成高度的百分比（.825h + edge），
-       读不成数字；这时按元素当前的开合状态换算出像素值 —— 注意看的是
-       类而不是 open 参数：起点要取它此刻真实所在的位置，否则收起态第一次
-       展开会从 0 起步、动画还没开始就已经跳到位 */
-    if (isNaN(curD)) curD = dock.classList.contains('is-open') ? 0 : dockHide(dock);
-    gsap.set(dock, {
-      '--hide-s': isNaN(curS) ? 1 : curS,
-      '--hide-d': curD + 'px'
-    });
-    dock.classList.toggle('is-open', open);
-    gsap.to(dock, {
-      '--hide-s': open ? 1 : HIDE_S,
-      '--hide-d': (open ? 0 : dockHide(dock)) + 'px',
-      duration: calmMotion.matches ? 0 : HIDE_DUR,
-      ease: HIDE_EASE,
-      overwrite: 'auto'
-    });
-  };
-
-  /* 收起态的位移只在开合时算一次。面板高度由内容定、不随窗口宽度变，
-     所以窗口缩放不会让这个像素值失准，不必再挂 resize 重算 */
-
-  var nodes = Array.prototype.slice.call(document.querySelectorAll('.rail, .user, .dock'));
+  var nodes = Array.prototype.slice.call(document.querySelectorAll('.rail, .user'));
   nodes.forEach(function (n) { n.__open = n.classList.contains('is-open'); });
 
   new MutationObserver(function (records) {
