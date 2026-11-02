@@ -1,8 +1,7 @@
 {
-  "repository": "https://github.com/HiKLPA/PrimebotX.git",
-  "source": "PrimebotX-main.zip (user download; git clone timed out)",
+  "repository": "https://github.com/UniqueUpstart/IntelliBot.git",
+  "source": "frontend/ (imported into this repository; the old external snapshot is no longer used)",
   "sha256": "585a60bafc9d6af29a576ca5165562e6ccd0ecbba7490636a34ee31a83df3dbb",
   "commit": null,
-  "note": "Source integration only; no imported git history or commit made.",
-  "upstream": "Third-party template source (PrimebotX). The URL points at that external project, not at this repository's former name."
+  "note": "All frontend assets now live in this repository and are maintained here; no external template repository is tracked."
 }
