@@ -124,8 +124,8 @@
    追加到该组末尾、编号按位置重排、当场绑上图钉。新增的卡片同样进 localStorage，
    刷新后按顺序重放一遍，编号因此始终和 pinned 的键对得上 */
 (function () {
-  var KEY = 'aloria:pinned';
-  var STORE = 'aloria:cards';   /* 新增卡片：{ type, name, brief } */
+  var KEY = 'intellibot:pinned';
+  var STORE = 'intellibot:cards';   /* 新增卡片：{ type, name, brief } */
   var CONFIRM_MS = 2800;   /* 对勾停留多久后自动退回「已钉」态 */
   var LABEL = { action: 'Action', dialog: 'Dialog', tendance: 'Tendance' };
   var pinned = Object.create(null);

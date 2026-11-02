@@ -21,7 +21,7 @@ try:
         except OSError:time.sleep(.05)
     else:raise AssertionError('server did not start')
     health=call('GET','/health')[1]['data']
-    assert health['service']=='aloria_backend' and health['mode']=='mock'
+    assert health['service']=='intellibot_backend' and health['mode']=='mock'
     assert 'ros2_implemented' not in health
     assert call('POST','/tts',{'text':'test'})[0]==503
     assert call('POST','/connections',{'mode':'ros2'})[0]==422 # 硬件连接已移除

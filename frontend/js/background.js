@@ -539,7 +539,7 @@
   /* 背景样式由 Settings 弹窗写入，键名与弹窗脚本里的一致。
      纯静态点阵那一种已经删掉，plain 现在就是位移场：
      旧版存过 matrix 的，这里也读成 plain，不用去改 localStorage */
-  var BG_KEY = 'aloria.bg';
+  var BG_KEY = 'intellibot.bg';
   function readMode() {
     try {
       var v = localStorage.getItem(BG_KEY);

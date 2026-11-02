@@ -15,14 +15,14 @@ for arg in "$@"; do
 done
 
 # 依次找：环境变量 > 仓库内构建目录
-if [ -n "${ALORIA_BIN:-}" ]; then
-  bin="$ALORIA_BIN"
-elif [ -x "$project_dir/backend-build/aloria_backend" ]; then
-  bin="$project_dir/backend-build/aloria_backend"
-elif [ -x "$project_dir/backend-build/aloria_backend.exe" ]; then
-  bin="$project_dir/backend-build/aloria_backend.exe"
+if [ -n "${INTELLIBOT_BIN:-}" ]; then
+  bin="$INTELLIBOT_BIN"
+elif [ -x "$project_dir/backend-build/intellibot_backend" ]; then
+  bin="$project_dir/backend-build/intellibot_backend"
+elif [ -x "$project_dir/backend-build/intellibot_backend.exe" ]; then
+  bin="$project_dir/backend-build/intellibot_backend.exe"
 else
-  echo "找不到 aloria_backend，先跑 bash scripts/fetch_deps.sh && bash scripts/build_backend.sh" >&2
+  echo "找不到 intellibot_backend，先跑 bash scripts/fetch_deps.sh && bash scripts/build_backend.sh" >&2
   exit 2
 fi
 

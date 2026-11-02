@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
       } catch (...) { return 2; }
     } else if (arg == "--web-root" && i + 1 < argc) web_root = argv[++i];
       else if (arg == "--sim-url" && i + 1 < argc) sim_url = argv[++i];
-    else { std::cerr << "Usage: aloria_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090]\n"; return 2; }
+    else { std::cerr << "Usage: intellibot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090]\n"; return 2; }
   }
   if (port < 1 || port > 65535) return 2;
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
       std::cerr << "Invalid frontend directory\n"; return 2;
     }
     server.Get("/", [](const httplib::Request&, httplib::Response& res) {
-      res.set_redirect("/ui/Aloria.html");
+      res.set_redirect("/ui/IntelliBot.html");
     });
   }
   std::mutex mutex;
@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
     const auto& path=req.path;
     try {
       if(req.method=="GET" && path=="/api/v1/health")
-        response(res,200,request_id,{{"service","aloria_backend"},{"version","0.1.0"},{"mode",sim_enabled?"sim":"mock"},{"sim_enabled",sim_enabled}});
+        response(res,200,request_id,{{"service","intellibot_backend"},{"version","0.1.0"},{"mode",sim_enabled?"sim":"mock"},{"sim_enabled",sim_enabled}});
       else if(req.method=="POST" && path=="/api/v1/connections") {
         const auto mode=input.value("mode",std::string());
         if(mode=="sim") {

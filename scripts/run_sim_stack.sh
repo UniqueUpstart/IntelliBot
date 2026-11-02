@@ -25,14 +25,14 @@ case "$SIM_MODE" in
 esac
 
 # 后端产物：优先环境变量，其次仓库内构建目录
-if [ -n "${ALORIA_BIN:-}" ]; then
-  BIN="$ALORIA_BIN"
-elif [ -x "$ROOT/backend-build/aloria_backend" ]; then
-  BIN="$ROOT/backend-build/aloria_backend"
-elif [ -x "$ROOT/backend-build/aloria_backend.exe" ]; then
-  BIN="$ROOT/backend-build/aloria_backend.exe"
+if [ -n "${INTELLIBOT_BIN:-}" ]; then
+  BIN="$INTELLIBOT_BIN"
+elif [ -x "$ROOT/backend-build/intellibot_backend" ]; then
+  BIN="$ROOT/backend-build/intellibot_backend"
+elif [ -x "$ROOT/backend-build/intellibot_backend.exe" ]; then
+  BIN="$ROOT/backend-build/intellibot_backend.exe"
 else
-  echo "找不到 aloria_backend，先跑 bash scripts/fetch_deps.sh && bash scripts/build_backend.sh" >&2
+  echo "找不到 intellibot_backend，先跑 bash scripts/fetch_deps.sh && bash scripts/build_backend.sh" >&2
   exit 2
 fi
 
@@ -58,6 +58,6 @@ if [ "${READY:-0}" != "1" ]; then
   exit 1
 fi
 echo "== 仿真桥就绪，启动后端 :$PORT"
-echo "== 打开 http://127.0.0.1:$PORT/ui/Aloria.html ，点顶栏 Advance 里的「连接仿真」"
+echo "== 打开 http://127.0.0.1:$PORT/ui/IntelliBot.html ，点顶栏 Advance 里的「连接仿真」"
 
 "$BIN" --port "$PORT" --web-root "$ROOT/frontend" --sim-url "http://127.0.0.1:$SIM_PORT"

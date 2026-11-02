@@ -1,4 +1,4 @@
-/* Aloria 国际化引擎：纯原生 JS，无依赖。
+/* IntelliBot 国际化引擎：纯原生 JS，无依赖。
  * 用法：HTML 元素加 data-i18n="key"，JS 里调用 t('key')。
  * 新增语言只需在 I18N 里加一组字典，页面文字自动跟随。 */
 
@@ -194,7 +194,7 @@ const I18N = {
   },
 };
 
-const I18N_KEY = "aloria.lang";
+const I18N_KEY = "intellibot.lang";
 
 function getLang() {
   try {

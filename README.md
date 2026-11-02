@@ -1,11 +1,11 @@
-# Aloria
+# IntelliBot
 
 基于 MuJoCo 的机器人仿真与 AI 交互界面：浏览器操作关节、姿态、手势与移动。
 
 ## 目录
 
 ```text
-frontend/        页面（入口 frontend/Aloria.html）
+frontend/        页面（入口 frontend/IntelliBot.html）
 backend/         C++17 HTTP 后端，校验并转发到仿真桥
 sim/             MuJoCo 桥（mujoco_bridge.py）
 scripts/         启动、构建与依赖脚本
@@ -26,17 +26,17 @@ docs/            接口与联调说明
 **终端 2 —— 后端（:8080）**
 
 ```powershell
-.\backend-build\aloria_backend.exe --port 8080 --web-root frontend --sim-url http://127.0.0.1:8090
+.\backend-build\intellibot_backend.exe --port 8080 --web-root frontend --sim-url http://127.0.0.1:8090
 ```
 
-浏览器打开 <http://127.0.0.1:8080/ui/Aloria.html>，在顶栏 Advance 里点「连接仿真」。
+浏览器打开 <http://127.0.0.1:8080/ui/IntelliBot.html>，在顶栏 Advance 里点「连接仿真」。
 
 ### 不开仿真
 
 只启动终端 2，去掉 `--sim-url`：
 
 ```powershell
-.\backend-build\aloria_backend.exe --port 8080 --web-root frontend
+.\backend-build\intellibot_backend.exe --port 8080 --web-root frontend
 ```
 
 ### 需要 MuJoCo 原生窗口

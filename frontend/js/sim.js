@@ -73,10 +73,10 @@
   /* 打开方式不对时，接口请求根本到不了后端，先在面板里说清楚，
      省得点下去只看到一句空响应 */
   if (location.protocol === 'file:') {
-    say('页面是用 file:// 打开的，接口请求到不了后端。请改为访问 http://127.0.0.1:8080/ui/Aloria.html');
+    say('页面是用 file:// 打开的，接口请求到不了后端。请改为访问 http://127.0.0.1:8080/ui/IntelliBot.html');
   } else if (API === '/api/v1' && location.port !== '8080') {
     say('当前页面来自 ' + location.host + '，不是后端的 8080。' +
-        '要么直接开 http://127.0.0.1:8080/ui/Aloria.html，' +
+        '要么直接开 http://127.0.0.1:8080/ui/IntelliBot.html，' +
         '要么在地址后加 ?api=http://127.0.0.1:8080/api/v1');
   }
 
@@ -403,7 +403,7 @@
     if (!connected) return;
     var link = document.createElement('a');
     link.href = API + '/sim/frame?t=' + Date.now();
-    link.download = 'aloria-sim-' + new Date().toISOString().replace(/[:.]/g, '-') + '.jpg';
+    link.download = 'intellibot-sim-' + new Date().toISOString().replace(/[:.]/g, '-') + '.jpg';
     document.body.appendChild(link);
     link.click();
     link.remove();

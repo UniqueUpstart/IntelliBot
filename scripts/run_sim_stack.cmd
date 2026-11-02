@@ -1,10 +1,10 @@
 @echo off
-rem Aloria sim stack launcher for Windows.
+rem IntelliBot sim stack launcher for Windows.
 rem   double-click it, or run it from cmd:  scripts\run_sim_stack.cmd
 rem It first tries to hand over to run_sim_stack.sh through Git Bash (that path keeps
 rem the Ctrl+C cleanup), and if no Git Bash is installed it starts the bridge and the
 rem backend itself with python + the built exe.
-rem Env vars are honored: PORT, SIM_PORT, SIM_MODE=viewer, PYTHON, ALORIA_BIN.
+rem Env vars are honored: PORT, SIM_PORT, SIM_MODE=viewer, PYTHON, INTELLIBOT_BIN.
 rem delayed expansion is on so that !cmdcmdline! is substituted after parsing: the value
 rem may contain ^&^& (when the script is chained on one cmd line) and must not be re-parsed
 setlocal EnableExtensions EnableDelayedExpansion
@@ -51,11 +51,11 @@ if exist "%PY%" set "PYQ="%PY%""
 if errorlevel 1 goto :no_mujoco
 
 set "BIN="
-if defined ALORIA_BIN if exist "%ALORIA_BIN%" set "BIN=%ALORIA_BIN%"
+if defined INTELLIBOT_BIN if exist "%INTELLIBOT_BIN%" set "BIN=%INTELLIBOT_BIN%"
 if defined BIN goto :have_bin
-if exist "%ROOT%\backend-build\aloria_backend.exe" set "BIN=%ROOT%\backend-build\aloria_backend.exe"
+if exist "%ROOT%\backend-build\intellibot_backend.exe" set "BIN=%ROOT%\backend-build\intellibot_backend.exe"
 if defined BIN goto :have_bin
-for /d %%D in ("%ROOT%\backend-build*") do if not defined BIN if exist "%%~fD\aloria_backend.exe" set "BIN=%%~fD\aloria_backend.exe"
+for /d %%D in ("%ROOT%\backend-build*") do if not defined BIN if exist "%%~fD\intellibot_backend.exe" set "BIN=%%~fD\intellibot_backend.exe"
 :have_bin
 if not defined BIN goto :no_backend
 
@@ -63,7 +63,7 @@ set "MODE_FLAG=--headless"
 if /i "%SIM_MODE%"=="viewer" set "MODE_FLAG="
 
 echo [sim] bridge :%SIM_PORT% (%SIM_MODE%), log in the minimized window
-start "Aloria sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --port %SIM_PORT% %MODE_FLAG%
+start "IntelliBot sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --port %SIM_PORT% %MODE_FLAG%
 
 echo [sim] waiting for the bridge to come up...
 set "READY="
@@ -71,11 +71,11 @@ for /l %%i in (1,1,30) do if not defined READY call :probe
 if not defined READY goto :bridge_timeout
 
 echo [sim] backend :%PORT%
-echo [sim] open http://127.0.0.1:%PORT%/ui/Aloria.html and press "连接仿真" in the Advance dialog
+echo [sim] open http://127.0.0.1:%PORT%/ui/IntelliBot.html and press "连接仿真" in the Advance dialog
 echo.
 "%BIN%" --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%"
 rem backend stopped: take the bridge window down with it
-"%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq Aloria sim bridge*" /T /F >nul 2>&1
+"%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot sim bridge*" /T /F >nul 2>&1
 echo [sim] backend stopped, bridge closed.
 goto :done
 
@@ -109,13 +109,13 @@ echo         %PY% -m pip install -r "%ROOT%\sim\requirements.txt"
 goto :fail
 
 :no_backend
-echo [sim] aloria_backend.exe not found. Build it once with:
+echo [sim] intellibot_backend.exe not found. Build it once with:
 echo         bash scripts/fetch_deps.sh ^&^& bash scripts/build_backend.sh
 goto :fail
 
 :bridge_timeout
 echo [sim] bridge did not answer /health within 30s. Check the minimized window.
-"%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq Aloria sim bridge*" /T /F >nul 2>&1
+"%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot sim bridge*" /T /F >nul 2>&1
 goto :fail
 
 :fail

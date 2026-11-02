@@ -26,7 +26,7 @@ const EYE_Y = 46;       /* 眼睛中线 */
 const EYE_DX = 15;      /* 眼睛离中轴的距离 */
 const MOUTH_Y = 79;     /* 嘴的中线 */
 
-const STORE = 'aloria.mood';
+const STORE = 'intellibot.mood';
 const STILL = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* —— 生命层：眨眼 —— */

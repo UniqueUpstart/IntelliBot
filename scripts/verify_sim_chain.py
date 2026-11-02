@@ -92,7 +92,7 @@ def sample_foot_clearance(chain: "Chain", seconds: float) -> float | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Aloria ↔ MuJoCo 全链路验收")
+    parser = argparse.ArgumentParser(description="IntelliBot ↔ MuJoCo 全链路验收")
     parser.add_argument("--backend", default="http://127.0.0.1:8080")
     args = parser.parse_args()
     chain = Chain(args.backend)
@@ -260,7 +260,7 @@ def main() -> int:
     chain.call("POST", "/sim/reset", {})
 
     print("\n11. 网页静态资源")
-    page = args.backend.rstrip("/") + "/ui/Aloria.html"
+    page = args.backend.rstrip("/") + "/ui/IntelliBot.html"
     try:
         with urllib.request.urlopen(page, timeout=5) as response:
             html = response.read().decode("utf-8", "replace")
@@ -275,7 +275,7 @@ def main() -> int:
     if chain.failures:
         print(f"结果：{len(chain.failures)} 项未通过 → " + "；".join(chain.failures))
         return 1
-    print("结果：全链路通过。打开 http://127.0.0.1:8080/ui/Aloria.html 点顶栏 Advance。")
+    print("结果：全链路通过。打开 http://127.0.0.1:8080/ui/IntelliBot.html 点顶栏 Advance。")
     return 0
 
 
