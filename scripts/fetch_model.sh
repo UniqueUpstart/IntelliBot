@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 从 AtomGit 拉官方 Q1 模型（MJCF + STL）到 sim/assets/q1-urdf。
 # 仓库约 35 MB，其中 meshes 25 MB，所以不进 git，按需拉。
+# 下面的地址是 Q1 模型上游仓库（第三方），与本项目名无关，不能改成 IntelliBot。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

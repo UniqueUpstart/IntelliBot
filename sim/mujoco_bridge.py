@@ -1009,6 +1009,7 @@ def find_model(explicit: str | None) -> str:
         "找不到 q1_v3_mc.xml。把模型放到 sim/assets/q1-urdf/xml/ 下，"
         "或显式传 --xml <路径>：\n"
         "  git clone https://atomgit.com/primebot/q1-urdf.git sim/assets/q1-urdf"
+        "（该地址是 Q1 模型的上游仓库，与本项目名无关）"
     )
 
 
