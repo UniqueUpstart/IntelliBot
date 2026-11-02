@@ -129,9 +129,21 @@ def main() -> int:
         "对不上说明 --xml 指的不是 q1_v3_mc.xml",
     )
     gesture_ids = {g.get("id") for g in table.get("gestures") or []}
-    chain.step("手势库可用", gesture_ids >= {"wave", "heart", "cheer"}, str(sorted(gesture_ids)))
-    chain.step("姿态预设可用", {p.get("id") for p in table.get("presets") or []} >= {"tpose", "squat"}, "")
-    chain.step("步态可用", {g.get("id") for g in table.get("gaits") or []} >= {"walk", "march"}, "")
+    expected_gestures = {"wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch"}
+    chain.step("七个动作均可用", gesture_ids == expected_gestures, str(sorted(gesture_ids)))
+    metadata_ok = all(g.get("description") and g.get("duration_s", 0) > 0 for g in table.get("gestures") or [])
+    chain.step("动作元数据完整", metadata_ok, "每个动作应有说明和持续时间")
+    chain.step(
+        "五个姿态预设可用",
+        {p.get("id") for p in table.get("presets") or []}
+        == {"stand", "tpose", "squat", "hands_up", "reach"},
+        "",
+    )
+    chain.step(
+        "行走、踏步和停止可用",
+        {g.get("id") for g in table.get("gaits") or []} == {"walk", "march", "off"},
+        "",
+    )
 
     print("\n4. 关节控制")
     target = 1.1
@@ -152,6 +164,13 @@ def main() -> int:
     chain.step("触发挥手", status == 200, f"HTTP {status}")
     state = chain.wait_state(lambda s: s.get("gesture") == "wave")
     chain.step("状态里能看到 gesture=wave", (state or {}).get("gesture") == "wave")
+
+    status, body = chain.call("POST", "/control/gesture", {"name": "salute"})
+    chain.step("触发敬礼", status == 200, f"HTTP {status}")
+    state = chain.wait_state(lambda s: s.get("gesture") == "salute")
+    chain.step("状态里能看到 gesture=salute", (state or {}).get("gesture") == "salute")
+    state = chain.wait_state(lambda s: s.get("gesture") is None, timeout=4.0)
+    chain.step("敬礼结束后自动复位", (state or {}).get("gesture") is None)
 
     print("\n6. 底盘与转向")
     before = chain.wait_state(lambda s: True)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 构建 intellibot_backend。
 #   Linux         直接用系统 cmake + make
-#   Windows(MSYS) 用 VS2022 自带 cmake/ninja，并显式拼 MSVC + Windows SDK 的
+#   Windows(MSYS) 用 Visual Studio 自带 cmake/ninja，并显式拼 MSVC + Windows SDK 的
 #                 PATH/INCLUDE/LIB。不调 vcvars64.bat：它内部会用 reg.exe 探测
 #                 安装信息，受限环境下会失败，显式给路径更稳。
 # 依赖缺失时先跑 scripts/fetch_deps.sh。
@@ -13,7 +13,14 @@ SRC="$ROOT/backend"
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
-    VS_ROOT="$(ls -d "/c/Program Files/Microsoft Visual Studio/2022/"* 2>/dev/null | head -1)"
+    VSWHERE="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+    if [ -x "$VSWHERE" ]; then
+      VS_WIN="$("$VSWHERE" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | tr -d '\r')"
+      VS_ROOT="$(cygpath -u "$VS_WIN")"
+    fi
+    if [ -z "$VS_ROOT" ]; then
+      VS_ROOT="$(ls -d /c/Program\ Files/Microsoft\ Visual\ Studio/*/* /e/Program\ Files/Microsoft\ Visual\ Studio/* 2>/dev/null | head -1)"
+    fi
     MSVC_DIR="$(ls -d "$VS_ROOT"/VC/Tools/MSVC/*/ 2>/dev/null | sort -V | tail -1)"
     CMAKE="$(ls "$VS_ROOT"/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe 2>/dev/null | head -1)"
     NINJA_DIR="$(ls -d "$VS_ROOT"/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja 2>/dev/null | head -1)"
@@ -25,14 +32,31 @@ case "$(uname -s)" in
     fi
     MSVC_WIN="$(cygpath -w "${MSVC_DIR%/}")"
     SDK_WIN="$(cygpath -w "$SDK_BIN_ROOT")"
+    DEPS_PREFIX_WIN="${INTELLIBOT_DEPS_PREFIX:-}"
+    if [ -z "$DEPS_PREFIX_WIN" ]; then
+      CONDA_ON_PATH="$(command -v conda.exe 2>/dev/null || command -v conda 2>/dev/null || true)"
+      for CONDA_EXE in "$CONDA_ON_PATH" /e/Miniforge/Scripts/conda.exe /c/Users/"$USERNAME"/miniconda3/Scripts/conda.exe; do
+        [ -n "$CONDA_EXE" ] || continue
+        if [ -x "$CONDA_EXE" ]; then
+          DEPS_PREFIX_WIN="$("$CONDA_EXE" info --base | tr -d '\r')\Library"
+          break
+        fi
+      done
+    fi
+    PREFIX_ARG=""
+    [ -n "$DEPS_PREFIX_WIN" ] && PREFIX_ARG="-DCMAKE_PREFIX_PATH=\"$DEPS_PREFIX_WIN\""
     TMP_BAT="$(mktemp -d)/build_intellibot.bat"
     {
       echo "@echo off"
       echo "set \"PATH=$(cygpath -w "${MSVC_DIR%/}")\\bin\\Hostx64\\x64;$SDK_WIN\\bin\\$SDK_VER\\x64;$(cygpath -w "$NINJA_DIR");%PATH%\""
       echo "set \"INCLUDE=$MSVC_WIN\\include;$SDK_WIN\\Include\\$SDK_VER\\ucrt;$SDK_WIN\\Include\\$SDK_VER\\um;$SDK_WIN\\Include\\$SDK_VER\\shared\""
       echo "set \"LIB=$MSVC_WIN\\lib\\x64;$SDK_WIN\\Lib\\$SDK_VER\\ucrt\\x64;$SDK_WIN\\Lib\\$SDK_VER\\um\\x64\""
-      echo "\"$(cygpath -w "$CMAKE")\" -S \"$(cygpath -w "$SRC")\" -B \"$(cygpath -w "$BUILD")\" -G Ninja -DCMAKE_BUILD_TYPE=Release || exit /b 1"
+      echo "\"$(cygpath -w "$CMAKE")\" --fresh -S \"$(cygpath -w "$SRC")\" -B \"$(cygpath -w "$BUILD")\" -G Ninja -DCMAKE_BUILD_TYPE=Release $PREFIX_ARG || exit /b 1"
       echo "\"$(cygpath -w "$CMAKE")\" --build \"$(cygpath -w "$BUILD")\" || exit /b 1"
+      if [ -n "$DEPS_PREFIX_WIN" ]; then
+        echo "if exist \"$DEPS_PREFIX_WIN\bin\libsodium.dll\" copy /y \"$DEPS_PREFIX_WIN\bin\libsodium.dll\" \"$(cygpath -w "$BUILD")\\\" >nul"
+        echo "if exist \"$DEPS_PREFIX_WIN\bin\sqlite3.dll\" copy /y \"$DEPS_PREFIX_WIN\bin\sqlite3.dll\" \"$(cygpath -w "$BUILD")\\\" >nul"
+      fi
     } > "$TMP_BAT"
     cmd //c "$(cygpath -w "$TMP_BAT")"
     echo "== 产物：$BUILD/intellibot_backend.exe"

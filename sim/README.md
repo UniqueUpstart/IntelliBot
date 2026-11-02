@@ -81,28 +81,29 @@ python sim/mujoco_bridge.py --print-joints   # 关节名、类型、限位、是
 
 ## 手势
 
-六个动作都落在 `q1_v3_mc.xml` 的真实限位上。这台机器人没有腕关节、前臂也短，够不到身体中线，胸前合掌做不出来，所以比心做成双手举过头顶的版本。
+七个动作集中定义在 `motion_library.py`，启动时会检查关节名、数值、摆动范围和模型限位。动态动作完成后会平滑回到自然站姿。
 
 | 名字 | 关节组合 | 视觉效果 |
 |---|---|---|
 | `wave` | 右肩 pitch -2.95 / roll -1.81 / yaw 1.38，肘 -0.14，roll 以 6.0 rad/s 摆动 | 右手举起挥手，左臂垂着 |
+| `salute` | 右肩 pitch -12.17° / roll -92.22° / yaw -85°，右肘 -45°，腰 yaw 9.25° | 右手敬礼，完成后自动回到站姿 |
 | `heart` | 双肩 pitch -2.73 / roll ±0.80 / yaw ∓1.22，肘 -0.20 | 双手举到头顶两侧，小臂折向头顶、指尖朝上汇聚 |
 | `cheer` | 右肩 roll -2.39 / yaw -0.76，肘 0.56，pitch 以 6.5 rad/s 前后推 | 右手举到脸前上方敲门式往复 |
 | `wave_both` | 双肩 pitch -2.95 / roll ±1.81 / yaw ∓1.38，roll 同步镜像摆 6.0 rad/s | 双手同时挥，节奏一致、方向相反 |
 | `dance` | 肩 pitch 分别按 3.0 / 4.5 rad/s 摆，肘 -0.25 再叠加 0.45 同频开合，腰 yaw 0.35 | 大臂带小臂一起摆，腰跟着扭 |
 | `stretch` | 双肩 pitch -3.03 / roll ±0.22 / yaw ∓0.28，肘 0.48，慢速小幅开合 | 双手举到头后，像伸完舒展 |
 
-要加动作就在 `GESTURES` 里加一项，`pose` 是基准姿势，`osc` 是正弦摆动（幅度, 角频率），需要错相位时写三元组（幅度, 角频率, 初相），`label` 是页面按钮上的中文名。
+要加动作就在 `motion_library.py` 的 `GESTURES` 中加一项。`pose` 是基准姿势，`osc` 是正弦摆动（幅度, 角频率），`duration_s` 是持续时间，`return_to_rest` 决定完成后是否回到站姿；`description` 和 `aliases` 供页面及后续大模型选择动作使用。
 
 ## 姿态、步态、视角
 
-三类操作的区别：姿态是一次性目标，步态是持续写 target 直到停，动作（手势）同理但只动上半身。
+三类操作的区别：姿态会保持，步态会持续运行到停止，动态动作按各自持续时间运行后自动回到站姿。
 
-姿态预设（`/cmd/preset`，`tpose` / `squat` / `hands_up` / `reach`）会先把所有关节归零再叠加，所以从任意姿势切过去都是可预期的。预设里没有「站直」这一项：模型的前臂默认朝前平伸（肘 0 就是僵尸手），全零姿态算不上自然站立，想回站姿用 `/cmd/reset`，它会把 `ARM_REST` 那组角（肩 roll ±0.22、肘 1.45）补上，手臂垂在体侧；启动时的初始 qpos 也用同一份。`squat` 带 `base_dz:-0.085`：屈膝会把脚抬离地面，机身要跟着压下去。髋 -0.85 / 膝 1.55 / 踝 -0.76 是一组反解结果——脚底四个接触点高差 5 mm（约 2°）；踝留 0 会让脚掌翘约 18°（脚底四点高差 46 mm），而再往下蹲踝会先顶到 -0.785 的限位，脚掌就压不平了。
+姿态预设（`/cmd/preset`，`stand` / `tpose` / `squat` / `hands_up` / `reach`）会先回到自然站姿再叠加，所以从任意姿势切换都不会残留上一动作。`stand` 和动态动作结束时共用 `ARM_REST`：肩 roll ±0.22、肘 1.45，使手臂自然垂在体侧。`squat` 带 `base_dz:-0.085`，屈膝时机身会同步下沉，使脚掌尽量贴地。
 
 kinematic 模式下机身高度不是按固定速度往 `home_z+base_dz` 压，而是每帧用当前腿型反推「脚底最低点正好贴地」所需的高度（`base_dz` 只作为下沉下限）。这样预设切换、拖动关节滑块的整个过渡过程里脚都不会穿地——按老做法机身 0.14 s 就沉到底、腿还要 0.5 s 才弯到位，中间那 0.4 s 脚会插进地面 8 cm。
 
-步态（`/cmd/gait`，`walk` / `march`）用正弦相位驱动两条腿：髋 pitch 摆幅 0.35、膝在摆动相屈起、踝反向补偿保持脚掌水平、腰轻微扭。摆臂跟同侧髋反号（髋与肩的 pitch 轴同向，正角都往后摆），所以两臂一前一后、与同侧腿反相，不会顺拐；摆幅 `walk` 0.45、`march` 0.5，肩 pitch 的 slew 按各自的幅值与频率另算（跑步峰值 5.6 rad/s，沿用 `--joint-speed` 会把手削成个小晃）。肘的目标角写在各自的 `elbow` 里：`walk` 取 1.45，前臂贴着大臂垂下来；`march` 取 -0.15，小臂抬到大臂前方、两者接近 90°。只写 target，实际角速度仍受 `--joint-speed` 限制，所以从站姿切进步态不会瞬移。`{"name":"off"}` 停止。
+步态（`/cmd/gait`）包含 `walk`（行走）、`march`（踏步）和 `off`（停止）。行走与踏步使用正弦相位驱动两条腿并配合摆臂；发送 `off` 后会停止步态并保持停止时的姿态。
 
 视角（`/cmd/camera`）传 `azimuth` / `elevation` / `distance` 的任意组合，或 `{"reset": true}` 回到启动时的机位。页面里在画面上拖动就是改 azimuth 与 elevation，滚轮缩放 distance。窗口模式没有离屏相机，这个接口会返回 422，页面上的相机控件随之置灰。
 
@@ -120,13 +121,13 @@ kinematic 模式下机身高度不是按固定速度往 `home_z+base_dz` 压，�
 | GET | `/frame` | 单帧 JPEG；窗口模式下返回 503 |
 | GET | `/stream` | MJPEG 流，可直接塞进 `<img>` |
 | POST | `/cmd/pose` | `{pose:{关节名:弧度}, duration_ms}`，按 duration 限速过渡 |
-| POST | `/cmd/gesture` | `{name, speed}`，清掉正在跑的步态 |
+| POST | `/cmd/gesture` | `{name, speed}`，清掉正在跑的步态，动作到期后自动回站姿 |
 | POST | `/cmd/preset` | `{name}`，回站姿再叠加该预设 |
 | POST | `/cmd/gait` | `{name: walk\|march\|off}` |
 | POST | `/cmd/camera` | `{azimuth?, elevation?, distance?, reset?}` |
 | POST | `/cmd/speed` | `{speed}`，0.2–3.0 夹紧 |
 | POST | `/cmd/base` | `{vx,vy,wz}`，仅运动学模式 |
-| POST | `/cmd/stop` | 清底盘速度、手势、步态与机身升降 |
+| POST | `/cmd/stop` | 清底盘速度、动作和步态，并保持停止时的位置与姿态 |
 | POST | `/cmd/reset` | `mj_resetData` 回初始姿态 |
 | POST | `/cmd/mode` | `{mode: kinematic\|dynamic}` |
 

@@ -296,7 +296,7 @@
       run('/control/gesture', { name: id }, '触发动作');
     });
     fillChips(gaitsBox, table.gaits, 'simGait', function (id) {
-      var stop = activeGait === id;
+      var stop = id === 'off' || activeGait === id;
       activeGait = stop ? null : id;
       activeGesture = null;
       markOn(gaitsBox, 'simGait', activeGait);
@@ -477,6 +477,14 @@
          当前模式看右侧参数栏的 mode 那行，那里显示的是 state.mode 原值 */
       setModeLabel(dynamic ? t('sim.mode.kinematic') : t('sim.mode.dynamic'));
       if (state.camera) cam = state.camera;
+      if (activeGesture !== (state.gesture || null)) {
+        activeGesture = state.gesture || null;
+        markOn(gesturesBox, 'simGesture', activeGesture);
+      }
+      if (activeGait !== (state.gait || null)) {
+        activeGait = state.gait || null;
+        markOn(gaitsBox, 'simGait', activeGait);
+      }
       Object.keys(sliders).forEach(function (name) {
         if (dragging[name] || !(name in state.joints)) return;
         sliders[name].value = state.joints[name];

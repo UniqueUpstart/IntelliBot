@@ -1,5 +1,5 @@
 """Persistent authentication and independent browser-session integration test."""
-import json, socket, subprocess, sys, tempfile, time, urllib.request, urllib.error, sqlite3
+import contextlib, json, socket, subprocess, sys, tempfile, time, urllib.request, urllib.error, sqlite3
 from pathlib import Path
 binary=sys.argv[1]
 with tempfile.TemporaryDirectory() as tmp:
@@ -50,7 +50,7 @@ with tempfile.TemporaryDirectory() as tmp:
         data('POST','/auth/logout',{},a)
         assert call('GET','/auth/me',token=a)[0]==401
         assert data('GET','/auth/me',token=b)['user']['username']=='bob'
-        with sqlite3.connect(db) as con:
+        with contextlib.closing(sqlite3.connect(db)) as con:
             hashes=[x[0] for x in con.execute('SELECT password_hash FROM users')]
             assert all(h.startswith('$argon2id$') for h in hashes)
             assert a not in str(list(con.execute('SELECT * FROM sessions')))

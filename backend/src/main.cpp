@@ -222,7 +222,16 @@ int main(int argc, char** argv) {
       } else if(req.method=="GET" && path=="/api/v1/capabilities") {
         json list=json::array();
         for(const auto& [id,n]:actions) list.push_back({{"id",id},{"sdk_constant",n},{"category","action"},{"mode",sim_session?"sim":"mock"},{"enabled",connected}});
-        response(res,200,request_id,{{"actions",list},{"emotions",json::array()},{"motion",sim_session},{"camera",sim_session},{"chat",false},{"gestures",sim_session?json::array({"wave","heart","cheer"}):json::array()}});
+        json gestures=json::array();
+        if(sim_session) {
+          std::string out; int status=0;
+          if(!sim_call("GET","/joints","",status,out) || status!=200) {
+            fail(502,"SIM_UNAVAILABLE","无法从仿真动作库读取能力列表"); return;
+          }
+          try { gestures=json::parse(out).value("gestures",json::array()); }
+          catch (...) { fail(502,"SIM_ERROR","仿真动作库返回了非法 JSON"); return; }
+        }
+        response(res,200,request_id,{{"actions",list},{"emotions",json::array()},{"motion",sim_session},{"camera",sim_session},{"chat",false},{"gestures",gestures}});
       } else if(req.method=="GET" && path=="/api/v1/logs") {
         unsigned long long after=0;
         if(req.has_param("after_id")) {
@@ -269,7 +278,7 @@ int main(int argc, char** argv) {
             if(!input.contains("joints")||!input["joints"].is_object()||input["joints"].empty()) bad="joints 需为非空对象";
             else { forward_body={{"pose",input["joints"]},{"duration_ms",input.value("duration_ms",300)}}; target="/cmd/pose"; }
           } else if(path=="/api/v1/control/gesture") {
-            if(!input.contains("name")||!input["name"].is_string()) bad="需提供手势名 wave/heart/cheer/wave_both/dance/stretch";
+            if(!input.contains("name")||!input["name"].is_string()) bad="需提供动作名称";
             else { forward_body={{"name",input["name"]},{"speed",input.value("speed",2.5)}}; target="/cmd/gesture"; }
           } else if(path=="/api/v1/sim/mode") {
             const auto mode=input.value("mode",std::string());

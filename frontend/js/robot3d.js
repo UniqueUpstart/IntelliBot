@@ -23,6 +23,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood } from './faces.js?v=3';
+import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=6';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */
@@ -32,12 +33,12 @@ const FRAME_KEY = 'intellibot.bot'; /* 与 Settings 里那组按钮共用同一�
    body 的 yaw 是「指针贴到屏幕边」时多转的角度，0.08 约 4.6°；
    head 直接用 Math.PI/6，就是左右各 30° */
 const FRAMES = {
-  body: { top: 1,     bottom: 0.48,  fill: 0.95, baseYaw: 0.22, yaw: 0.08,       pitch: 0.025, breathe: 0.02 },
+  body: { top: 1,     bottom: 0,     fill: 0.9,  baseYaw: 0.12, yaw: 0.08,       pitch: 0.025, breathe: 0.012 },
   head: { top: 1.03,  bottom: 0.81,  fill: 0.92, baseYaw: 0,    yaw: Math.PI / 6, pitch: 0,     breathe: 0.006 },
 };
 const ARM_SPAN = 0.5;       /* 含边距的臂展（归一化到身高），窄屏时用它挡横向溢出 */
 
-const WHITE = 0xf7f7f7;     /* 壳体白 */
+const WHITE = 0xe3e6e8;     /* 壳体白：全身取景下与浅灰背景保持足够轮廓 */
 const DARK = 0x2f3134;      /* 关节、护甲缝隙的深色 */
 const VISOR = 0x1b1d20;     /* 面罩：比关节再深一档，压成镜面 */
 const DARK_AS_WHITE = false;/* true = 连面罩一起刷白，整台纯白（会丢掉五官） */
@@ -90,11 +91,13 @@ function init() {
   const rig = new THREE.Group();
   scene.add(rig);
 
-  let mixer = null, model = null, ready = false;
+  let mixer = null, model = null, motionController = null, idleAction = null, ready = false;
+  let setActiveMotion = () => {};
   let clips = [], activeAction = null;
   let playback = {clip: 'idle', state: 'loading'};
   function playClip(name, loop = false) {
     if (!ready || !mixer) throw new Error('模型尚未加载');
+    if (motionController?.activeId) motionController.stop();
     const clip = THREE.AnimationClip.findByName(clips, name);
     if (!clip) throw new Error('模型没有此动画：' + name);
     const next = mixer.clipAction(clip);
@@ -145,8 +148,10 @@ function init() {
       tgtD = span / (2 * tanV) / f.fill;
       tgtY = (f.top + f.bottom) / 2;
     } else {
-      const topInset = parseFloat(getComputedStyle(wrap).getPropertyValue('--robofx-top')) || 88;
-      const avail = Math.max(160, h - topInset);   /* 机器人可见段要占的高度 */
+      const style = getComputedStyle(wrap);
+      const topInset = parseFloat(style.getPropertyValue('--robofx-top')) || 88;
+      const bottomInset = parseFloat(style.getPropertyValue('--robofx-bottom')) || 208;
+      const avail = Math.max(240, h - topInset - bottomInset);
       /* 纵向：可见段占 avail 像素。画布比 avail 高，所以同一段在世界里
          要摊到 h 那么高，距离按 h / avail 放大 */
       const distV = (span * h) / (avail * 2 * tanV);
@@ -154,9 +159,9 @@ function init() {
          窄屏纵向撑满后宽度会顶到九成，收一档让它离边远一点 */
       const distH = ARM_SPAN / (2 * tanV * camera.aspect);
       tgtD = Math.max(distV, distH) / f.fill;
-      /* 让下沿那个高度正好落在画布下边缘：目标点抬到 bottom + dist*tanV，
-         底边就贴着腰线。再往上挪画面就回来了 */
-      tgtY = f.bottom + tgtD * tanV;
+      const contentCenter = (topInset + h - bottomInset) / 2;
+      const worldPerPixel = (2 * tgtD * tanV) / h;
+      tgtY = (f.top + f.bottom) / 2 + (contentCenter - h / 2) * worldPerPixel;
     }
 
     if (instant || REDUCED || !camPlaced) {
@@ -335,12 +340,20 @@ function init() {
         window.dispatchEvent(new CustomEvent('robot-playback', {detail: {...playback}}));
       });
       const clip = THREE.AnimationClip.findByName(gltf.animations, CLIP) || gltf.animations[0];
-      const action = mixer.clipAction(clip);
-      action.setLoop(THREE.LoopRepeat, Infinity);
-      action.play();
-      activeAction = action;
+      idleAction = mixer.clipAction(clip);
+      idleAction.setLoop(THREE.LoopRepeat, Infinity);
+      idleAction.play();
+      activeAction = idleAction;
       if (REDUCED) mixer.update(0.5);
     }
+
+    motionController = createHomeMotionController(
+      model,
+      mixer,
+      idleAction,
+      setActiveMotion,
+      () => { if (REDUCED) renderer.setAnimationLoop(tick); },
+    );
 
     fit(true);
     ready = true;
@@ -370,6 +383,13 @@ function init() {
     renderer.setAnimationLoop(document.hidden ? null : tick);
   });
 
+  setActiveMotion = mountHomeMotionControls((id) => {
+    if (!motionController) return;
+    if (activeAction && activeAction !== idleAction) activeAction.stop();
+    activeAction = idleAction;
+    motionController.play(id);
+  });
+
   window.robot3d = {
     scene, camera, renderer, rig,
     get model() { return model; },
@@ -381,6 +401,8 @@ function init() {
     get mood() { return moodId(); },
     /* 外部（比如接上聊天状态）直接调这个换表情，底栏那排缩略图会跟着点亮 */
     setMood,
+    playGesture(id) { return motionController ? motionController.play(id) : false; },
+    stopGesture() { if (motionController) motionController.stop(); },
     /* Settings 那组按钮调这里：切档 → 重算相机目标 → 交给 tick 推过去 */
     setFraming(key) {
       const next = key === 'head' ? 'head' : 'body';

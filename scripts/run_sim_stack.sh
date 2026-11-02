@@ -37,7 +37,7 @@ else
 fi
 
 echo "== 启动仿真桥 :$SIM_PORT（$SIM_MODE）"
-"$PYTHON" "$ROOT/sim/mujoco_bridge.py" --legacy-dev --port "$SIM_PORT" "${BRIDGE_FLAGS[@]}" &
+"$PYTHON" "$ROOT/sim/mujoco_bridge.py" --port "$SIM_PORT" "${BRIDGE_FLAGS[@]}" &
 BRIDGE_PID=$!
 cleanup() { kill "$BRIDGE_PID" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM

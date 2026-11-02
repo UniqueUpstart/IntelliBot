@@ -63,7 +63,7 @@ set "MODE_FLAG=--headless"
 if /i "%SIM_MODE%"=="viewer" set "MODE_FLAG="
 
 echo [sim] bridge :%SIM_PORT% (%SIM_MODE%), log in the minimized window
-start "IntelliBot sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --legacy-dev --port %SIM_PORT% %MODE_FLAG%
+start "IntelliBot sim bridge" /min %PYQ% "%ROOT%\sim\mujoco_bridge.py" --port %SIM_PORT% %MODE_FLAG%
 
 echo [sim] waiting for the bridge to come up...
 set "READY="

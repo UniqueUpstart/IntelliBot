@@ -271,6 +271,21 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 .dock__card:hover::before{opacity:1}
 
+.dock__card.is-motion{
+  display:grid;
+  place-items:center;
+  padding:7px;
+  border:0;
+  color:var(--text-primary);
+  cursor:pointer;
+  font:700 12px/1.2 "Arial Narrow", "Microsoft YaHei", sans-serif;
+  letter-spacing:.02em;
+  text-align:center;
+}
+.dock__card.is-motion:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+.motion__label{position:relative; z-index:1; pointer-events:none}
+.dock__card.is-motion.is-on .motion__label{color:var(--text-primary)}
+
 /* Emotions 那列的表情卡：卡里嵌一块小黑屏，屏上画的就是机器人面罩上那张
    发光脸（同一份画法，见 js/faces.js）。
    屏要抬到 z-index 1 —— 卡片的 hover 填色是 ::before（z-index 0）铺在整卡上的，
