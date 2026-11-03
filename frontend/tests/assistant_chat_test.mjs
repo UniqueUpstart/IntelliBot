@@ -7,6 +7,10 @@ class ClassList {
   constructor() { this.values = new Set(); }
   add(...values) { values.forEach(value => this.values.add(value)); }
   remove(...values) { values.forEach(value => this.values.delete(value)); }
+  toggle(value, force) {
+    const on = force === undefined ? !this.values.has(value) : force;
+    if (on) this.values.add(value); else this.values.delete(value);
+  }
 }
 
 
@@ -19,6 +23,7 @@ class Node {
     this.disabled = false;
     this.value = '';
     this.textContent = '';
+    this.dataset = {};
     this.scrollTop = 0;
     this.scrollHeight = 0;
     this.parent = null;
@@ -51,6 +56,13 @@ const sendButton = new Node();
 const clearButton = new Node();
 const stopButton = new Node();
 const status = new Node();
+panel.querySelector = selector => ({
+  '[data-assistant-log]': log,
+  '[data-assistant-clear]': clearButton,
+  '[data-assistant-stop]': stopButton,
+  '[data-assistant-status]': status,
+  '[data-chat-suggestions]': null,
+})[selector];
 composer.querySelector = selector => ({
   '[data-assistant-chat]': panel,
   '[data-assistant-log]': log,
@@ -62,13 +74,17 @@ composer.querySelector = selector => ({
 })[selector];
 
 globalThis.document = {
-  querySelector: selector => selector === '.composer' ? composer : null,
+  querySelector: selector => selector === '.composer' ? composer :
+    (selector === '[data-assistant-chat]' ? panel : null),
   createElement: () => new Node(),
 };
 globalThis.location = {search: ''};
+globalThis.sessionStorage = {getItem() { return null; }, setItem() {}, removeItem() {}};
 globalThis.requestAnimationFrame = callback => callback();
 globalThis.Event = class { constructor(type) { this.type = type; } };
 globalThis.window = {
+  addEventListener() {},
+  matchMedia: () => ({matches: false}),
   robot3d: {
     ready: true,
     played: [],
@@ -169,6 +185,6 @@ assert.equal(window.intellibotChat.history.length, 10, 'history should retain at
 
 clearButton.dispatchEvent(new Event('click'));
 assert.equal(window.intellibotChat.history.length, 0);
-assert.equal(panel.hidden, true);
+assert.equal(log.children.length, 0);
 
 console.log('PASS: chat controls, action sequence, stop command, validation, history limit');

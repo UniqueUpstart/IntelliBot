@@ -21,7 +21,7 @@ export const Q1_MOTIONS = Object.freeze({
       "打招呼",
       "你好"
     ],
-    "mood": null,
+    "mood": "happy",
     "duration": 3.0,
     "pose": {
       "right_shoulder_pitch_joint": -2.95,
@@ -47,7 +47,7 @@ export const Q1_MOTIONS = Object.freeze({
       "双手挥",
       "双手打招呼"
     ],
-    "mood": null,
+    "mood": "happy",
     "duration": 3.0,
     "pose": {
       "left_shoulder_pitch_joint": -2.95,
@@ -77,7 +77,7 @@ export const Q1_MOTIONS = Object.freeze({
       "敬礼",
       "行礼"
     ],
-    "mood": null,
+    "mood": "calm",
     "duration": 2.5,
     "pose": {
       "right_shoulder_pitch_joint": -0.2124065699677099,
@@ -95,7 +95,7 @@ export const Q1_MOTIONS = Object.freeze({
       "比心",
       "爱心"
     ],
-    "mood": null,
+    "mood": "happy",
     "duration": 2.5,
     "pose": {
       "left_shoulder_pitch_joint": -2.73,
@@ -116,7 +116,7 @@ export const Q1_MOTIONS = Object.freeze({
       "加油",
       "鼓励"
     ],
-    "mood": null,
+    "mood": "happy",
     "duration": 2.5,
     "pose": {
       "right_shoulder_pitch_joint": -0.04,
@@ -140,7 +140,7 @@ export const Q1_MOTIONS = Object.freeze({
       "舞动",
       "跳舞"
     ],
-    "mood": null,
+    "mood": "happy",
     "duration": 4.0,
     "pose": {
       "left_shoulder_roll_joint": 0.55,
@@ -176,6 +176,14 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "cha_cha": {
     "label": "cha-cha",
+    "description": "恰恰基本步：胯部左右摆动，双臂交替推送",
+    "aliases": [
+      "cha-cha",
+      "cha cha",
+      "恰恰",
+      "恰恰舞"
+    ],
+    "mood": "happy",
     "duration": 4.0,
     "pose": {
       "left_shoulder_pitch_joint": -0.55,
@@ -235,7 +243,7 @@ export const Q1_MOTIONS = Object.freeze({
       "伸懒腰",
       "舒展"
     ],
-    "mood": null,
+    "mood": "calm",
     "duration": 3.0,
     "pose": {
       "left_shoulder_roll_joint": 0.22,

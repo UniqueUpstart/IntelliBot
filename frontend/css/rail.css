@@ -100,18 +100,18 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 
 /* ============================================================
-   右栏动作卡 —— Gestures / Emotions
+   右栏动作、表情与聊天
    栏体展开后，内容区 = 601（--rail-expanded）− 80（图标列）− 1（分割线）
    − 32（左右内边距）≈ 488；一行四张方格、间隔 8：
    (488 − 24) / 4 ≈ 116。边长交给 1fr，窄屏（78vw）时四张一起缩，
    始终四列不折行
    ============================================================ */
-/* 两页共用一块滚动区，只显示 data-view 对应的那一页；
-   没点过图标就展开（无脚本兜底）时先给手势页 */
+/* 三页共用一块内容区，只显示 data-view 对应的那一页。 */
 .rail__view{display:none}
-[data-panel-body][data-view="gestures"] [data-rail-view="gestures"],
+[data-panel-body][data-view="motions"] [data-rail-view="motions"],
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
-[data-panel-body]:not([data-view]) [data-rail-view="gestures"]{display:block}
+[data-panel-body][data-view="chat"] [data-rail-view="chat"],
+[data-panel-body]:not([data-view]) [data-rail-view="motions"]{display:block}
 
 /* 分栏标题：字号、字距、字色、行盒与吸顶位置都对齐左栏的 .sc-group__title（24 号）
    —— 两边是同一级标题，只是左边按指令组排、右边按视图排。
@@ -513,8 +513,9 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item[data-panel="Tendance"]{--itc:var(--series-pink-light)}
 /* 右栏两枚不与左栏的指令分组色走：那一列是「看机器人」的入口，
    与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
-.item[data-panel="Gestures"]{--itc:var(--theme)}
+.item[data-panel="Motions"]{--itc:var(--theme)}
 .item[data-panel="Emotions"]{--itc:var(--theme)}
+.item[data-panel="Chat"]{--itc:var(--theme)}
 .item[data-panel="Model"]{--itc:var(--theme)}
 .item[data-panel="Skin"]{--itc:var(--theme)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），

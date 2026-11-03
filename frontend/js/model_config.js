@@ -21,12 +21,16 @@
   var API = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var HISTORY_KEY = 'intellibot.modelHistory';
   var busy = false;
+  var LEGACY_MODELS = {
+    'deepseek-chat': 'deepseek-flash',
+    'deepseek-reasoner': 'deepseek-v4-pro',
+  };
 
   var PRESETS = {
     deepseek: {
       label: 'DeepSeek',
       baseUrl: 'https://api.deepseek.com',
-      models: ['deepseek-chat', 'deepseek-reasoner'],
+      models: ['deepseek-flash', 'deepseek-v4-pro'],
     },
     openai: {
       label: 'OpenAI',
@@ -43,7 +47,7 @@
   var current = {
     provider: 'deepseek',
     base_url: PRESETS.deepseek.baseUrl,
-    model: 'deepseek-chat',
+    model: 'deepseek-flash',
     configured: false,
     key_hint: '',
   };
@@ -54,6 +58,26 @@
 
   function providerName(provider) {
     return (PRESETS[provider] && PRESETS[provider].label) || provider || 'AI';
+  }
+
+  function normalizeModel(provider, model) {
+    return provider === 'deepseek' && LEGACY_MODELS[model] ? LEGACY_MODELS[model] : model;
+  }
+
+  function modelLabel(model) {
+    if (model === 'deepseek-flash') return 'DeepSeek Flash';
+    if (model === 'deepseek-v4-pro') return 'DeepSeek V4 Pro';
+    return model;
+  }
+
+  function modelDescription(provider, model) {
+    if (provider === 'deepseek' && model === 'deepseek-flash') {
+      return t('model.desc.deepseekFlash', '响应快、成本较低，适合日常对话和机器人动作理解');
+    }
+    if (provider === 'deepseek' && model === 'deepseek-v4-pro') {
+      return t('model.desc.deepseekV4Pro', '综合能力更强，适合复杂指令和较长对话');
+    }
+    return t('model.desc.custom', '自定义模型');
   }
 
   function readHistory() {
@@ -80,6 +104,7 @@
     var values = preset.models.slice();
     if (Array.isArray(history)) {
       history.forEach(function (model) {
+        model = normalizeModel(provider, model);
         if (typeof model === 'string' && !values.includes(model)) values.push(model);
       });
     }
@@ -123,10 +148,10 @@
 
       var name = document.createElement('span');
       name.className = 'model-menu__name';
-      name.textContent = model;
+      name.textContent = modelLabel(model);
       var provider = document.createElement('span');
       provider.className = 'model-menu__provider';
-      provider.textContent = providerName(current.provider);
+      provider.textContent = modelDescription(current.provider, model);
       item.append(name, provider);
       menuList.appendChild(item);
     });
@@ -136,7 +161,7 @@
     current = {
       provider: config.provider || 'custom',
       base_url: config.base_url || '',
-      model: config.model || '',
+      model: normalizeModel(config.provider || 'custom', config.model || ''),
       configured: !!config.configured,
       key_hint: config.key_hint || '',
     };
@@ -150,7 +175,7 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = current.configured
-      ? current.model
+      ? modelLabel(current.model)
       : t('model.choose', '选择模型');
     trigger.classList.toggle('is-ready', current.configured);
     trigger.setAttribute('aria-label', current.configured

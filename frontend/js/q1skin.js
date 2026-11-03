@@ -1,9 +1,9 @@
 /* 主页皮肤。
    下拉里的「原模型」是 q1_ff.glb，自己播片段。
-   「示意人形」和导入的 Mixamo / glTF 跟右侧 Gestures（含街舞）的同一套关节角走。
+   「示意人形」和导入的 Mixamo / glTF 跟右侧 Motions（含街舞）的同一套关节角走。
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
-import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js';
+import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
 import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=2';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
 
@@ -176,10 +176,10 @@ function init() {
     return sampleHomePose(gesture.id, progress);
   }
 
-  function watchGestures() {
-    const grid = document.querySelector('[data-rail-grid="gestures"]');
+  function watchMotions() {
+    const grid = document.querySelector('[data-rail-grid="motions"]');
     if (!grid) {
-      requestAnimationFrame(watchGestures);
+      requestAnimationFrame(watchMotions);
       return;
     }
     const sync = () => {
@@ -202,7 +202,7 @@ function init() {
     };
     new MutationObserver(sync).observe(grid, { attributes: true, subtree: true, attributeFilter: ['class'] });
   }
-  watchGestures();
+  watchMotions();
 
   /* 和原模型同一套取景，再叠上同一套环绕、缩放。正面朝 +X。 */
   const view = { azimuth: 0, elevation: 0, distance: 1 };

@@ -23,8 +23,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose } from './homepage_motions.js?v=16';
-import { Q1_REST_POSE, Q1_MOTIONS } from './q1_motion_data.js?v=2';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose } from './homepage_motions.js?v=17';
+import { Q1_REST_POSE, Q1_MOTIONS } from './q1_motion_data.js?v=3';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */

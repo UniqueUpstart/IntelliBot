@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {moodId, setMood, onMood} from './faces.js?v=15';
-import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=2';
+import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=3';
 import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=2';
 
 const MOTION_BY_ID = Object.fromEntries([
@@ -301,7 +301,7 @@ export function mountHomeMotionControls(play) {
   document.querySelectorAll('.sc-group--action [data-motion], .sc-group--action [data-action-motion]')
     .forEach((card) => card.remove());
 
-  const grid = document.querySelector('[data-rail-grid="gestures"]');
+  const grid = document.querySelector('[data-rail-grid="motions"]');
   if (grid) {
     while (grid.children.length < HOME_MOTIONS.length + 1) {
       const card = document.createElement('div');

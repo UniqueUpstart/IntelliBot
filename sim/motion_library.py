@@ -17,6 +17,7 @@ ARM_REST: dict[str, float] = {
 GESTURES: dict[str, dict] = {
     "wave": {
         "label": "挥手",
+        "mood": "happy",
         "description": "右手抬起并左右挥动",
         "aliases": ["挥手", "打招呼", "你好"],
         "pose": {
@@ -35,6 +36,7 @@ GESTURES: dict[str, dict] = {
     },
     "wave_both": {
         "label": "双手挥",
+        "mood": "happy",
         "description": "双手同时抬起并挥动",
         "aliases": ["双手挥", "双手打招呼"],
         "pose": {
@@ -56,6 +58,7 @@ GESTURES: dict[str, dict] = {
     },
     "salute": {
         "label": "敬礼",
+        "mood": "calm",
         "description": "右手完成敬礼姿态",
         "aliases": ["敬礼", "行礼"],
         "pose": {
@@ -71,6 +74,7 @@ GESTURES: dict[str, dict] = {
     },
     "heart": {
         "label": "比心",
+        "mood": "happy",
         "description": "双手在头顶组成心形",
         "aliases": ["比心", "爱心"],
         "pose": {
@@ -89,6 +93,7 @@ GESTURES: dict[str, dict] = {
     },
     "cheer": {
         "label": "加油",
+        "mood": "happy",
         "description": "右手举起并做加油动作",
         "aliases": ["加油", "鼓励"],
         "pose": {
@@ -105,6 +110,7 @@ GESTURES: dict[str, dict] = {
     },
     "dance": {
         "label": "舞动",
+        "mood": "happy",
         "description": "双臂和腰部按不同节奏摆动",
         "aliases": ["舞动", "跳舞"],
         "pose": {
@@ -128,6 +134,7 @@ GESTURES: dict[str, dict] = {
     },
     "cha_cha": {
         "label": "cha-cha",
+        "mood": "happy",
         "description": "恰恰基本步：胯部左右摆动，双臂交替推送",
         "aliases": ["cha-cha", "cha cha", "恰恰", "恰恰舞"],
         "pose": {
@@ -159,6 +166,7 @@ GESTURES: dict[str, dict] = {
     },
     "stretch": {
         "label": "伸懒腰",
+        "mood": "calm",
         "description": "双臂举过头顶并缓慢舒展",
         "aliases": ["伸懒腰", "舒展"],
         "pose": {

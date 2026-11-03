@@ -15,6 +15,7 @@ from ai.deepseek_bridge import (
     BridgeError,
     BridgeState,
     Config,
+    _request_payload,
     chat,
     validate_ai_config,
     validate_chat_request,
@@ -57,6 +58,27 @@ class DeepSeekBridgeTest(unittest.TestCase):
         )
         self.assertEqual(result["reply"], "我是 IntelliBot。")
         self.assertIsNone(result["action_id"])
+
+    def test_thinking_is_disabled_only_for_deepseek(self):
+        deepseek = _request_payload(self.config, "你好", [])
+        custom = _request_payload(
+            Config(api_key="test-key", provider="custom", model="local-model"),
+            "你好",
+            [],
+        )
+        self.assertEqual(deepseek["thinking"], {"type": "disabled"})
+        self.assertNotIn("thinking", custom)
+
+    def test_legacy_deepseek_models_are_migrated(self):
+        updated = validate_ai_config(
+            {
+                "provider": "deepseek",
+                "base_url": "https://api.deepseek.com",
+                "model": "deepseek-reasoner",
+            },
+            self.config,
+        )
+        self.assertEqual(updated.model, "deepseek-v4-pro")
 
     def test_supported_actions_are_kept(self):
         for action_id in ("salute", "wave", "surprised", "hug", "refuse"):

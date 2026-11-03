@@ -24,7 +24,11 @@ from motion_library import GESTURES, gesture_metadata
 
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-flash"
+LEGACY_DEEPSEEK_MODELS = {
+    "deepseek-chat": "deepseek-flash",
+    "deepseek-reasoner": "deepseek-v4-pro",
+}
 RUNTIME_CONFIG = ROOT / "data" / "ai_config.json"
 MAX_BODY_BYTES = 8192
 MAX_MESSAGE_CHARS = 500
@@ -112,6 +116,8 @@ def load_config() -> Config:
     provider = pick("provider", "AI_PROVIDER", "deepseek")
     base_url = pick("base_url", "AI_BASE_URL", DEFAULT_BASE_URL)
     model = pick("model", "AI_MODEL", DEFAULT_MODEL)
+    if provider.lower() == "deepseek":
+        model = LEGACY_DEEPSEEK_MODELS.get(model, model)
     return Config(api_key=api_key, model=model, provider=provider, base_url=base_url)
 
 
@@ -144,6 +150,8 @@ def validate_ai_config(value: object, current: Config) -> Config:
     provider = _validate_text(value.get("provider", current.provider), "provider", 48)
     base_url = _validate_text(value.get("base_url", current.base_url), "base_url", 300)
     model = _validate_text(value.get("model", current.model), "model", 120)
+    if provider.lower() == "deepseek":
+        model = LEGACY_DEEPSEEK_MODELS.get(model, model)
     parsed = urllib.parse.urlparse(base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise BridgeError(400, "INVALID_AI_CONFIG", "API 地址必须是 http(s) URL")
@@ -235,7 +243,7 @@ def _system_prompt() -> str:
 
 
 def _request_payload(config: Config, message: str, history: list[dict[str, str]]) -> dict:
-    return {
+    payload = {
         "model": config.model,
         "messages": [
             {"role": "system", "content": _system_prompt()},
@@ -246,6 +254,9 @@ def _request_payload(config: Config, message: str, history: list[dict[str, str]]
         "max_tokens": 300,
         "response_format": {"type": "json_object"},
     }
+    if config.provider.lower() == "deepseek":
+        payload["thinking"] = {"type": "disabled"}
+    return payload
 
 
 def _default_open(request: urllib.request.Request, timeout: float):

@@ -19,13 +19,13 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=13"></script>
+<script src="js/i18n.js?v=14"></script>
   <link rel="stylesheet" href="css/base.css?v=8">
   <link rel="stylesheet" href="css/topbar.css?v=8">
-  <link rel="stylesheet" href="css/rail.css?v=25">
+  <link rel="stylesheet" href="css/rail.css?v=26">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=35">
+  <link rel="stylesheet" href="css/chat.css?v=36">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -214,7 +214,7 @@
           <label class="model-field">
             <span data-i18n="model.model">模型</span>
             <input data-model-name type="text" spellcheck="false" autocomplete="off"
-                   list="model-name-options" placeholder="deepseek-chat">
+                   list="model-name-options" placeholder="deepseek-flash">
             <datalist id="model-name-options"></datalist>
           </label>
           <label class="model-field">
@@ -318,19 +318,16 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<!-- ===================== 右侧：Gestures / Emotions =====================
-     原来这里是 Chat / Log 两个占位页，现在两页都由动作卡填满：
-     手势页铺 12 张（全部手势动作含街舞）、表情页铺 16 张，一行四张（卡片由 js/rails.js 注入，
-     动作名来自 js/homepage_motions.js、表情屏来自 js/faces.js） -->
+<!-- ===================== 右侧：动作 / 表情 / 聊天 ===================== -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
-      <button class="item" type="button" data-panel="Gestures" aria-expanded="false" aria-controls="panel-tools">
+      <button class="item" type="button" data-panel="Motions" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12.1 3.6c-.9 0-1.6.7-1.6 1.6v10.2l-1.8-2.4c-.5-.7-1.5-.9-2.2-.4-.7.5-.8 1.4-.4 2.1l4.6 6.9c1.1 1.7 3 2.7 5 2.7h3.4c2.9 0 5.2-2.3 5.2-5.2v-6.7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v2.9h-.6V8.5c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v6.4h-.6V7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v8h-.6V5.2c0-.9-.7-1.6-1.6-1.6Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="18.5" cy="5.5" r="2.7"/><path d="m15.2 10.1 4.2-1.3 4 4.1 4.1 1.2-.8 2.6-5-1.5-2.1-2.1-1.5 5.2 4 3.2-1.7 6.8-2.8-.7 1.3-5-3.7-2.8-2.1 3.4-5.4 2.2-1.1-2.6 4.4-1.8 2.6-4.4Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="dock.gestures">Gestures</span>
+        <span class="item__label" data-i18n="dock.motions">Motions</span>
       </button>
 
       <button class="item" type="button" data-panel="Emotions" aria-expanded="false" aria-controls="panel-tools">
@@ -338,6 +335,13 @@
           <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M16 3.2a12.8 12.8 0 1 0 0 25.6 12.8 12.8 0 0 0 0-25.6Zm0 2.6a10.2 10.2 0 1 1 0 20.4 10.2 10.2 0 0 1 0-20.4Z"/><circle cx="12.2" cy="14.2" r="1.8"/><circle cx="19.8" cy="14.2" r="1.8"/><path d="M10.6 19.4c1.4 1.9 3.3 2.9 5.4 2.9s4-1 5.4-2.9c.4-.5.2-1.2-.4-1.3-.3-.1-.6 0-.8.2-1.1 1.4-2.5 2.1-4.2 2.1s-3.1-.7-4.2-2.1c-.2-.2-.5-.3-.8-.2-.6.1-.8.8-.4 1.3Z"/></svg>
         </span>
         <span class="item__label" data-i18n="dock.emotions">Emotions</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Chat" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 5h22v16H14l-7 6v-6H5V5Zm4 5v2h14v-2H9Zm0 5v2h10v-2H9Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.right.chat">Chat</span>
       </button>
     </div>
   </div>
@@ -348,16 +352,57 @@
          卡片从遮罩下面滚过去时被糊开、标题始终清楚 -->
     <span class="frost frost--top" aria-hidden="true"></span>
     <span class="frost frost--bottom" aria-hidden="true"></span>
-    <div class="panel__body" data-panel-body data-view="gestures">
-      <!-- 两页共用这一块滚动区，按 data-view 显隐：点图标时 rails.js 写
-           data-view="gestures" / "emotions"，CSS 只留对应的那一页 -->
-      <div class="rail__view" data-rail-view="gestures">
-        <div class="rail__title" data-i18n="dock.gestures">Gestures</div>
-        <div class="rail__grid" data-rail-grid="gestures"></div>
+    <div class="panel__body" data-panel-body data-view="motions">
+      <div class="rail__view" data-rail-view="motions">
+        <div class="rail__title" data-i18n="dock.motions">Motions</div>
+        <div class="rail__grid" data-rail-grid="motions"></div>
       </div>
       <div class="rail__view" data-rail-view="emotions">
         <div class="rail__title" data-i18n="dock.emotions">Emotions</div>
         <div class="rail__grid" data-rail-grid="emotions"></div>
+      </div>
+      <div class="rail__view rail__view--chat" data-rail-view="chat">
+        <div class="rail__title" data-i18n="rail.right.chat">Chat</div>
+        <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
+          <header class="assistant-chat__toolbar">
+            <span class="assistant-chat__status" data-assistant-status data-i18n="chat.status.ready">待命</span>
+            <button class="assistant-chat__tool" type="button" data-assistant-stop data-i18n="chat.stop" hidden>停止动作</button>
+            <button class="assistant-chat__tool" type="button" data-assistant-clear data-i18n="chat.clear">清空</button>
+          </header>
+          <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
+          <div class="assistant-chat__suggestions" data-chat-suggestions>
+            <button type="button" data-chat-example="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+          </div>
+        </section>
+        <div class="composer">
+          <button class="composer__model" type="button" data-model-trigger
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+            <span class="composer__model-dot" aria-hidden="true"></span>
+            <span class="composer__model-label" data-model-label>选择模型</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+          </button>
+          <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
+            <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
+            <div class="model-menu__list" data-model-menu-list></div>
+            <button class="model-menu__manage" type="button" data-model-manage>
+              <span data-i18n="model.manage">管理 API 与模型</span>
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+          </div>
+          <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
+                    maxlength="500" data-assistant-input
+                    data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
+                    placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
+          <button class="composer__send" type="button" data-assistant-send
+                  data-i18n-aria="chat.send" aria-label="发送">
+            <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 19V5M6 11l6-6 6 6"/>
+            </svg>
+          </button>
+          <button class="composer__history" type="button" data-chat-history
+                  data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录">+</button>
+        </div>
       </div>
     </div>
   </section>
@@ -369,7 +414,8 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<script src="js/rails.js?v=14"></script>
+<script src="js/rail_layout.js?v=1"></script>
+<script src="js/rails.js?v=15"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
 <script src="js/avatar.js?v=3"></script>
@@ -642,53 +688,25 @@
   </div>
 </div>
 
-<!-- ===================== 底部 AI 输入胶囊 =====================
-     悬浮在视口底边正中：距底 64，默认一行 48 高、宽占页面 1/4。
-     对话记录在桌面端停靠到输入框右侧，窄屏时才收回输入框上方，避免遮住机器人。
-     宽度和高度由 js/composer.js 按内容逐键改写：一行装不下先横向长到
-     半页宽，再装不下纵向长到四行，超过四行转成滚动。
-     底片与聚焦描边沿用左栏编辑表单的输入框，见 css/chat.css 末尾 -->
-<div class="composer">
-  <button class="composer__model" type="button" data-model-trigger
-          aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
-    <span class="composer__model-dot" aria-hidden="true"></span>
-    <span class="composer__model-label" data-model-label>选择模型</span>
-    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+<!-- 舞台只展示最新一轮问答；完整历史位于右栏聊天页。 -->
+<div class="stage-chat" data-stage-chat>
+  <button class="stage-chat__bubble stage-chat__bubble--assistant" type="button"
+          data-stage-message="assistant" data-chat-open hidden
+          data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录">
+    <span data-stage-text></span>
   </button>
-  <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
-    <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
-    <div class="model-menu__list" data-model-menu-list></div>
-    <button class="model-menu__manage" type="button" data-model-manage>
-      <span data-i18n="model.manage">管理 API 与模型</span>
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-    </button>
-  </div>
-  <section class="assistant-chat" data-assistant-chat hidden aria-label="IntelliBot conversation">
-    <header class="assistant-chat__toolbar">
-      <span class="assistant-chat__status" data-assistant-status>待命</span>
-      <button class="assistant-chat__tool" type="button" data-assistant-stop hidden>停止动作</button>
-      <button class="assistant-chat__tool" type="button" data-assistant-clear>清空</button>
-    </header>
-    <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
-  </section>
-  <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
-            maxlength="500" data-assistant-input
-            data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
-            placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
-  <!-- 发送钮：单一向上箭头，禁用、可发送两态由底色与文字色区分。 -->
-  <button class="composer__send" type="button" data-assistant-send
-          data-i18n-aria="chat.send" aria-label="发送">
-    <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 19V5M6 11l6-6 6 6"/>
-    </svg>
+  <button class="stage-chat__bubble stage-chat__bubble--user" type="button"
+          data-stage-message="user" data-chat-open hidden
+          data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录">
+    <span data-stage-text></span>
   </button>
 </div>
 
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=5"></script>
-<script src="js/model_config.js?v=4"></script>
-<script src="js/assistant_chat.js?v=6"></script>
+<script src="js/model_config.js?v=5"></script>
+<script src="js/assistant_chat.js?v=7"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
@@ -708,7 +726,7 @@
 </script>
 <script type="module" src="js/robot3d.js?v=59"></script>
 <script type="module" src="js/view-control.js?v=41"></script>
-<script type="module" src="js/q1skin.js?v=22"></script>
+<script type="module" src="js/q1skin.js?v=23"></script>
 
 </body>
 </html>

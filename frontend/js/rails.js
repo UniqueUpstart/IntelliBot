@@ -76,7 +76,7 @@
    列表，换掉 DOM 就得重扫一遍。
    手势页 12 张（全部手势动作含街舞）、表情页 16 张（四行），都是一行四张 */
 (function () {
-  var COUNTS = { gestures: 12, emotions: 16 };
+  var COUNTS = { motions: 12, emotions: 16 };
   document.querySelectorAll('[data-rail-grid]').forEach(function (grid) {
     var total = COUNTS[grid.dataset.railGrid] || 8;
     var html = '';
