@@ -20,10 +20,10 @@
 })();
 </script>
 <script src="js/i18n.js?v=24"></script>
-  <link rel="stylesheet" href="css/base.css?v=11">
+  <link rel="stylesheet" href="css/base.css?v=12">
   <link rel="stylesheet" href="css/topbar.css?v=12">
-  <link rel="stylesheet" href="css/rail.css?v=30">
-  <link rel="stylesheet" href="css/workspace.css?v=7">
+  <link rel="stylesheet" href="css/rail.css?v=31">
+  <link rel="stylesheet" href="css/workspace.css?v=8">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
   <link rel="stylesheet" href="css/chat.css?v=50">
@@ -256,7 +256,7 @@
             </span>
             <datalist id="model-name-options"></datalist>
           </label>
-          <p class="model-view__note" data-model-note data-i18n="model.key.local">
+          <p class="model-view__note visually-hidden" data-model-note data-i18n="model.key.local">
             API Key 只保存在本机，不会写入浏览器。
           </p>
           <button class="model-save" data-model-save type="submit">
@@ -308,7 +308,7 @@
             <span data-i18n="persona.fields.prompt">角色设定</span>
             <textarea data-persona-prompt rows="5" maxlength="1200"></textarea>
           </label>
-          <p class="persona-note" data-persona-note data-i18n="persona.localNote">
+          <p class="persona-note visually-hidden" data-persona-note data-i18n="persona.localNote">
             角色样式和设定只保存在本机浏览器，发送消息时会作为语气设定交给当前模型。
           </p>
           <div class="persona-actions">
@@ -870,7 +870,7 @@
   </button>
 </div>
 
-<script src="js/modal.js?v=29"></script>
+<script src="js/modal.js?v=30"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=12"></script>
