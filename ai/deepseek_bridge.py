@@ -273,18 +273,28 @@ def _request_payload(
     message: str,
     history: list[dict[str, str]],
     persona: str = "",
+    *,
+    json_mode: bool = True,
+    recovery: bool = False,
 ) -> dict:
+    system_prompt = _system_prompt(persona)
+    if recovery:
+        system_prompt += (
+            "上一次响应未能形成有效 JSON。现在请立即返回一个完整 JSON 对象，"
+            "不得返回空白、解释、代码块或 JSON 以外的内容。"
+        )
     payload = {
         "model": config.model,
         "messages": [
-            {"role": "system", "content": _system_prompt(persona)},
+            {"role": "system", "content": system_prompt},
             *history,
             {"role": "user", "content": message},
         ],
         "temperature": 0.2,
-        "max_tokens": 300,
-        "response_format": {"type": "json_object"},
+        "max_tokens": 600,
     }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
     if config.provider.lower() == "deepseek":
         payload["thinking"] = {"type": "disabled"}
     return payload
@@ -300,12 +310,22 @@ def _call_once(
     history: list[dict[str, str]],
     opener: Callable = _default_open,
     persona: str = "",
+    *,
+    json_mode: bool = True,
+    recovery: bool = False,
 ) -> tuple[str, str]:
     endpoint = config.base_url.rstrip("/")
     if not endpoint.endswith("/chat/completions"):
         endpoint += "/chat/completions"
     body = json.dumps(
-        _request_payload(config, message, history, persona),
+        _request_payload(
+            config,
+            message,
+            history,
+            persona,
+            json_mode=json_mode,
+            recovery=recovery,
+        ),
         ensure_ascii=False,
     ).encode("utf-8")
     request = urllib.request.Request(
@@ -352,8 +372,16 @@ def chat(
 ) -> dict:
     content = ""
     model = config.model
-    for _ in range(2):
-        content, model = _call_once(config, message, history, opener, persona)
+    for attempt in range(2):
+        content, model = _call_once(
+            config,
+            message,
+            history,
+            opener,
+            persona,
+            json_mode=attempt == 0,
+            recovery=attempt == 1,
+        )
         if content.strip():
             break
     if not content.strip():

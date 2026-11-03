@@ -126,9 +126,18 @@ class DeepSeekBridgeTest(unittest.TestCase):
         self.assertIsNone(result["action_id"])
 
     def test_blank_json_retries_once(self):
+        requests = []
         responses = iter([completion("   "), completion('{"reply":"重试成功。","action_id":null}')])
-        result = chat(self.config, "你好", [], lambda *_args, **_kwargs: next(responses))
+
+        def opener(request, **_kwargs):
+            requests.append(json.loads(request.data.decode("utf-8")))
+            return next(responses)
+
+        result = chat(self.config, "你好", [], opener)
         self.assertEqual(result["reply"], "重试成功。")
+        self.assertIn("response_format", requests[0])
+        self.assertNotIn("response_format", requests[1])
+        self.assertIn("上一次响应未能形成有效 JSON", requests[1]["messages"][0]["content"])
 
     def test_two_blank_responses_fail(self):
         with self.assertRaisesRegex(BridgeError, "空白 JSON"):

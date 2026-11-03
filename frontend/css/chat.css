@@ -604,11 +604,12 @@
 .assistant-chat__suggestions button:hover,.assistant-chat__suggestions button:focus-visible{background:var(--theme);color:#fff;outline:none}
 .stage-chat{position:fixed;inset:0;z-index:18;pointer-events:none}
 .stage-chat__bubble{
-  position:absolute;top:34%;box-sizing:border-box;width:clamp(180px,18vw,280px);max-width:calc(50vw - 190px);
+  position:absolute;top:34%;box-sizing:border-box;width:max-content;min-width:96px;
+  max-width:min(320px,calc(50vw - 190px));
   min-height:42px;border:0;border-radius:18px;padding:11px 14px;background:var(--card-solid);
   box-shadow:0 8px 26px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.2));color:var(--text);
   font:600 var(--fs-14)/1.35 var(--font);text-align:left;cursor:pointer;pointer-events:auto;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+  white-space:pre-wrap;overflow-wrap:anywhere;
   opacity:1;transform:translateY(0);transition:opacity .2s var(--ease),transform .2s var(--ease)
 }
 .stage-chat__bubble[hidden]{display:none}
@@ -617,7 +618,7 @@
 .stage-chat__bubble.is-leaving{opacity:0;transform:translateY(-5px)}
 body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 @media(max-width:760px){
-  .stage-chat__bubble{width:40vw;max-width:40vw;top:22%;font-size:12px}
+  .stage-chat__bubble{width:max-content;min-width:84px;max-width:40vw;top:22%;font-size:12px}
   .stage-chat__bubble--assistant{left:12px;right:auto}
   .stage-chat__bubble--user{left:auto;right:12px;top:31%}
 }
