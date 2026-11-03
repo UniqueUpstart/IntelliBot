@@ -20,7 +20,11 @@
   var historyMenu = document.querySelector('[data-chat-history-menu]');
   var exportButton = document.querySelector('[data-chat-export]');
   var clearButton = document.querySelector('[data-chat-clear]');
-  var stopButton = findInPanel('[data-assistant-stop]');
+  /* 停止动作那枚按钮挂在聊天视图的头部动作区，是 [data-assistant-chat] 的
+     兄弟节点，findInPanel 抓不到；只按面板找会拿到 null，下面的守卫直接把
+     整个脚本退掉，快捷胶囊、发送、清空就全没反应。这里补一层文档兜底 */
+  var stopButton = findInPanel('[data-assistant-stop]') ||
+    document.querySelector('[data-assistant-stop]');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');

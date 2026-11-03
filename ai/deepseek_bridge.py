@@ -475,7 +475,10 @@ def _request_payload(
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
-    if config.provider.lower() == "deepseek":
+    # 思考型模型会先花掉一大截 completion 额度在 reasoning_content 上，
+    # 900 这个上限很容易被推理吃光、正文退回空串；DeepSeek 与智谱系列
+    # （GLM-4.5 以上）都认 thinking.type=disabled，一并关掉
+    if config.provider.lower() in {"deepseek", "zhipu", "bigmodel", "z.ai"}:
         payload["thinking"] = {"type": "disabled"}
     return payload
 
