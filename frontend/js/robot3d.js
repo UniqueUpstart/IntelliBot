@@ -20,6 +20,7 @@
    表情就是这张图上白色的线，黑底不发光。图案由 faces.js 一处提供，
    底栏 Emotions 那排缩略图画的也是同一份数据。 */
 import * as THREE from 'three';
+import {sampleIdle, idleState} from './idle_motion.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
@@ -129,6 +130,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
   let headYaw = 0, headPitch = 0, headBlend = 0;
   let playback = {clip: 'idle', state: 'loading'};
   function playClip(name, loop = false) {
+    clearIdleOffsets();
     if (!ready || !mixer) throw new Error('模型尚未加载');
     if (motionController?.activeId) motionController.stop();
     const clip = THREE.AnimationClip.findByName(clips, name);
@@ -250,6 +252,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
   }
 
   function freezePose() {
+    clearIdleOffsets();
     if (!ready || !mixer || poseMode) return;
     if (motionController?.activeId) motionController.stop();
     const currentPose = capturePose();
@@ -262,6 +265,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
   }
 
   function resetPose() {
+    clearIdleOffsets();
     if (!ready || !mixer) return;
     if (motionController?.activeId) motionController.stop();
     if (!poseMode) mixer.stopAllAction();
@@ -345,6 +349,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
 
   /* 卡片那头在拖起与松手时各调一次：屏上换下载图标、头开始跟指针 */
   function beginCardDrag() {
+    clearIdleOffsets();
     if (cardDrag) return;
     cardDrag = true;
     markActive();
@@ -757,6 +762,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
   }
 
   function pickUpCard(motionId, look) {
+    clearIdleOffsets();
     if (!ready || !model || ritual) return false;
     const mood0 = moodId();
     ritual = {
@@ -860,6 +866,15 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     }
   }
 
+  const idleApplied = [];
+  const idleDelta = new THREE.Quaternion();
+  function clearIdleOffsets() {
+    for (let index = idleApplied.length - 1; index >= 0; index--) {
+      const [bone, delta] = idleApplied[index];
+      bone.quaternion.multiply(delta.invert());
+    }
+    idleApplied.length = 0;
+  }
   function tick() {
     const now = performance.now();
     const frameMs = now - last;
@@ -881,6 +896,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     last = now;
     govern(now, frameMs, full);
 
+    clearIdleOffsets();
     if (mixer) mixer.update(dt);
     if (motionController) motionController.update(dt);
     if (ritual) stepRitual(now);
@@ -904,6 +920,18 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     rig.rotation.z = ritual ? ritual.roll : 0;
     /* 要排在 mixer.update 之后：idle 每帧都会重写 head 骨骼 */
     stepHeadAim(dt);
+    const idle = sampleIdle(now, poseMode || !!ritual || !!cardDrag ||
+      !!motionController?.activeId || (!!activeAction && activeAction !== idleAction) ||
+      document.body.classList.contains('is-modal'));
+    if (joints && idle.active) {
+      for (const [name, angle] of Object.entries(idle.offsets)) {
+        const binding = joints[name];
+        if (!binding) continue;
+        idleDelta.setFromAxisAngle(binding.axis, angle);
+        binding.bone.quaternion.multiply(idleDelta);
+        idleApplied.push([binding.bone, idleDelta.clone()]);
+      }
+    }
     /* 也排在骨架姿态定下来之后：手里那张卡要读右手此刻的世界坐标 */
     stepCard(now);
 
@@ -1089,6 +1117,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     return startGesture(id);
   }
   function startGesture(id) {
+    clearIdleOffsets();
     if (!motionController) return;
     if (activeAction && activeAction !== idleAction) activeAction.stop();
     poseMode = false;
@@ -1111,6 +1140,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     get mixer() { return mixer; },
     get action() { return activeAction; },
     get poseMode() { return poseMode; },
+    get idleState() { return idleState(); },
     get viewHeading() { return FRAMES[frame].baseYaw; },
     freezePose,
     resetPose,
