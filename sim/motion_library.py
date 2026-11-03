@@ -152,6 +152,49 @@ GESTURES: dict[str, dict] = {
 }
 
 
+# Expressive browser gestures; also checked against the Q1 model limits.
+GESTURES.update({ 'surprised': {'label': '惊讶',
+               'description': '双臂张开并短暂停顿，缓慢收回',
+               'aliases': ['惊讶', '吃惊', '吓一跳'],
+               'mood': 'alert',
+               'pose': {'left_shoulder_pitch_joint': -0.65,
+                        'right_shoulder_pitch_joint': -0.65,
+                        'left_shoulder_roll_joint': 1.0,
+                        'right_shoulder_roll_joint': -1.0,
+                        'left_elbow_joint': 0.75,
+                        'right_elbow_joint': 0.75},
+               'osc': {},
+               'duration_s': 2.6,
+               'return_to_rest': True},
+ 'hug': {'label': '拥抱',
+         'description': '双臂向前展开后轻收，保持拥抱再放下',
+         'aliases': ['拥抱', '抱抱', '抱一下', '安慰'],
+         'mood': 'happy',
+         'pose': {'left_shoulder_pitch_joint': -1.25,
+                  'right_shoulder_pitch_joint': -1.25,
+                  'left_shoulder_roll_joint': 0.72,
+                  'right_shoulder_roll_joint': -0.72,
+                  'left_shoulder_yaw_joint': -0.25,
+                  'right_shoulder_yaw_joint': 0.25,
+                  'left_elbow_joint': 0.7,
+                  'right_elbow_joint': 0.7},
+         'osc': {},
+         'duration_s': 4.0,
+         'return_to_rest': True},
+ 'refuse': {'label': '摆手拒绝',
+            'description': '右手抬起向外摆动两次，表达拒绝后放下',
+            'aliases': ['摆手拒绝', '拒绝', '不要', '不行'],
+            'mood': 'focus',
+            'pose': {'right_shoulder_pitch_joint': -1.3,
+                     'right_shoulder_roll_joint': -0.65,
+                     'right_shoulder_yaw_joint': 0.25,
+                     'right_elbow_joint': -0.55},
+            'osc': {'right_shoulder_yaw_joint': (0.3, 5.0)},
+            'duration_s': 3.0,
+            'return_to_rest': True}
+})
+
+
 PRESETS: dict[str, dict] = {
     "stand": {
         "label": "站立",

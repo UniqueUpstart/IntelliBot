@@ -22,8 +22,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createScreen, onMood, moodId, setMood } from './faces.js?v=4';
-import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=10';
+import { createScreen, onMood, moodId, setMood } from './faces.js?v=5';
+import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=14';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */
@@ -454,13 +454,19 @@ function init() {
     renderer.setAnimationLoop(document.hidden ? null : tick);
   });
 
-  const paintMotionControls = mountHomeMotionControls((id) => {
+  function playGesture(id) {
+    if (!motionController || !motionController.getInfo(id)) return false;
+    window.dispatchEvent(new Event('robot-manual-motion'));
+    return startGesture(id);
+  }
+  function startGesture(id) {
     if (!motionController) return;
     if (activeAction && activeAction !== idleAction) activeAction.stop();
     poseMode = false;
     activeAction = idleAction;
-    motionController.play(id);
-  });
+    return motionController.play(id);
+  }
+  const paintMotionControls = mountHomeMotionControls(playGesture);
   setActiveMotion = (id) => {
     paintMotionControls(id);
     setPointerAimPaused(id === 'street_dance', 'dance');
@@ -484,7 +490,7 @@ function init() {
     get mood() { return moodId(); },
     /* 外部（比如接上聊天状态）直接调这个换表情，底栏那排缩略图会跟着点亮 */
     setMood,
-    playGesture(id) { return motionController ? motionController.play(id) : false; },
+    playGesture(id, options = {}) { return options.source === 'chat' ? startGesture(id) : playGesture(id); },
     getGestureInfo(id) { return motionController ? motionController.getInfo(id) : null; },
     getMotionCatalog() { return motionController ? motionController.getCatalog() : []; },
     stopGesture() { if (motionController) motionController.stop(); },

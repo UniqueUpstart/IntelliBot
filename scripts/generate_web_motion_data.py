@@ -32,6 +32,9 @@ def javascript() -> str:
     motions = {
         motion_id: {
             "label": motion["label"],
+            "description": motion.get("description", motion["label"]),
+            "aliases": motion.get("aliases", []),
+            "mood": motion.get("mood"),
             "duration": float(motion["duration_s"]),
             "pose": {joint: float(value) for joint, value in motion["pose"].items()},
             "oscillation": {
@@ -52,6 +55,9 @@ def javascript() -> str:
         "  id,\n"
         "  label: motion.label,\n"
         "  duration: motion.duration,\n"
+        "  description: motion.description,\n"
+        "  aliases: motion.aliases,\n"
+        "  mood: motion.mood,\n"
         "}));\n"
     )
 

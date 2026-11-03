@@ -84,3 +84,7 @@ back/
 data/
 *.db-wal
 *.db-shm
+
+# Local clangd and formatting configuration
+.clangd
+.clang-format

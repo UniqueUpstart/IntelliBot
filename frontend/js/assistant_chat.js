@@ -104,7 +104,7 @@
       if (token !== sequenceToken) return;
       var actionId = actions[index];
       var info = robot.getGestureInfo ? robot.getGestureInfo(actionId) : null;
-      if (!info || !robot.playGesture(actionId)) {
+      if (!info || !robot.playGesture(actionId, {source:'chat'})) {
         note('动作未播放：' + actionId + ' 不在主页白名单中');
         continue;
       }
@@ -168,6 +168,9 @@
     panel.hidden = true;
     status.textContent = '待命';
     input.focus();
+  });
+  window.addEventListener('robot-manual-motion', function () {
+    sequenceToken += 1; stopButton.hidden = true; status.textContent = '已切换为手动动作';
   });
   window.intellibotChat = {
     submit: submit,

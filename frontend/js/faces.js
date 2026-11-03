@@ -643,16 +643,16 @@ export function onMood(fn) {
   listeners.push(fn);
 }
 
-export function setMood(id) {
+export function setMood(id, options = {}) {
   if (!MOODS.some((m) => m.id === id) || id === current) return;
   current = id;
-  try { localStorage.setItem(STORE, id); } catch (e) {}
+  if (options.persist !== false) { try { localStorage.setItem(STORE, id); } catch (e) {} }
   cards.forEach((c) => {
     const on = c.dataset.mood === id;
     c.classList.toggle('is-on', on);
     c.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
-  listeners.forEach((fn) => fn(id));
+  listeners.forEach((fn) => fn(id, options.source || 'user'));
 }
 
 /* —— 缩略图：底栏 Emotions 那一列的卡 —— */

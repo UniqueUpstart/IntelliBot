@@ -52,7 +52,7 @@ class DeepSeekBridgeTest(unittest.TestCase):
         self.assertIsNone(result["action_id"])
 
     def test_supported_actions_are_kept(self):
-        for action_id in ("salute", "wave"):
+        for action_id in ("salute", "wave", "surprised", "hug", "refuse"):
             with self.subTest(action_id=action_id):
                 result = chat(
                     self.config,

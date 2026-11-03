@@ -38,6 +38,9 @@ class FakeAiHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+        if message in {"surprised", "hug", "refuse"}:
+            self.reply(200, {"reply":"好的", "action_id":message, "actions":[message], "stop":False, "model":"deepseek-flash"})
+            return
         if message == "slow":
             time.sleep(1.2)
         self.reply(
@@ -106,6 +109,10 @@ try:
             time.sleep(0.05)
     else:
         raise AssertionError("backend did not start")
+
+    for action in ["surprised", "hug", "refuse"]:
+        code, result = call(backend_port, "POST", "/chat", {"message":action}, str(uuid4()))
+        assert code == 200 and result["data"]["actions"] == [action], (code,result)
 
     status, payload = call(
         backend_port,

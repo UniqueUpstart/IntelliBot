@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {moodId, setMood, onMood} from './faces.js?v=5';
 import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js';
 import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=2';
 
@@ -53,6 +54,10 @@ function samplePose(id, progress) {
     let target = motion.pose[joint] ?? rest;
     const [amplitude = 0, omega = 0, phase = 0] = motion.oscillation?.[joint] ?? [];
     target += amplitude * Math.sin(omega * time + phase);
+    if (id === 'hug' && joint.endsWith('shoulder_roll_joint')) {
+      const sign = joint.startsWith('left') ? 1 : -1;
+      target = sign * (1.0 - 0.58 * smoothstep((progress - 0.25) / 0.35));
+    }
     pose[joint] = rest + (target - rest) * blend;
   });
   return pose;
@@ -169,6 +174,18 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   model.traverse((object) => {
     if (object.isMesh && /^foot_(left|right)/i.test(object.name)) footMeshes.push(object);
   });
+  let savedMood = null;
+  let ownsMood = false;
+  onMood((_id, source) => { if (source !== 'motion') ownsMood = false; });
+  function restoreMood() {
+    if (ownsMood && savedMood) setMood(savedMood, {source:'motion', persist:false});
+    savedMood = null; ownsMood = false;
+  }
+  function applyMood(motion) {
+    if (!motion.mood) return;
+    savedMood = moodId(); ownsMood = true;
+    setMood(motion.mood, {source:'motion', persist:false});
+  }
   let active = null;
   let action = null;
 
@@ -191,6 +208,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 
   mixer.addEventListener('finished', (event) => {
     if (!action || event.action !== action) return;
+    restoreMood();
     action = null;
     active = null;
     resetRoot();
@@ -200,6 +218,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 
   function stop() {
     if (action) action.stop();
+    restoreMood();
     action = null;
     active = null;
     resetRoot();
@@ -213,6 +232,8 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
       const motion = MOTION_BY_ID[id];
       if (!motion) return false;
       if (action) action.stop();
+      restoreMood();
+      applyMood(motion);
       resetRoot();
       if (idleAction) idleAction.fadeOut(0.15);
       active = motion;
@@ -246,6 +267,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
         description: motion.description || motion.label,
         aliases: motion.aliases || [motion.label],
         duration: motion.duration,
+        mood: motion.mood || null,
         category: motion.category || 'gesture',
         bpm: motion.bpm || null,
         loop: !!motion.loop,
@@ -261,6 +283,13 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 
 export function mountHomeMotionControls(play) {
   const grid = document.querySelector('[data-rail-grid="gestures"]');
+  if (grid) {
+    while (grid.children.length < HOME_MOTIONS.length) {
+      const card = document.createElement('div');
+      card.className = 'rail__card';
+      grid.appendChild(card);
+    }
+  }
   const cards = grid ? Array.from(grid.children) : [];
 
   HOME_MOTIONS.forEach((motion, index) => {

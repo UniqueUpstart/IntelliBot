@@ -15,6 +15,13 @@ export const Q1_REST_POSE = Object.freeze({
 export const Q1_MOTIONS = Object.freeze({
   "wave": {
     "label": "挥手",
+    "description": "右手抬起并左右挥动",
+    "aliases": [
+      "挥手",
+      "打招呼",
+      "你好"
+    ],
+    "mood": null,
     "duration": 3.0,
     "pose": {
       "right_shoulder_pitch_joint": -2.95,
@@ -35,6 +42,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "wave_both": {
     "label": "双手挥",
+    "description": "双手同时抬起并挥动",
+    "aliases": [
+      "双手挥",
+      "双手打招呼"
+    ],
+    "mood": null,
     "duration": 3.0,
     "pose": {
       "left_shoulder_pitch_joint": -2.95,
@@ -59,6 +72,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "salute": {
     "label": "敬礼",
+    "description": "右手完成敬礼姿态",
+    "aliases": [
+      "敬礼",
+      "行礼"
+    ],
+    "mood": null,
     "duration": 2.5,
     "pose": {
       "right_shoulder_pitch_joint": -0.2124065699677099,
@@ -71,6 +90,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "heart": {
     "label": "比心",
+    "description": "双手在头顶组成心形",
+    "aliases": [
+      "比心",
+      "爱心"
+    ],
+    "mood": null,
     "duration": 2.5,
     "pose": {
       "left_shoulder_pitch_joint": -2.73,
@@ -86,6 +111,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "cheer": {
     "label": "加油",
+    "description": "右手举起并做加油动作",
+    "aliases": [
+      "加油",
+      "鼓励"
+    ],
+    "mood": null,
     "duration": 2.5,
     "pose": {
       "right_shoulder_pitch_joint": -0.04,
@@ -104,6 +135,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "dance": {
     "label": "舞动",
+    "description": "双臂和腰部按不同节奏摆动",
+    "aliases": [
+      "舞动",
+      "跳舞"
+    ],
+    "mood": null,
     "duration": 4.0,
     "pose": {
       "left_shoulder_roll_joint": 0.55,
@@ -139,6 +176,12 @@ export const Q1_MOTIONS = Object.freeze({
   },
   "stretch": {
     "label": "伸懒腰",
+    "description": "双臂举过头顶并缓慢舒展",
+    "aliases": [
+      "伸懒腰",
+      "舒展"
+    ],
+    "mood": null,
     "duration": 3.0,
     "pose": {
       "left_shoulder_roll_joint": 0.22,
@@ -168,6 +211,73 @@ export const Q1_MOTIONS = Object.freeze({
         1.0
       ]
     }
+  },
+  "surprised": {
+    "label": "惊讶",
+    "description": "双臂张开并短暂停顿，缓慢收回",
+    "aliases": [
+      "惊讶",
+      "吃惊",
+      "吓一跳"
+    ],
+    "mood": "alert",
+    "duration": 2.6,
+    "pose": {
+      "left_shoulder_pitch_joint": -0.65,
+      "right_shoulder_pitch_joint": -0.65,
+      "left_shoulder_roll_joint": 1.0,
+      "right_shoulder_roll_joint": -1.0,
+      "left_elbow_joint": 0.75,
+      "right_elbow_joint": 0.75
+    },
+    "oscillation": {}
+  },
+  "hug": {
+    "label": "拥抱",
+    "description": "双臂向前展开后轻收，保持拥抱再放下",
+    "aliases": [
+      "拥抱",
+      "抱抱",
+      "抱一下",
+      "安慰"
+    ],
+    "mood": "happy",
+    "duration": 4.0,
+    "pose": {
+      "left_shoulder_pitch_joint": -1.25,
+      "right_shoulder_pitch_joint": -1.25,
+      "left_shoulder_roll_joint": 0.72,
+      "right_shoulder_roll_joint": -0.72,
+      "left_shoulder_yaw_joint": -0.25,
+      "right_shoulder_yaw_joint": 0.25,
+      "left_elbow_joint": 0.7,
+      "right_elbow_joint": 0.7
+    },
+    "oscillation": {}
+  },
+  "refuse": {
+    "label": "摆手拒绝",
+    "description": "右手抬起向外摆动两次，表达拒绝后放下",
+    "aliases": [
+      "摆手拒绝",
+      "拒绝",
+      "不要",
+      "不行"
+    ],
+    "mood": "focus",
+    "duration": 3.0,
+    "pose": {
+      "right_shoulder_pitch_joint": -1.3,
+      "right_shoulder_roll_joint": -0.65,
+      "right_shoulder_yaw_joint": 0.25,
+      "right_elbow_joint": -0.55
+    },
+    "oscillation": {
+      "right_shoulder_yaw_joint": [
+        0.3,
+        5.0
+      ]
+    }
   }
 });
 
@@ -175,4 +285,7 @@ export const HOME_MOTIONS = Object.entries(Q1_MOTIONS).map(([id, motion]) => ({
   id,
   label: motion.label,
   duration: motion.duration,
+  description: motion.description,
+  aliases: motion.aliases,
+  mood: motion.mood,
 }));

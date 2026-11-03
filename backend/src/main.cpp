@@ -127,7 +127,8 @@ int main(int argc, char** argv) {
   };
   const std::unordered_map<std::string,int> actions{{"q1.wave",3004},{"q1.heart",3007},{"q1.cheer",3008}};
   const std::unordered_set<std::string> ai_actions{
-    "wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch"
+    "wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch",
+    "surprised", "hug", "refuse"
   };
   /* 页面若从别的本地端口打开（静态服务器、预览器），接口就是跨源的。
      只对 localhost / 127.0.0.1 来源放行，别把本机控制口暴露给任意网页。 */
