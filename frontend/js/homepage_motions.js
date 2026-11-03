@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js';
+import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=2';
 
-const MOTION_BY_ID = Object.fromEntries(HOME_MOTIONS.map((motion) => [motion.id, motion]));
+const MOTION_BY_ID = Object.fromEntries([
+  ...HOME_MOTIONS.map((motion) => [motion.id, motion]),
+  [STREET_DANCE.id, STREET_DANCE],
+]);
 
 // MuJoCo 自然站姿下的关节世界轴，已经从 (x前, y左, z上) 转到
 // GLB 的 (x左, y上, z前)。运行时再转换到对应骨骼的局部坐标。
@@ -16,6 +20,22 @@ const RETARGET = {
   right_shoulder_roll_joint: {bone: 'Bone.010', worldAxis: [0, 0, 1]},
   right_shoulder_yaw_joint: {bone: 'Bone.011', worldAxis: [0.21822962, 0.97589745, 0]},
   right_elbow_joint: {bone: 'Bone.012', worldAxis: [0.97589745, -0.21822962, 0]},
+};
+
+const DANCE_RETARGET = {
+  ...RETARGET,
+  left_hip_pitch_joint: {bone: 'Bone.030', worldAxis: [1, 0, 0]},
+  left_hip_roll_joint: {bone: 'Bone.032', worldAxis: [0, 0, 1]},
+  left_hip_yaw_joint: {bone: 'Bone.033', worldAxis: [0, 1, 0]},
+  left_knee_joint: {bone: 'Bone.035', worldAxis: [1, 0, 0]},
+  left_ankle_pitch_joint: {bone: 'Bone.037', worldAxis: [1, 0, 0]},
+  left_ankle_roll_joint: {bone: 'Bone.038', worldAxis: [0, 0, 1]},
+  right_hip_pitch_joint: {bone: 'Bone.031', worldAxis: [1, 0, 0]},
+  right_hip_roll_joint: {bone: 'Bone.034', worldAxis: [0, 0, 1]},
+  right_hip_yaw_joint: {bone: 'Bone.036', worldAxis: [0, 1, 0]},
+  right_knee_joint: {bone: 'Bone.039', worldAxis: [1, 0, 0]},
+  right_ankle_pitch_joint: {bone: 'Bone.040', worldAxis: [1, 0, 0]},
+  right_ankle_roll_joint: {bone: 'Bone.041', worldAxis: [0, 0, 1]},
 };
 
 function smoothstep(value) {
@@ -38,17 +58,49 @@ function samplePose(id, progress) {
   return pose;
 }
 
+function sampleTrack(points, beat) {
+  if (!points || !points.length) return 0;
+  if (beat <= points[0][0]) return points[0][1];
+  const last = points[points.length - 1];
+  if (beat >= last[0]) return last[1];
+  for (let index = 1; index < points.length; index += 1) {
+    const [endBeat, endValue] = points[index];
+    if (beat > endBeat) continue;
+    const [startBeat, startValue] = points[index - 1];
+    const progress = smoothstep((beat - startBeat) / (endBeat - startBeat || 1));
+    return startValue + (endValue - startValue) * progress;
+  }
+  return last[1];
+}
+
+function sampleDancePose(time, transform) {
+  const beat = time * transform.bpm / 60;
+  const pose = {...STREET_DANCE_REST_POSE};
+  Object.entries(transform.tracks).forEach(([joint, points]) => {
+    pose[joint] = sampleTrack(points, beat);
+  });
+  return pose;
+}
+
+function sampleDanceRoot(time) {
+  const beat = time * STREET_DANCE.bpm / 60;
+  return {
+    side: sampleTrack(STREET_DANCE.root.side, beat),
+    yaw: sampleTrack(STREET_DANCE.root.yaw, beat),
+  };
+}
+
 function findBone(model, name) {
   return model.getObjectByName(name)
     || model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
 }
 
-function createBindings(model) {
+function createBindings(model, retarget = RETARGET) {
   const bindings = {};
   const groups = new Map();
 
   model.updateMatrixWorld(true);
-  Object.entries(RETARGET).forEach(([joint, spec]) => {
+  Object.entries(retarget).forEach(([joint, spec]) => {
     const bone = findBone(model, spec.bone);
     if (!bone) return;
     const world = bone.getWorldQuaternion(new THREE.Quaternion());
@@ -61,7 +113,7 @@ function createBindings(model) {
     groups.get(bone.uuid).bindings.push(binding);
   });
 
-  const missing = Object.keys(RETARGET).filter((joint) => !bindings[joint]);
+  const missing = Object.keys(retarget).filter((joint) => !bindings[joint]);
   if (missing.length) throw new Error(`主页模型缺少动作骨骼：${missing.join(', ')}`);
   return [...groups.values()];
 }
@@ -85,16 +137,63 @@ function buildClip(motion, groups) {
   return new THREE.AnimationClip(`q1_${motion.id}`, motion.duration, tracks);
 }
 
-export function createHomeMotionController(model, mixer, idleAction, onState, ensurePlayback) {
+function buildDanceClip(motion, groups) {
+  const steps = Math.ceil(motion.duration * 30);
+  const times = Array.from({length: steps + 1}, (_, index) => motion.duration * index / steps);
+  const tracks = groups.map((group) => {
+    const values = [];
+    times.forEach((time) => {
+      const pose = sampleDancePose(time, motion);
+      const result = group.rest.clone();
+      group.bindings.forEach(({joint, axis}) => {
+        const angle = pose[joint] - STREET_DANCE_REST_POSE[joint];
+        result.multiply(new THREE.Quaternion().setFromAxisAngle(axis, angle));
+      });
+      values.push(result.x, result.y, result.z, result.w);
+    });
+    return new THREE.QuaternionKeyframeTrack(`${group.bone.name}.quaternion`, times, values);
+  });
+  return new THREE.AnimationClip(`q1_${motion.id}`, motion.duration, tracks);
+}
+
+export function createHomeMotionController(model, mixer, idleAction, onState, ensurePlayback, options = {}) {
   const groups = createBindings(model);
-  const clips = Object.fromEntries(HOME_MOTIONS.map((motion) => [motion.id, buildClip(motion, groups)]));
+  const danceGroups = createBindings(model, DANCE_RETARGET);
+  const clips = {
+    ...Object.fromEntries(HOME_MOTIONS.map((motion) => [motion.id, buildClip(motion, groups)])),
+    [STREET_DANCE.id]: buildDanceClip(STREET_DANCE, danceGroups),
+  };
+  const motionRoot = options.motionRoot || null;
+  const footMeshes = [];
+  const footBox = new THREE.Box3();
+  model.traverse((object) => {
+    if (object.isMesh && /^foot_(left|right)/i.test(object.name)) footMeshes.push(object);
+  });
   let active = null;
   let action = null;
+
+  function resetRoot() {
+    if (!motionRoot) return;
+    motionRoot.position.set(0, 0, 0);
+    motionRoot.rotation.set(0, 0, 0);
+    motionRoot.updateMatrixWorld(true);
+  }
+
+  function lowestFootY() {
+    let lowest = Infinity;
+    model.updateMatrixWorld(true);
+    footMeshes.forEach((mesh) => {
+      footBox.setFromObject(mesh);
+      if (Number.isFinite(footBox.min.y)) lowest = Math.min(lowest, footBox.min.y);
+    });
+    return lowest;
+  }
 
   mixer.addEventListener('finished', (event) => {
     if (!action || event.action !== action) return;
     action = null;
     active = null;
+    resetRoot();
     if (idleAction) idleAction.reset().fadeIn(0.2).play();
     onState(null);
   });
@@ -103,6 +202,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
     if (action) action.stop();
     action = null;
     active = null;
+    resetRoot();
     if (idleAction) idleAction.reset().play();
     onState(null);
     ensurePlayback();
@@ -113,6 +213,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
       const motion = MOTION_BY_ID[id];
       if (!motion) return false;
       if (action) action.stop();
+      resetRoot();
       if (idleAction) idleAction.fadeOut(0.15);
       active = motion;
       action = mixer.clipAction(clips[id]);
@@ -124,9 +225,35 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
       return true;
     },
     stop,
+    update() {
+      if (!motionRoot || !action || !active || active.id !== STREET_DANCE.id) return;
+      const root = sampleDanceRoot(Math.min(action.time, STREET_DANCE.duration));
+      motionRoot.position.set(root.side, 0, 0);
+      motionRoot.rotation.set(0, THREE.MathUtils.degToRad(root.yaw), 0);
+      motionRoot.updateMatrixWorld(true);
+      for (let pass = 0; pass < 3; pass += 1) {
+        const lowest = lowestFootY();
+        if (!Number.isFinite(lowest) || Math.abs(lowest) < 1e-4) break;
+        motionRoot.position.y -= lowest;
+        motionRoot.updateMatrixWorld(true);
+      }
+    },
     getInfo(id) {
       const motion = MOTION_BY_ID[id];
-      return motion ? {id: motion.id, label: motion.label, duration: motion.duration} : null;
+      return motion ? {
+        id: motion.id,
+        label: motion.label,
+        description: motion.description || motion.label,
+        aliases: motion.aliases || [motion.label],
+        duration: motion.duration,
+        category: motion.category || 'gesture',
+        bpm: motion.bpm || null,
+        loop: !!motion.loop,
+        returnToRest: motion.returnToRest !== false,
+      } : null;
+    },
+    getCatalog() {
+      return Object.keys(MOTION_BY_ID).map((id) => this.getInfo(id));
     },
     get activeId() { return active?.id ?? null; },
   };
@@ -134,8 +261,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 
 export function mountHomeMotionControls(play) {
   const grid = document.querySelector('[data-rail-grid="gestures"]');
-  if (!grid) return () => {};
-  const cards = Array.from(grid.children);
+  const cards = grid ? Array.from(grid.children) : [];
 
   HOME_MOTIONS.forEach((motion, index) => {
     const card = cards[index];
@@ -157,11 +283,36 @@ export function mountHomeMotionControls(play) {
     });
   });
 
+  const danceCard = document.querySelector('[data-action-motion="street_dance"]');
+  if (danceCard) {
+    danceCard.classList.add('is-motion');
+    danceCard.setAttribute('role', 'button');
+    danceCard.setAttribute('tabindex', '0');
+    danceCard.setAttribute('aria-label', '播放街舞动作');
+    danceCard.setAttribute('aria-pressed', 'false');
+    const activateDance = () => play(STREET_DANCE.id);
+    danceCard.addEventListener('click', (event) => {
+      if (event.target.closest('.sc__pin')) return;
+      activateDance();
+    });
+    danceCard.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.target.closest('.sc__pin')) return;
+      event.preventDefault();
+      activateDance();
+    });
+  }
+
   return (activeId) => {
     cards.forEach((card) => {
       const active = card.dataset.motion === activeId;
       card.classList.toggle('is-on', active);
       if (card.dataset.motion) card.setAttribute('aria-pressed', String(active));
     });
+    if (danceCard) {
+      const active = activeId === STREET_DANCE.id;
+      danceCard.classList.toggle('is-on', active);
+      danceCard.setAttribute('aria-pressed', String(active));
+    }
   };
 }

@@ -136,6 +136,14 @@
   overflow:hidden;     /* 填充层按圆角裁，边缘不外溢 */
   display:flex; flex-direction:column; align-items:flex-start;
 }
+.sc--dance{cursor:pointer}
+.sc--dance.is-on{
+  box-shadow:inset 0 0 0 1px var(--sc);
+}
+.sc--dance:focus-visible{
+  outline:2px solid var(--sc);
+  outline-offset:2px;
+}
 /* hover 的整卡填色改由覆盖层画：只动 opacity（合成器上做），
    卡面底色和文字绘制都不参与，也不会每帧去跟背后那层模糊重新混合，
    所以进出卡片时不会闪 */

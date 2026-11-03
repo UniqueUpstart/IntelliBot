@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood } from './faces.js?v=4';
-import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=7';
+import { createHomeMotionController, mountHomeMotionControls } from './homepage_motions.js?v=10';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */
@@ -89,12 +89,16 @@ function init() {
 
   const camera = new THREE.PerspectiveCamera(24, 1, 0.05, 40);
   const rig = new THREE.Group();
+  const motionRoot = new THREE.Group();
+  motionRoot.name = 'motionRoot';
+  rig.add(motionRoot);
   scene.add(rig);
 
   let mixer = null, model = null, motionController = null, idleAction = null, ready = false;
   let setActiveMotion = () => {};
   let clips = [], activeAction = null;
   let basePose = null, poseMode = false, aimPaused = false;
+  const aimPauseSources = new Set();
   let playback = {clip: 'idle', state: 'loading'};
   function playClip(name, loop = false) {
     if (!ready || !mixer) throw new Error('模型尚未加载');
@@ -231,8 +235,12 @@ function init() {
     if (REDUCED) renderer.render(scene, camera);
   }
 
-  function setPointerAimPaused(paused) {
-    aimPaused = !!paused;
+  function setPointerAimPaused(paused, source = 'view') {
+    if (paused) aimPauseSources.add(source);
+    else aimPauseSources.delete(source);
+    const next = aimPauseSources.size > 0;
+    if (aimPaused === next) return;
+    aimPaused = next;
     if (!aimPaused) aim();
   }
 
@@ -261,6 +269,7 @@ function init() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (mixer) mixer.update(dt);
+    if (motionController) motionController.update(dt);
     const t = (now - T0) / 1000;
     const f = FRAMES[frame];
 
@@ -388,7 +397,7 @@ function init() {
     model.position.x -= center.x;
     model.position.z -= center.z;
     model.position.y -= box.min.y;
-    rig.add(model);
+    motionRoot.add(model);
     basePose = capturePose();
 
     if (gltf.animations && gltf.animations.length) {
@@ -414,6 +423,7 @@ function init() {
       idleAction,
       setActiveMotion,
       () => { if (REDUCED) renderer.setAnimationLoop(tick); },
+      {motionRoot},
     );
 
     fit(true);
@@ -444,13 +454,17 @@ function init() {
     renderer.setAnimationLoop(document.hidden ? null : tick);
   });
 
-  setActiveMotion = mountHomeMotionControls((id) => {
+  const paintMotionControls = mountHomeMotionControls((id) => {
     if (!motionController) return;
     if (activeAction && activeAction !== idleAction) activeAction.stop();
     poseMode = false;
     activeAction = idleAction;
     motionController.play(id);
   });
+  setActiveMotion = (id) => {
+    paintMotionControls(id);
+    setPointerAimPaused(id === 'street_dance', 'dance');
+  };
 
   window.robot3d = {
     scene, camera, renderer, rig,
@@ -472,6 +486,7 @@ function init() {
     setMood,
     playGesture(id) { return motionController ? motionController.play(id) : false; },
     getGestureInfo(id) { return motionController ? motionController.getInfo(id) : null; },
+    getMotionCatalog() { return motionController ? motionController.getCatalog() : []; },
     stopGesture() { if (motionController) motionController.stop(); },
     /* Settings 那组按钮调这里：切档 → 重算相机目标 → 交给 tick 推过去 */
     setFraming(key) {
