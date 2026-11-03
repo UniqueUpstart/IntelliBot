@@ -108,11 +108,12 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    ============================================================ */
 /* 各页共用一块内容区，只显示 data-view 对应的那一页。 */
 .rail__view{display:none}
-[data-panel-body][data-view="poses"] [data-rail-view="poses"],
-[data-panel-body][data-view="actions"] [data-rail-view="actions"],
+[data-panel-body][data-view="gestures"] [data-rail-view="gestures"],
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
+[data-panel-body][data-view="shortcuts"] [data-rail-view="shortcuts"],
+[data-panel-body][data-view="edit"] [data-rail-view="edit"],
 [data-panel-body][data-view="chat"] [data-rail-view="chat"],
-[data-panel-body]:not([data-view]) [data-rail-view="poses"]{display:block}
+[data-panel-body]:not([data-view]) [data-rail-view="gestures"]{display:block}
 
 /* 聊天页从右栏移入左栏后，与原有快捷卡片共用同一个 panel__body。
    进入 chat 视图时只保留聊天页，避免旧卡片把历史记录挤到滚动区下方。 */
@@ -131,7 +132,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 /* 每页第一枚标题：静止位置与吸顶位置重合，都用 --title-top（遮罩中线 24 减
    半个 24 号标题盒的 12）。正文自带 --pad-y 的上留白，这里用同样的差值抵掉，
-   写法和左栏 .sc-group.is-first 那条一致 */
+   写法与快捷指令页第一组标题那条一致 */
 .rail__view > .rail__title:first-child{
   margin-top:calc(var(--title-top) - var(--pad-y));
 }
@@ -178,20 +179,27 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .rail__card.is-on{box-shadow:inset 0 0 0 1.5px var(--theme)}
 .rail__card.is-on::before{opacity:1}
 
-/* 手势卡：卡面是机器人做这个动作的缩略图（离屏渲染的半身像，见 robot3d.js），
-   模型没就绪时先显示英文名，图一到就撤掉。图压在最上层，
-   hover 只亮边框，选中时 theme 底片才从图后面透出来 */
+/* 手势卡：卡面是机器人做这个动作的缩略图（离屏渲染的半身像，见 robot3d.js 的
+   motionThumb），模型没就绪时先显示名字，图一到就撤掉。图压在最上层，
+   hover 只亮边框，选中时 theme 底片才从图后面透出来。
+   这一段样式现在只服务右栏；模型页已搬进 Settings，容器样式见下方 .model-view */
+.motion__thumb{
+  position:relative; z-index:1;
+  width:88%; height:88%;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+  /* 图是透明底上的白壳，卡面也是浅色：给轮廓垫一层薄影，
+     不然肩线和手臂会化进卡片里。
+     选中时不反色 —— 那层 theme 底只是把卡「点亮」，
+     机器人还是原来那个白壳，反成暗部会读成另一张图 */
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.22));
+}
 .model-view{
-  display:none;
+  display:flex;
   flex-direction:column;
   gap:16px;
-}
-[data-panel-body][data-view="model"] .model-view{
-  display:flex;
-}
-[data-panel-body][data-view="model"] .sc-group,
-[data-panel-body][data-view="model"] .skin-view{
-  display:none;
 }
 .model-view__head{
   display:flex;
@@ -267,6 +275,8 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   font-size:var(--fs-12);
   line-height:1.5;
 }
+/* 没有反馈要报的时候整行收掉：表单是 grid，留着空元素会多出一格 gap 和一行行高 */
+.model-view__note:empty{display:none}
 .model-view__note.is-error{color:var(--warning)}
 .model-save{
   appearance:none; -webkit-appearance:none;
@@ -283,121 +293,6 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .model-save:hover{filter:brightness(.96)}
 .model-save:focus-visible{outline:2px solid var(--theme-dark); outline-offset:2px}
 .model-save:disabled{opacity:.55;cursor:wait}
-
-/* 左栏换皮页：沿用右栏手势卡的四列方形节奏，避免再出现独立浮动控件 */
-.skin-view{
-  display:none;
-  flex-direction:column;
-  gap:12px;
-}
-[data-panel-body][data-view="skin"] .skin-view{
-  display:flex;
-}
-[data-panel-body][data-view="skin"] .sc-group{
-  display:none;
-}
-/* 手势类动作统一收进右栏；左栏 DOM 里若还有旧动作入口，加载期间也不露出来 */
-.sc-group--action [data-motion],
-.sc-group--action [data-action-motion]{
-  display:none;
-}
-.skin-view__title{
-  position:sticky;
-  top:calc(var(--title-top) - var(--pad-y));
-  z-index:4;
-  margin:0;
-  font-size:var(--fs-16); line-height:1; letter-spacing:.4px; font-weight:var(--fw);
-  color:var(--text-secondary);
-}
-.skin-view__hint{
-  margin:-4px 0 4px;
-  font-size:var(--fs-12); line-height:1.45;
-  color:var(--text-muted);
-}
-.skin-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:8px;
-}
-.skin-card{
-  appearance:none; -webkit-appearance:none;
-  position:relative;
-  aspect-ratio:1;
-  min-width:0;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  gap:8px;
-  padding:10px 6px;
-  border:0; border-radius:16px;
-  background:var(--card);
-  color:var(--text-reduced);
-  font-family:inherit; font-weight:var(--fw);
-  cursor:pointer;
-  overflow:hidden;
-  box-shadow:inset 0 0 0 1px transparent;
-  transition:box-shadow .12s linear, color .12s linear;
-}
-.skin-card::before{
-  content:'';
-  position:absolute; inset:0;
-  border-radius:inherit;
-  background:var(--theme);
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .14s cubic-bezier(.16,.84,.3,1);
-}
-.skin-card:hover,
-.skin-card:focus-visible{
-  box-shadow:inset 0 0 0 1.5px var(--theme);
-}
-.skin-card.is-on{
-  color:var(--text-invert);
-  box-shadow:inset 0 0 0 1.5px var(--theme);
-}
-.skin-card.is-on::before{opacity:1}
-.skin-card:focus-visible{
-  outline:2px solid var(--theme);
-  outline-offset:2px;
-}
-.skin-card__icon,
-.skin-card__name{position:relative; z-index:1}
-.skin-card__icon{
-  width:34px; height:34px;
-  display:grid; place-items:center;
-}
-.skin-card__icon svg{
-  width:100%; height:100%; display:block;
-  fill:none; stroke:currentColor; stroke-width:1.7;
-  stroke-linecap:round; stroke-linejoin:round;
-}
-.skin-card__name{
-  max-width:100%;
-  font-size:var(--fs-14); line-height:1.15;
-  text-align:center;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.skin-card--import{color:var(--text-muted)}
-.skin-delete{
-  appearance:none; -webkit-appearance:none;
-  align-self:flex-start;
-  min-height:36px;
-  padding:0 14px;
-  border:0; border-radius:999px;
-  background:var(--card);
-  color:var(--text-reduced);
-  font:inherit; font-size:var(--fs-14);
-  cursor:pointer;
-}
-.skin-delete:hover{background:var(--warning); color:var(--text-invert)}
-.skin-delete[hidden], .skin-note[hidden]{display:none}
-.skin-note{
-  margin:0;
-  padding:10px 12px;
-  border-radius:12px;
-  background:var(--card);
-  color:var(--text-muted);
-  font-size:var(--fs-12); line-height:1.45;
-}
 
 /* 手势卡：中文标签两三个字，居中。卡片比原来底栏那版（64）大了一档，
    字号跟着提到 14，不然一张 116 的方格里只剩两粒小字 */
@@ -437,10 +332,15 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
      而且重绘是 70ms 一拍，滤镜虽然即时，颜色却和脸谱的其它细节不同源 */
 }
 
-/* 右栏面板：上内边距留给标题与雾带，标题就在这条内边距上吸住不动 */
+/* 右栏面板：手势 / 表情页的上内边距留给标题与雾带（20），标题就在这条内边距上吸住；
+   快捷指令页是从左栏搬来的卡片，首尾留白与标题吸附都按卡片那套走 32 */
 #panel-tools .panel__body{
   --pad-y:20px;
   padding-bottom:var(--panel-pad);
+}
+#panel-tools .panel__body[data-view="shortcuts"]{
+  --pad-y:32px;
+  padding-bottom:var(--pad-y);
 }
 
 /* 图标列（始终贴锚定侧） */
@@ -453,8 +353,14 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
      取 32 − 18 = 14，图标底边到栏底才是 32，与 Pinned 图标顶边到栏顶的 32 相等 */
   padding:32px 16px 14px;
 }
-.rail__items{display:flex; flex-direction:column; gap:8px; flex:1 1 auto}
-/* 编辑钮单独吊到列底：列已经撑满栏体，margin-top:auto 把剩下的高度全吃掉 */
+.rail__items{display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0}
+/* 矮视口上图标列可能装不下：允许这一列自己滚，滚动条不画出来 */
+.rail__bar{overflow:hidden}
+.rail__items{overflow-y:auto; scrollbar-width:none}
+.rail__items::-webkit-scrollbar{width:0; height:0}
+/* 两栏的图标钮同尺寸（--btn 48）：左栏只剩角色与对话流两枚，右栏四枚
+   （手势 / 表情 / 快捷指令 / 编辑），都用默认那一档，不再为装不装得下单独缩小。
+   编辑钮单独吊到列底：列已经撑满栏体，margin-top:auto 把剩下的高度全吃掉 */
 .item--edit{margin-top:auto}
 
 .item{
@@ -510,20 +416,14 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   opacity:0;
   transition:color .1s cubic-bezier(.7,0,.84,.16), opacity .12s linear;
 }
-/* 每个图标钮各自的强调色。Action / Dialog / Tendance 填各自的分组色，
-   与展开后卡片区那套 --sc（.sc-group--action 等）同源；没写 --itc 的
-   按钮（Pinned 等）回落到全站的 --theme */
-.item[data-panel="Action"]{--itc:var(--series-green-light)}
-.item[data-panel="Dialog"]{--itc:var(--series-blue-light)}
-.item[data-panel="Tendance"]{--itc:var(--series-pink-light)}
-/* 右栏两枚不与左栏的指令分组色走：那一列是「看机器人」的入口，
-   与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
-.item[data-panel="Poses"]{--itc:var(--theme)}
-.item[data-panel="Actions"]{--itc:var(--theme)}
-.item[data-panel="Emotions"]{--itc:var(--theme)}
-.item[data-panel="Chat"]{--itc:var(--theme)}
-.item[data-panel="Model"]{--itc:var(--theme)}
-.item[data-panel="Skin"]{--itc:var(--theme)}
+/* 图标钮的强调色。快捷指令页里三组卡片各用系列色，但圆钮本身不归属某一组，
+   与展开后卡片里的 theme 选中底是同一套颜色，所以四枚都取全站的 --theme；
+   没写 --itc 的按钮也回落到它 */
+.item[data-panel="Gestures"],
+.item[data-panel="Emotions"],
+.item[data-panel="Shortcuts"],
+.item[data-panel="Edit"],
+.item[data-panel="Chat"],
 .item[data-panel="Persona"]{--itc:var(--theme)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），
    同样不带边；进场这条曲线先快后慢，尾巴慢慢贴住圆周。

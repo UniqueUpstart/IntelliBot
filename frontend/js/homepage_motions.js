@@ -103,6 +103,21 @@ function sampleTimelineRoot(time, transform) {
   };
 }
 
+/* 动作库有两种写法：前十个是「一串关节角 + 振荡」，街舞与捧腹大笑是
+   带 BPM 的时间轴轨道。要把某个动作定格成一帧（右栏卡片的缩略图就走这里），
+   外面不该各判一次类型 —— 这个入口按 id 收口，连它自己的自然站姿一起给，
+   因为两种写法的基线姿势并不相同（时间轴那份带不带腿的关节）。
+   返回 null 表示这个 id 不在动作库里 */
+export function sampleMotionFrame(id, progress) {
+  const timeline = TIMELINE_BY_ID[id];
+  if (timeline) {
+    const time = THREE.MathUtils.clamp(progress, 0, 1) * timeline.duration;
+    return {pose: sampleTimelinePose(time, timeline), rest: timelineRest(timeline)};
+  }
+  if (!Q1_MOTIONS[id]) return null;
+  return {pose: samplePose(id, THREE.MathUtils.clamp(progress, 0, 1)), rest: Q1_REST_POSE};
+}
+
 function findBone(model, name) {
   return model.getObjectByName(name)
     || model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
@@ -306,15 +321,14 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   };
 }
 
-/* 所有手势类动作都统一收进右栏，使用文字卡面，动作名称直接可读。 */
-const RAIL_MOTIONS = [...HOME_MOTIONS, ...TIMELINE_MOTIONS];
+/* 已经搬进左栏 Action 的三张卡（舞动、cha-cha、街舞）不在右栏重复出现；
+   其余手势都进右栏，卡面是机器人做这个动作的缩略图，图没就绪时先显示名字 */
+const RAIL_EXCLUDE = new Set(['dance', 'cha_cha', 'street_dance']);
+const RAIL_MOTIONS = [...HOME_MOTIONS, ...TIMELINE_MOTIONS]
+  .filter((motion) => !RAIL_EXCLUDE.has(motion.id));
 
 export function mountHomeMotionControls(play) {
-  /* 兼容旧页面：左侧 Action 里若还留着动作入口，在绑定时直接移走。 */
-  document.querySelectorAll('.sc-group--action [data-motion], .sc-group--action [data-action-motion]')
-    .forEach((card) => card.remove());
-
-  const grid = document.querySelector('[data-rail-grid="motions"]');
+  const grid = document.querySelector('[data-rail-grid="gestures"]');
   if (grid) {
     while (grid.children.length < RAIL_MOTIONS.length) {
       const card = document.createElement('div');
@@ -329,7 +343,8 @@ export function mountHomeMotionControls(play) {
     if (!card) return;
     card.classList.add('is-motion');
     card.dataset.motion = motion.id;
-    card.innerHTML = `<span class="motion__label">${motion.label}</span>`;
+    card.innerHTML = `<span class="motion__label">${motion.label}</span>`
+      + '<img class="motion__thumb" alt="" decoding="async" draggable="false" hidden>';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `播放${motion.label}动作`);
@@ -343,6 +358,30 @@ export function mountHomeMotionControls(play) {
       activate();
     });
   });
+
+  /* 缩略图归三维那侧拍：robot3d.js 的 motionThumb 拿离屏 target 渲一张，
+     之后走缓存。模型 6.4MB，比这段脚本晚就绪：先留名字，robot-ready 再补一次 */
+  function fillThumbs() {
+    const api = window.robot3d;
+    if (!api || typeof api.motionThumb !== 'function') return false;
+    let filled = false;
+    RAIL_MOTIONS.forEach((motion, index) => {
+      const card = cards[index];
+      if (!card) return;
+      const img = card.querySelector('.motion__thumb');
+      if (!img || img.getAttribute('src')) return;
+      const url = api.motionThumb(motion.id);
+      if (!url) return;
+      img.src = url;
+      img.hidden = false;
+      const label = card.querySelector('.motion__label');
+      if (label) label.remove();
+      filled = true;
+    });
+    return filled;
+  }
+
+  if (!fillThumbs()) window.addEventListener('robot-ready', fillThumbs, { once: true });
 
   return (activeId) => {
     cards.forEach((card) => {

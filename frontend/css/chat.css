@@ -1,19 +1,22 @@
-/* ── 左栏编辑页 + 两条雾带显隐 ───────────────────────────────
-   右栏原来那页聊天已经换成手势 / 表情卡片（样式见 rail.css 的 .rail__card），
-   这里只剩左栏 Edit 页与雾带的取舍规则 */
+/* ── 右栏编辑页 + 两条雾带显隐 ───────────────────────────────
+   聊天页已经移到左栏（.rail__view--chat），右栏是手势 / 表情 / 快捷指令 / 编辑四页，
+   这里只剩 Edit 页与雾带的取舍规则 */
 
-/* 编辑页在左栏那块面板里，没有滚动内容要托，顶上那条雾带也用不上 */
-#panel-shortcuts:has([data-panel-body][data-view="edit"]) > .frost--top{display:none}
+/* 编辑页在右栏那块面板里，没有滚动内容要托，顶上那条雾带也用不上 */
+#panel-tools:has([data-panel-body][data-view="edit"]) > .frost--top{display:none}
 /* 卡片撑不满、压根滚不动时同样收掉：雾带本身是给"内容从遮罩下滚过去"用的，
    没有可滚的距离，它就只剩压在空白上的一块灰。data-scroll 由 sticky.js 量完写入
-   （scrollHeight 与 clientHeight 比较），切视图、钉卡、面板开合都会重算 */
+   （scrollHeight 与 clientHeight 比较），切视图、增卡、面板开合都会重算 */
 #panel-shortcuts:has(> [data-panel-body][data-scroll="off"]) > .frost--top{display:none}
+/* 快捷指令页搬到右栏后同一条判据也跟着过去：卡片不够一屏时右栏顶上那条也收掉，
+   手势 / 表情两页不受影响（它们本来就要一条雾带压住滚动的卡面） */
+#panel-tools:has([data-panel-body][data-view="shortcuts"][data-scroll="off"]) > .frost--top{display:none}
 /* 底部那条同理：滚不动的面板底下没有内容要化开，它只剩压在底沿的一块灰。
    两栏共用这一条 —— 判定同样来自 body 的 data-scroll */
 .rail__panel:has(> [data-panel-body][data-scroll="off"]) > .frost--bottom{display:none}
 
-/* ── 左栏编辑页 ─────────────────────────────────────────────
-   左栏 Edit 钮把本栏面板切到 data-view="edit" 时出现：先选类型，再填名字与简介。
+/* ── 右栏编辑页 ─────────────────────────────────────────────
+   右栏 Edit 钮把本面板切到 data-view="edit" 时出现：先选类型，再填名字与简介。
    左右内边距已由 .panel__body 给到 --panel-pad，这里只排纵向节奏。
    窗口压矮时字段自己滚，提交按钮不至于被挤出面板 */
 .edit{
@@ -37,6 +40,10 @@
   padding-bottom:var(--panel-pad);
 }
 [data-panel-body][data-view="edit"] .edit{display:flex}
+/* 表单外面套了一层视图壳（.rail__view--edit），而它原来是面板的直系子项、
+   靠面板的纵向弹性撑满、把动作行压到右下角。这一页把壳设成 display:contents：
+   壳不生成盒子，表单照旧是面板的弹性子项，贴底与滚动都和搬过来之前一样 */
+[data-panel-body][data-view="edit"] .rail__view--edit{display:contents}
 /* 字段区自己滚，撑满表单剩下的高度；动作行因此被挤到右下角，窗口压矮也不跟着滚走。
    同样借一层内边距给柔光：横向与 .edit 一起把边界推到面板边，纵向在底部留 16
    （柔光半径），滚到底时最后一个输入框的投影才不会被自身的裁剪边切平。
@@ -321,19 +328,12 @@
 .assistant-chat__toolbar{
   display:flex;
   align-items:center;
+  justify-content:flex-end;
   gap:8px;
   min-height:28px;
   padding:0 2px 8px;
   color:var(--text-muted);
   font-size:var(--fs-12);
-}
-.assistant-chat__status{
-  margin-right:auto;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  color:var(--text-secondary);
 }
 .assistant-chat__tool{
   appearance:none;
@@ -541,16 +541,7 @@
   width:16px;height:16px;fill:currentColor;
   transform:rotate(180deg);
 }
-.composer__send-icon{
-  display:block;
-  width:18px;
-  height:18px;
-  fill:none;
-  stroke:currentColor;
-  stroke-width:2;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-}
+
 /* 悬停不做任何变化：这是常驻在页面底部的一格，光标扫过它就等于扫过
    大片空白，回回亮一下反而吵；能输入这件事由光标（cursor:text）说明就够。
    所以这里没有 :hover 规则，只有下面聚焦这一组 —— 真的点进去、光标落进来时，
@@ -591,27 +582,6 @@
   padding:0;background:transparent;box-shadow:none
 }
 .rail__view--chat .assistant-chat__log{max-height:none}
-.stage-chat{position:fixed;inset:0;z-index:18;pointer-events:none}
-.stage-chat__bubble{
-  position:absolute;top:34%;box-sizing:border-box;width:max-content;min-width:96px;
-  max-width:min(320px,calc(50vw - 190px));
-  min-height:42px;border:0;border-radius:18px;padding:11px 14px;background:var(--card-solid);
-  box-shadow:0 8px 26px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.2));color:var(--text);
-  font:600 var(--fs-14)/1.35 var(--font);text-align:left;cursor:pointer;pointer-events:auto;
-  white-space:pre-wrap;overflow-wrap:anywhere;
-  opacity:1;transform:translateY(0);transition:opacity .2s var(--ease),transform .2s var(--ease)
-}
-.stage-chat__bubble[hidden]{display:none}
-.stage-chat__bubble--assistant{right:calc(50% + clamp(150px,17vw,260px))}
-.stage-chat__bubble--user{left:calc(50% + clamp(150px,17vw,260px));top:42%;background:rgb(from var(--theme) r g b / .34)}
-.stage-chat__bubble.is-leaving{opacity:0;transform:translateY(-5px)}
-body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
-@media(max-width:760px){
-  .stage-chat__bubble{width:max-content;min-width:84px;max-width:40vw;top:22%;font-size:12px}
-  .stage-chat__bubble--assistant{left:12px;right:auto}
-  .stage-chat__bubble--user{left:auto;right:12px;top:31%}
-}
-@media(prefers-reduced-motion:reduce){.stage-chat__bubble{transition:none}}
 
 /* ============================================================
    Conversation polish
@@ -620,7 +590,7 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
    ============================================================ */
 .composer__starters{
   position:absolute;
-  left:50%;
+  left:0;
   bottom:calc(100% + 14px);
   z-index:2;
   display:flex;
@@ -636,27 +606,9 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
     inset 0 1px 0 rgba(255,255,255,.48);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
-  transform:translateX(-50%);
   animation:starters-arrive .55s cubic-bezier(.16,1,.3,1) both;
 }
 .composer__starters[hidden]{display:none}
-.composer__starters-label{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  padding:0 8px 0 7px;
-  color:var(--text-muted);
-  font-size:var(--fs-12);
-  letter-spacing:.3px;
-  white-space:nowrap;
-}
-.composer__starters-label i{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--theme);
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--theme) 18%,transparent);
-}
 .composer__starters button{
   appearance:none;
   -webkit-appearance:none;
@@ -739,37 +691,10 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   margin-top:5px;
   line-height:1.35;
 }
-.chat-view__head .view-badge{
-  min-height:26px;
-  border:1px solid color-mix(in srgb,var(--border) 70%,transparent);
-  background:color-mix(in srgb,var(--card-solid) 72%,transparent);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.42);
-  font-size:11px;
-}
-.chat-view__head .view-badge::before{
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--persona-color,var(--hint)) 16%,transparent);
-}
 .rail__view--chat .assistant-chat{padding:12px 0 0}
 .rail__view--chat .assistant-chat__toolbar{
   min-height:30px;
   padding:0 2px 10px;
-}
-.assistant-chat__status{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  color:var(--text-muted);
-  font-size:11px;
-  letter-spacing:.2px;
-}
-.assistant-chat__status::before{
-  content:'';
-  flex:0 0 auto;
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:var(--hint);
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--hint) 13%,transparent);
 }
 .assistant-chat__tool{
   min-height:26px;
@@ -869,129 +794,26 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   color:var(--card-solid);
   box-shadow:0 7px 16px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.7));
 }
-.stage-chat__bubble{
-  --bubble-x:0px;
-  --bubble-y:0px;
-  --bubble-tilt:-1deg;
-  border:1px solid color-mix(in srgb,var(--border) 78%,transparent);
-  background:
-    linear-gradient(145deg,color-mix(in srgb,var(--card-solid) 98%,#fff),color-mix(in srgb,var(--card-solid) 88%,var(--theme)));
-  box-shadow:
-    0 13px 34px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.45)),
-    inset 0 1px 0 rgba(255,255,255,.5);
-  transform:translate(var(--bubble-x),var(--bubble-y)) rotate(var(--bubble-tilt));
-  transform-origin:30% 100%;
-}
-.stage-chat__bubble::after{
-  content:'';
-  position:absolute;
-  left:16px;
-  bottom:-7px;
-  width:14px;
-  height:14px;
-  border-radius:4px 2px 10px 3px;
-  background:inherit;
-  transform:rotate(38deg);
-  z-index:0;
-}
-.stage-chat__bubble span{position:relative;z-index:1;display:block}
-.stage-chat__bubble--assistant{
-  --bubble-tilt:-1.4deg;
-  right:calc(50% + clamp(150px,17vw,260px));
-  top:34%;
-}
-.stage-chat__bubble--user{
-  --bubble-tilt:1.2deg;
-  left:calc(50% + clamp(150px,17vw,260px));
-  top:42%;
-  border-color:color-mix(in srgb,var(--theme) 52%,var(--border));
-  background:
-    linear-gradient(145deg,color-mix(in srgb,var(--theme) 54%,var(--card-solid)),color-mix(in srgb,var(--theme) 30%,var(--bg)));
-  transform-origin:70% 100%;
-}
-.stage-chat__bubble--user::after{
-  right:16px;
-  left:auto;
-  border-radius:2px 4px 3px 10px;
-  transform:rotate(-38deg);
-}
-.stage-chat__bubble[data-bubble-variant="0"]{--bubble-x:-10px;--bubble-y:-9px;--bubble-tilt:-2.2deg}
-.stage-chat__bubble[data-bubble-variant="1"]{--bubble-x:8px;--bubble-y:4px;--bubble-tilt:1.8deg}
-.stage-chat__bubble[data-bubble-variant="2"]{--bubble-x:-5px;--bubble-y:11px;--bubble-tilt:-.8deg}
-.stage-chat__bubble[data-bubble-variant="3"]{--bubble-x:12px;--bubble-y:-6px;--bubble-tilt:2.5deg}
-.stage-chat__bubble:not([hidden]){
-  animation:stage-bubble-arrive .72s cubic-bezier(.16,1,.3,1) both;
-}
-.stage-chat__bubble span{
-  animation:stage-bubble-drift 4.2s ease-in-out 1s infinite alternate;
-}
-.stage-chat__bubble[data-bubble-variant="1"] span{animation-duration:5.1s;animation-delay:.8s}
-.stage-chat__bubble[data-bubble-variant="2"] span{animation-duration:4.6s;animation-delay:1.25s}
-.stage-chat__bubble[data-bubble-variant="3"] span{animation-duration:5.5s;animation-delay:.65s}
-.stage-chat__bubble.is-leaving{
-  animation:none;
-  opacity:0;
-  transform:translate(var(--bubble-x),calc(var(--bubble-y) - 9px)) scale(.93) rotate(var(--bubble-tilt));
-}
-.assistant-chat__message--user[data-bubble-variant="0"],
-.stage-chat__bubble--user[data-bubble-variant="0"]{--bubble-shift-x:-3px}
-.assistant-chat__message--user[data-bubble-variant="1"],
-.stage-chat__bubble--user[data-bubble-variant="1"]{--bubble-shift-x:2px}
-.assistant-chat__message--user[data-bubble-variant="2"],
-.stage-chat__bubble--user[data-bubble-variant="2"]{--bubble-shift-x:-1px}
-.assistant-chat__message--user[data-bubble-variant="3"],
-.stage-chat__bubble--user[data-bubble-variant="3"]{--bubble-shift-x:4px}
-.assistant-chat__message[data-bubble-variant="0"]{--bubble-tilt:-.8deg}
-.assistant-chat__message[data-bubble-variant="1"]{--bubble-tilt:.7deg}
-.assistant-chat__message[data-bubble-variant="2"]{--bubble-tilt:-.35deg}
-.assistant-chat__message[data-bubble-variant="3"]{--bubble-tilt:.9deg}
 @keyframes starters-arrive{
-  from{opacity:0;transform:translate(-50%,8px) scale(.97)}
-  to{opacity:1;transform:translate(-50%,0) scale(1)}
+  from{opacity:0;transform:translateY(8px) scale(.97)}
+  to{opacity:1;transform:translateY(0) scale(1)}
 }
 @keyframes chat-bubble-arrive{
   from{opacity:0;transform:translate(var(--bubble-shift-x),10px) scale(.94) rotate(0deg)}
   to{opacity:1;transform:translate(var(--bubble-shift-x),0) scale(1) rotate(var(--bubble-tilt))}
 }
-@keyframes stage-bubble-arrive{
-  0%{opacity:0;transform:translate(calc(var(--bubble-x) + 10px),calc(var(--bubble-y) + 18px)) scale(.82) rotate(0deg);filter:blur(4px)}
-  68%{opacity:1;transform:translate(calc(var(--bubble-x) - 2px),calc(var(--bubble-y) - 3px)) scale(1.025) rotate(calc(var(--bubble-tilt) - .4deg));filter:blur(0)}
-  100%{opacity:1;transform:translate(var(--bubble-x),var(--bubble-y)) scale(1) rotate(var(--bubble-tilt));filter:blur(0)}
-}
-@keyframes stage-bubble-drift{
-  from{translate:0 0}
-  to{translate:0 -4px}
-}
 @media(max-width:760px){
   .composer__starters{
     width:min(560px,calc(100vw - 28px));
     flex-wrap:wrap;
-    justify-content:center;
+    justify-content:flex-start;
     border-radius:22px;
   }
-  .composer__starters-label{display:none}
   .composer__starters button{flex:1 1 auto;text-align:center}
-}
-@media(min-width:761px) and (max-width:1000px){
-  .stage-chat__bubble{
-    max-width:min(220px,calc(50vw - 160px));
-    top:18%;
-  }
-  .stage-chat__bubble--assistant{
-    left:calc(var(--edge) + var(--rail-w) + 12px);
-    right:auto;
-  }
-  .stage-chat__bubble--user{
-    right:calc(var(--edge) + var(--rail-w) + 12px);
-    left:auto;
-    top:28%;
-  }
 }
 @media(prefers-reduced-motion:reduce){
   .composer__starters,
-  .assistant-chat__message,
-  .stage-chat__bubble,
-  .stage-chat__bubble span{animation:none}
+  .assistant-chat__message{animation:none}
 }
 
 /* ============================================================
@@ -1078,14 +900,21 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   box-shadow:none;
   cursor:pointer;
 }
+/* 菜单图标：三横各自浮动，打开对话流时上下两条往中间收并斜成叉，中间那条淡出。
+   每条线单独做变换，所以 transform-box 指到 viewBox，旋转中心才是整枚图标的中点 */
 .composer__history svg{
-  width:23px;
-  height:23px;
+  width:20px;
+  height:20px;
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;
   stroke-linecap:round;
-  transition:transform .18s ease;
+  overflow:visible;
+}
+.composer__menu-line{
+  transform-box:view-box;
+  transform-origin:50% 50%;
+  transition:transform .22s var(--ease),opacity .16s ease;
 }
 .composer__history:hover,
 .composer__history:focus-visible{
@@ -1095,7 +924,11 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   transform:none;
   box-shadow:none;
 }
-.composer__history.is-open svg{transform:rotate(45deg)}
+/* 先平移到中心、再绕中心转，两条斜线才会交叉在正中（写成 translate 在前就变成
+   先转后挪，斜线会滑到一边去） */
+.composer__history.is-open .composer__menu-line:first-child{transform:rotate(45deg) translateY(5px)}
+.composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
+.composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
 .composer__model{
   position:static;
   z-index:auto;
@@ -1170,6 +1003,8 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   color:#fff;
   cursor:pointer;
   box-shadow:none;
+  /* 箭头飞出去的那一帧要落在按钮外面，不裁掉就会压在输入框上 */
+  overflow:hidden;
   transition:background-color .15s ease,transform .15s ease,opacity .15s ease;
 }
 .composer__send.is-filled{
@@ -1187,9 +1022,40 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   outline:2px solid color-mix(in srgb,var(--theme) 75%,transparent);
   outline-offset:2px;
 }
-.composer__send-icon{
-  width:19px;
-  height:19px;
+/* 发送钮里的箭头：图形是 icon/arrow.svg 那条路径（只有填充、无描边），
+   颜色走 currentColor。箭头画两遍叠在同一格 —— 一枚飞出去，一枚从下方落回来，
+   两份静止时像素级重合，平时只看得到一枚，所以不必另做显隐。
+   不能用 mask 引外部 svg：file:// 下取不到 alpha，整枚图标会被当成空的抹掉 */
+.composer__send-icon{display:grid; width:24px; height:24px}
+.composer__send-arrow{
+  grid-area:1/1;
+  display:block;
+  width:100%;
+  height:100%;
+  fill:currentColor;
+  /* arrow.svg 是右指箭头，放倒 90 度朝上。旋转写成独立属性，
+     下面的飞行位移才能继续用 translate，两套坐标互不覆盖 */
+  rotate:-90deg;
+  translate:0 0;
+  will-change:translate;
+}
+/* 发出的那一下：上面那枚急急冲出上沿，下面那枚从底边缓缓升回原位。
+   位移 40px 足够整枚越出按钮（图标 24，墨迹约 18），多出的部分被按钮裁掉 */
+@keyframes composer-send-out{
+  0%  {translate:0 0;    animation-timing-function:cubic-bezier(.45,.02,.85,.4)}
+  32% {translate:0 -40px}
+  100%{translate:0 -40px}
+}
+@keyframes composer-send-in{
+  0%  {translate:0 40px}
+  32% {translate:0 40px; animation-timing-function:cubic-bezier(.16,.84,.3,1)}
+  100%{translate:0 0}
+}
+.composer__send-icon.is-flying > .composer__send-arrow:first-child{animation:composer-send-out .62s both}
+.composer__send-icon.is-flying > .composer__send-arrow:last-child{animation:composer-send-in .62s both}
+/* 关掉动效的人不该看到箭头凭空消失又出现 */
+@media(prefers-reduced-motion:reduce){
+  .composer__send-icon.is-flying > .composer__send-arrow{animation:none}
 }
 .model-menu{
   right:10px;
@@ -1316,31 +1182,21 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   background:color-mix(in srgb,var(--bg) 76%,transparent);
   outline:none;
 }
+/* 快捷胶囊贴着输入面板的左缘排一行：不要再居中，也不要前面那枚圆点标签 */
 .composer__starters{
   right:auto;
-  left:50%;
+  left:0;
   bottom:calc(100% + 12px);
   width:max-content;
   max-width:100%;
   gap:8px;
-  justify-content:center;
-  padding:0 4px;
+  justify-content:flex-start;
+  padding:0;
   border:0;
   background:transparent;
   box-shadow:none;
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
-  transform:translateX(-50%);
-}
-.composer__starters-label{
-  color:var(--text-muted);
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-weight:400;
-}
-.composer__starters-label i{
-  width:5px;
-  height:5px;
-  box-shadow:none;
 }
 .composer__starters button{
   padding:6px 10px;
@@ -1366,11 +1222,6 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   box-shadow:none;
 }
 .chat-view__mark::after{box-shadow:none}
-.chat-view__head .view-badge{
-  background:color-mix(in srgb,var(--card-solid) 86%,transparent);
-  box-shadow:none;
-}
-.chat-view__head .view-badge::before{box-shadow:none}
 .assistant-chat__log{
   gap:12px;
   padding:8px 2px 16px;
@@ -1419,75 +1270,9 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-weight:400;
 }
-
-/* Stage bubbles remain lively, but move gently and stay visually sharp. */
-.stage-chat__bubble{
-  --bubble-x:0px;
-  --bubble-y:0px;
-  --bubble-tilt:0deg;
-  border:1px solid color-mix(in srgb,#dedede 76%,var(--border));
-  border-radius:17px;
-  width:max-content;
-  min-width:0;
-  min-height:38px;
-  max-width:min(300px,calc(50vw - 180px));
-  display:flex;
-  align-items:center;
-  padding:10px 14px;
-  background:var(--card-solid);
-  box-shadow:0 8px 22px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .62));
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:13px;
-  font-weight:500;
-  line-height:1.5;
-  overflow-wrap:break-word;
-  word-break:normal;
-  transform:translate(var(--bubble-x),var(--bubble-y));
-}
-.stage-chat__bubble::after{
-  width:12px;
-  height:12px;
-  bottom:-6px;
-  border-radius:2px;
-  background:inherit;
-  transform:rotate(35deg);
-}
-.stage-chat__bubble--user{
-  border-color:color-mix(in srgb,var(--theme) 55%,var(--border));
-  background:color-mix(in srgb,var(--theme) 35%,var(--card-solid));
-}
-.stage-chat__bubble--user::after{transform:rotate(-35deg)}
-.stage-chat__bubble[data-bubble-variant="0"]{--bubble-x:-3px;--bubble-y:-3px}
-.stage-chat__bubble[data-bubble-variant="1"]{--bubble-x:3px;--bubble-y:2px}
-.stage-chat__bubble[data-bubble-variant="2"]{--bubble-x:-2px;--bubble-y:3px}
-.stage-chat__bubble[data-bubble-variant="3"]{--bubble-x:4px;--bubble-y:-2px}
-.stage-chat__bubble:not([hidden]){
-  animation:bubble-clean-in .28s ease-out both;
-}
-.stage-chat__bubble span{
-  animation:bubble-clean-drift 6s ease-in-out .4s infinite alternate;
-}
-.stage-chat__bubble.is-leaving{
-  animation:none;
-  opacity:0;
-  transform:translate(var(--bubble-x),calc(var(--bubble-y) - 5px)) scale(.97);
-}
-.assistant-chat__message--user[data-bubble-variant],
-.assistant-chat__message[data-bubble-variant]{
-  --bubble-tilt:0deg;
-  --bubble-shift-x:0px;
-}
 @keyframes chat-message-in{
   from{opacity:0;transform:translateY(4px)}
   to{opacity:1;transform:translateY(0)}
-}
-@keyframes bubble-clean-in{
-  from{opacity:0;transform:translate(var(--bubble-x),calc(var(--bubble-y) + 7px)) scale(.98)}
-  to{opacity:1;transform:translate(var(--bubble-x),var(--bubble-y)) scale(1)}
-}
-@keyframes bubble-clean-drift{
-  from{translate:0 0}
-  to{translate:0 -2px}
 }
 @keyframes model-menu-in{
   from{opacity:0;transform:translateY(6px) scale(.97)}
@@ -1509,14 +1294,144 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   .composer__starters{
     width:min(100%,calc(100vw - 24px));
     flex-wrap:wrap;
+    justify-content:flex-start;
   }
-  .composer__starters-label{display:none}
   .composer__starters button{flex:1 1 auto}
-  .stage-chat__bubble{
-    min-width:0;
-    max-width:min(220px,62vw);
-  }
 }
 @media(prefers-reduced-motion:reduce){
   .model-menu{animation:none}
+}
+
+/* ============================================================
+   舞台两侧的聊天记录板
+   机器人左边是 IntelliBot 说的话，右边是你说的话。两块板都是纯平面，
+   没有厚度，只绕 Y 轴朝机器人那一侧偏转 14 度 —— 板面法线指向中间，
+   看上去是「面朝机器人」而不是斜插出去；两块都垂直居中、贴着自己那侧，
+   宽度按视口算，永远不压到机器人身上。
+
+   每块板自己上下滚：往上滑就是更早的记录，新消息只在还贴着底的时候
+   把板带下去，翻旧记录的人不会被拽回底部（判定在 assistant_chat.js
+   的 atStageBottom）。滚出内容时才加 .is-overflow 给顶上那截渐隐 ——
+   只有一条消息时不该看见半透明的气泡。
+   ============================================================ */
+.stage-chat{
+  position:fixed;
+  inset:0;
+  z-index:18;
+  pointer-events:none;
+  perspective:1500px;
+  perspective-origin:50% 46%;
+}
+/* 转轴压在内侧那条边（靠机器人的一边）：内侧贴住不动，外侧朝人掀起来，
+   倾斜感落在靠近视口边缘的那一头 */
+.stage-chat__side{
+  position:absolute;
+  top:22%;
+  bottom:24%;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  width:min(300px,calc(50vw - 190px));
+  pointer-events:none;
+}
+.stage-chat__side--assistant{
+  right:calc(50% + clamp(150px,17vw,260px));
+  transform:rotateY(14deg);
+  transform-origin:100% 50%;
+}
+.stage-chat__side--user{
+  left:calc(50% + clamp(150px,17vw,260px));
+  transform:rotateY(-14deg);
+  transform-origin:0 50%;
+}
+/* 记录流本身才是滚动区：短的时候按内容收高、由外层贴底放，
+   长过一板高度才封顶并出现滚动 —— 不走 justify-content:flex-end 那条
+   在滚动容器上会把顶部内容裁掉、滚不到的老路 */
+.stage-chat__stream{
+  flex:0 1 auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-height:0;
+  max-height:100%;
+  padding:2px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  pointer-events:auto;
+  scrollbar-width:none;
+}
+.stage-chat__stream::-webkit-scrollbar{width:0;height:0}
+.stage-chat__stream.is-overflow{
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 20px);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 20px);
+}
+.stage-chat__side--assistant .stage-chat__stream{align-items:flex-start}
+.stage-chat__side--user .stage-chat__stream{align-items:flex-end}
+
+.stage-chat__bubble{
+  flex:0 0 auto;
+  max-width:100%;
+  border:1px solid color-mix(in srgb,var(--border) 76%,transparent);
+  border-radius:999px;
+  padding:9px 16px;
+  background:var(--card-solid);
+  box-shadow:
+    0 10px 24px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .7)),
+    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .32)),
+    inset 0 1px 0 rgba(255,255,255,.45);
+  color:var(--text-secondary);
+  font-family:"Noto Sans SC","Segoe UI",sans-serif;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.5;
+  text-align:left;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  cursor:pointer;
+  animation:stage-bubble-in .3s var(--ease) both;
+  transition:box-shadow .18s ease,border-color .18s ease;
+}
+.stage-chat__bubble span{display:block}
+/* 胶囊只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角照旧收圆 */
+.stage-chat__bubble--assistant{border-bottom-left-radius:0}
+.stage-chat__bubble--user{
+  border-bottom-right-radius:0;
+  border-color:color-mix(in srgb,var(--theme) 55%,var(--border));
+  background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
+  color:var(--text-primary);
+}
+.stage-chat__bubble:hover{
+  box-shadow:
+    0 14px 30px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .9)),
+    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .32)),
+    inset 0 1px 0 rgba(255,255,255,.45);
+}
+@keyframes stage-bubble-in{
+  from{opacity:0;transform:translateY(8px) scale(.96)}
+  to{opacity:1;transform:none}
+}
+
+/* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这块板不必叠着 */
+body:has(.rail.is-open) .stage-chat,
+body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
+
+@media(max-width:1000px){
+  .stage-chat__side{width:min(220px,calc(50vw - 110px))}
+  .stage-chat__side--assistant{right:calc(50% + clamp(110px,14vw,170px))}
+  .stage-chat__side--user{left:calc(50% + clamp(110px,14vw,170px))}
+}
+@media(max-width:760px){
+  .stage-chat{perspective:900px}
+  .stage-chat__side{
+    top:14%;
+    bottom:auto;
+    height:34vh;
+    width:calc(50vw - 14px);
+  }
+  .stage-chat__side--assistant{right:auto;left:8px;transform:rotateY(10deg)}
+  .stage-chat__side--user{left:auto;right:8px;transform:rotateY(-10deg)}
+  .stage-chat__bubble{padding:8px 13px;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .stage-chat__bubble{animation:none}
 }

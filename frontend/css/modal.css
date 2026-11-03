@@ -29,16 +29,17 @@
    底片等比内收再 elastic 弹回。原来这里是实心主按钮、靠 opacity 表示明暗，
    现在和面板里的工具按钮同一种表达，按下有压弹而不是下沉 1px。
    isolation + z-index:-1 让底片落在文字之下 —— 按钮的字是裸文本，不是子元素 */
-/* 定长 128：文案在「连接仿真」与「已连接」之间切换时按钮不会忽宽忽窄，
-   标题右列的对齐也就不会跟着跳。文案居中对齐，左右各留出约 36 的余量 */
+/* 定长下限 128：文案在「连接」与「已连接」之间切换时按钮不会忽宽忽窄，
+   标题右列的对齐也就不会跟着跳；再长的文案按内容撑开，不会压字。
+   字号与顶栏胶囊同一档（--pill-fs），高度跟着取 --pill-h */
 .modal__act-btn{
   position:relative; isolation:isolate;
-  width:128px; padding:0; box-sizing:border-box;
-  height:34px;
+  min-width:128px; padding:0 20px; box-sizing:border-box;
+  height:var(--pill-h);
   white-space:nowrap;
   border:1px solid transparent; border-radius:999px;
   background:transparent; color:var(--text-reduced);
-  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-14);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--pill-fs);
   letter-spacing:.2px; line-height:1; cursor:pointer;
   transition:color .1s cubic-bezier(.7,0,.84,.16), opacity .12s linear;
 }
@@ -80,6 +81,20 @@
    再点一次才真的断开；3 秒内没有第二下就退回已连接 */
 .modal__act-btn.is-arm{color:var(--text-invert)}
 .modal__act-btn.is-arm::before{scale:1; background:var(--warning)}
+
+/* Preference 的导入钮：壳是同一颗（胶囊、悬停涨满主题色、按住回弹），
+   但它不是「一次动作两种状态」的开关 —— 按下去只唤起文件选择，
+   文案与底色都不跟着变，所以没有 is-on / is-cut / is-arm 那三档，
+   宽度也不吃连接钮那 128 的下限，按「导入」两个字收窄 */
+.pref__import{
+  min-width:0;
+  padding:0 22px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;                  /* 连点两下不要选中文字 */
+}
+.pref__import:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
 .modal__title{
   font-size:var(--fs-28); line-height:1; letter-spacing:.2px;
   /* line-height:1 的盒高只有 1em，比字体的内容区（约 1.2em）小，
@@ -342,16 +357,14 @@
 }
 
 
-/* ── Preference：模型一块 ──────────────────────────────────────────
-   这一页原来只有标题区。原来浮在页面左侧的 .skinbar（下拉 + 导入 + 删除）
-   搬进来之后就是一个普通分组：4 的内边距、16 的圆角，里面一行一个 40 高的条目，
-   底下一条 14 号的说明给导入状态用。
-   分组宽定 300：弹窗宽近 900，下拉铺满一条会显得孤零零；
-   这个量级是菜单该有的宽度，右边留白，以后要并排放第二块也有地方。
-   分组底用 --shadow 那一档颜色压 4.5%：浅色下是一层很淡的灰（比面板沉一档），
-   深色下自然变成更深的底，不用为两种主题各写一份。
+/* ── Preference：机器人外观一块 ────────────────────────────────────
+   这一页只做一件事：换机器人外观。所以不再有块名、不再垫一层灰底板、
+   底下也不留那行说明 —— 一组方卡直接摆在面板上，靠卡片自己的 --card
+   与面板分开。导入钮搬去了标题区右上角（.pref__import），这里只剩卡、
+   「删除当前导入」那一行，以及在导入失败时才出现的提示。
    行条目的 hover 只淡淡抬一层底，不用顶栏胶囊那套「涨满主题色 + 字反白」——
-   这里一行是一个设置项，不是提交动作，压过旁边 Settings 的选项就重了 */
+   这里一行是一个设置项，不是提交动作，压过旁边 Settings 的选项就重了
+   （外观卡自己是选中态，那套填色只给它用） */
 .pref{
   display:flex; flex-direction:column;
   flex:1 1 auto; min-height:0;
@@ -362,10 +375,6 @@
 .pref[hidden]{display:none}          /* 类选择器会盖掉 [hidden] 的 UA display:none */
 .pref::-webkit-scrollbar{width:0; height:0}
 .pref__item{display:flex; flex-direction:column; gap:8px}
-.pref__name{
-  font-size:var(--fs-16); line-height:1.2; letter-spacing:.2px;
-  color:var(--text-secondary);
-}
 .pref__group{
   display:flex; flex-direction:column; gap:2px;
   width:min(300px, 100%);
@@ -415,14 +424,112 @@
 
 /* 导入过程与骨架识别结果的提示：一行 14 号，长句自动折行 */
 .pref__note{
-  padding:6px 12px 4px;
+  padding:0;
   font-size:var(--fs-14); line-height:normal; letter-spacing:.2px;
   color:var(--text-reduced);
   white-space:normal;
 }
 .pref__note[hidden]{display:none}
 
+/* ── Preference：机器人外观（换皮） ────────────────────────────────
+   四张内置外观排成一行方卡，导入进来的模型由 js/q1skin.js 追加到末尾。
+   一行最多 6 张：列数写死 6，卡跟着格子缩 —— 不按卡片数量重排列数，
+   导入一张进来，已有的四张不会跟着变小。间隔 8，横竖一样。
+   底下不再垫那块灰底板：卡自己就是 --card，已经能从面板上分出来，
+   再套一层只会多一层盒子。分组宽定 664，6 列扣掉 5 道 8 的间隔正好
+   每张 104 见方，与搬进来之前在栏里的那一档卡片差不多大。
+   卡是方的、图标 34、名字 14；选中的那枚涨满主题色、字反白，
+   与顶栏胶囊选中时同一条规矩 —— 这一格表达的是「现在穿的是它」，
+   不是提交动作，所以只填主题色、不加箭头 */
+.pref__group--skin{
+  width:min(664px, 100%);
+  padding:0;
+  gap:8px;
+  background:none;
+  border-radius:0;
+}
+.pref__group--skin .skin-grid{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:8px;
+}
+/* 删除导入那一行排在卡下面，按内容收宽、贴左，与第一张卡的左缘齐 */
+.pref__group--skin .pref__row{
+  align-self:flex-start;
+  margin-top:0;
+}
+.skin-card{
+  appearance:none; -webkit-appearance:none;
+  position:relative;
+  aspect-ratio:1;
+  min-width:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:8px;
+  padding:10px 6px;
+  border:0; border-radius:16px;
+  /* 底板撤掉之后由卡自己当表面：用 --card-solid 那一档，
+     再加一道很浅的投影，浅色下才分得清「方卡」与「面板」——
+     两者都是近白，只靠色差是拉不开的 */
+  background:var(--card-solid);
+  color:var(--text-reduced);
+  font-family:inherit; font-weight:var(--fw);
+  cursor:pointer;
+  overflow:hidden;
+  box-shadow:
+    0 1px 3px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .45)),
+    inset 0 0 0 1px transparent;
+  transition:box-shadow .12s linear, color .12s linear;
+}
+/* 选中 / 悬停的底色挂在伪元素上，淡入淡出只改 opacity，
+   不用每帧重画一道内描边；is-on 时它一直铺着 */
+.skin-card::before{
+  content:'';
+  position:absolute; inset:0;
+  border-radius:inherit;
+  background:var(--theme);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .14s cubic-bezier(.16,.84,.3,1);
+}
+.skin-card:hover,
+.skin-card:focus-visible{
+  box-shadow:
+    0 1px 3px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .45)),
+    inset 0 0 0 1.5px var(--theme);
+}
+.skin-card.is-on{
+  color:var(--text-invert);
+  box-shadow:
+    0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .7)),
+    inset 0 0 0 1.5px var(--theme);
+}
+.skin-card.is-on::before{opacity:1}
+.skin-card:focus-visible{
+  outline:2px solid var(--theme);
+  outline-offset:2px;
+}
+.skin-card__icon,
+.skin-card__name{position:relative; z-index:1}
+.skin-card__icon{
+  width:34px; height:34px;
+  display:grid; place-items:center;
+}
+.skin-card__icon svg{
+  width:100%; height:100%; display:block;
+  fill:none; stroke:currentColor; stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.skin-card__name{
+  max-width:100%;
+  font-size:var(--fs-14); line-height:1.15;
+  text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
 @media (max-width:700px){
-  /* 窄屏上弹窗本身已经收窄，分组跟着占满，不再留那截右边白 */
+  /* 窄屏上弹窗本身已经收窄，分组跟着占满，不再留那截右边白；
+     六列挤到 40 出头就没法看了，收成三列 */
   .pref__group{width:100%}
+  .pref__group--skin .skin-grid{grid-template-columns:repeat(3, minmax(0, 1fr))}
 }

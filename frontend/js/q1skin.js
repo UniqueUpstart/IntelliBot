@@ -19,7 +19,7 @@ const TIMELINE_REST_POSES = new Map([
 ]);
 
 const skinStyle = document.createElement('style');
-/* 模型那条工具条（下拉 + 导入 + 删除）已经搬进 Preference 弹窗，
+/* 换皮与导入那块（外观卡 + 导入卡 + 删除）挂在 Preference 弹窗里，
    样式跟着落到 css/modal.css 的 .pref 一组里；
    这里只剩导入模型的画布叠层，它挂在主页机器人上，与弹窗无关 */
 skinStyle.textContent = [
@@ -120,8 +120,10 @@ function init() {
   const pick = panel.querySelector('[data-skin-pick]');
   const note = panel.querySelector('[data-skin-note]');
   const removeBtn = panel.querySelector('[data-skin-delete]');
-  const fileInput = panel.querySelector('[data-skin-file]');
-  const importCard = panel.querySelector('.skin-card--import');
+  /* 导入钮搬到了弹窗标题区右上角（.modal__act 里那颗胶囊），不再挂在面板里，
+     所以这两个按整页取；取不到就整段跳过，换版式时不会连带 Q1 一起挂掉 */
+  const fileInput = document.querySelector('[data-skin-file]');
+  const importCard = document.querySelector('[data-skin-import]');
   const loaded = new Map();
   let current = 'builtin:q1';
   let shown = false;
@@ -203,6 +205,7 @@ function init() {
   }
 
   function setNote(text) {
+    if (!note) return;
     note.hidden = !text;
     note.textContent = text || '';
   }
@@ -268,7 +271,7 @@ function init() {
   }
 
   function watchMotions() {
-    const grid = document.querySelector('[data-rail-grid="motions"]');
+    const grid = document.querySelector('[data-rail-grid="gestures"]');
     if (!grid) {
       requestAnimationFrame(watchMotions);
       return;
@@ -875,7 +878,7 @@ function init() {
       setFigureVisible(false);
       showStage(false);
       setOriginalMaterialTheme(true);
-      setNote('已应用奶蛙皮肤：黄色外壳、奶白腹部和棕黑手脚。');
+      setNote('');
       return;
     }
     setOriginalMaterialTheme(false);
@@ -912,7 +915,7 @@ function init() {
     }
   }
 
-  fileInput.addEventListener('change', async () => {
+  fileInput?.addEventListener('change', async () => {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = '';
     if (!file) return;
@@ -936,7 +939,7 @@ function init() {
       setNote(err.message);
     }
   });
-  importCard.addEventListener('keydown', (event) => {
+  importCard?.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     fileInput.click();

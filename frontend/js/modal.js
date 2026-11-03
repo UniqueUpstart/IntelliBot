@@ -209,8 +209,9 @@
     Array.prototype.forEach.call(panel.querySelectorAll('[data-privacy-only]'), function (el) {
       el.hidden = name !== 'Privacy';
     });
-    /* Preference 目前只有标题区：这块照弹窗名整块切，
-       以后往 .pref 里添内容时（样式已备好），切走再回来也不丢状态 */
+    /* Preference 是机器人外观那一块（换皮 + 导入）：照弹窗名整块切。
+       卡片的选中态由 js/q1skin.js 自己写，这里只负责显隐，
+       切走再回来外观、导入列表都还是原样 */
     Array.prototype.forEach.call(panel.querySelectorAll('[data-preference-only]'), function (el) {
       el.hidden = name !== 'Preference';
     });
@@ -454,7 +455,7 @@
     });
     /* 标题区那行说明跟着当前选项走 */
     if (panel.getAttribute('aria-label') === 'Settings') {
-      var subMap = { appearance: 'settings.appearance', language: 'settings.language' };
+      var subMap = { appearance: 'settings.appearance', language: 'settings.language', model: 'settings.model' };
       subL[0].textContent = subMap[key] ? t(subMap[key]) : key;
     }
   }

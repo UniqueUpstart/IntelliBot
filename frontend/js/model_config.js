@@ -38,6 +38,12 @@
       baseUrl: 'https://api.openai.com/v1',
       models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini'],
     },
+    /* 智谱的 Flash 档长期免费，且国内可直连，适合当默认的零成本选项 */
+    zhipu: {
+      label: '智谱 GLM',
+      baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+      models: ['glm-4-flash', 'glm-4.7-flash'],
+    },
     custom: {
       label: 'OpenAI Compatible',
       baseUrl: '',
@@ -68,6 +74,8 @@
   function modelLabel(model) {
     if (model === 'deepseek-flash') return 'DeepSeek Flash';
     if (model === 'deepseek-v4-pro') return 'DeepSeek V4 Pro';
+    if (model === 'glm-4-flash') return 'GLM-4-Flash';
+    if (model === 'glm-4.7-flash') return 'GLM-4.7 Flash';
     return model;
   }
 
@@ -77,6 +85,9 @@
     }
     if (provider === 'deepseek' && model === 'deepseek-v4-pro') {
       return t('model.desc.deepseekV4Pro', '综合能力更强，适合复杂指令和较长对话');
+    }
+    if (provider === 'zhipu' && model === 'glm-4-flash') {
+      return t('model.desc.glmFlash', '永久免费、国内直连，适合日常对话');
     }
     return t('model.desc.custom', '自定义模型');
   }
@@ -120,9 +131,12 @@
     statusNode.textContent = text;
   }
 
+  /* 说明行只用来报「保存成功 / 具体错误」：没有话要说就清空，
+     空元素由 css/rail.css 的 :empty 收掉，所以这里不再有常驻的默认文案 */
   function setNote(text, error) {
-    note.textContent = text || t('model.key.local', 'API Key 只保存在本机，不会写入浏览器。');
-    note.classList.toggle('is-error', !!error);
+    if (!note) return;
+    note.textContent = text || '';
+    note.classList.toggle('is-error', !!error && !!text);
   }
 
   function renderDatalist(provider) {
@@ -294,7 +308,8 @@
       modelInput.value = button.dataset.prefillModel || '';
       renderDatalist(providerInput.value);
       paintPreset(providerInput.value, baseInput.value, modelInput.value);
-      setStatus('idle', t('model.status.preset', '待保存'));
+      /* 顶部那枚状态胶囊只说服务端真实状态（已连接 / 未配置 / 服务未启动），
+         点预设不再把它改成「待保存」—— 需要提醒的话由下面这行说明承担 */
       setNote(t('model.preset.filled', '已填入预设，补全 API Key 后保存即可。'));
       if (!baseInput.value) baseInput.focus();
       else if (!modelInput.value) modelInput.focus();
@@ -337,8 +352,12 @@
     }
     if (event.target.closest('[data-model-manage]')) {
       closeMenu();
-      var button = document.querySelector('.rail--left .item[data-panel="Model"]');
-      if (button) button.click();
+      /* 模型页搬进 Settings 了：先开弹窗，再点那枚 Model 页签。
+         页签按名字点，不依赖左列的顺序 */
+      var entry = document.querySelector('.pill[data-modal="Settings"]');
+      if (entry) entry.click();
+      var tab = document.querySelector('[data-set-tab="model"]');
+      if (tab) tab.click();
     }
   });
 

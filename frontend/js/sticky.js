@@ -83,18 +83,11 @@ gsap.registerPlugin(ScrollTrigger);
         if (titles.length) ScrollTrigger.refresh();
       }).observe(body, { attributes: true, attributeFilter: ['data-view'] });
 
-      /* 卡片是脚本后来才填进来的（右栏的手势 / 表情、左栏钉住的卡），
+      /* 卡片是脚本后来才填进来的（手势 / 表情格、新增的快捷指令卡），
          内容高度当场就变，同样不能等防抖。雾带那条判定必须跟上，
          否则空页面会先挂着两条灰带、等下一次 resize 才收 */
       new MutationObserver(fit).observe(body, { childList: true, subtree: true });
 
-      /* 图钉会藏掉整组/整张卡片，内容高度当场就变，同样不能等防抖 */
-      body.addEventListener('pinchange', function () {
-        clearTimeout(timer);
-        measure();
-        fit();
-        if (titles.length) ScrollTrigger.refresh();
-      });
     }
     window.addEventListener('resize', titles.length ? relayout : fit);
 

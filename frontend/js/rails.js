@@ -29,8 +29,8 @@
       i.classList.toggle('is-active', on);
       i.setAttribute('aria-expanded', on ? 'true' : 'false');
     });
-    /* 面板内容按选中项切视图：Pinned 三组全列，其余只留本类卡片，
-       Edit 项对应的是同一块面板里的编辑页（表单在 HTML 里，排在卡片组前面） */
+    /* 面板内容按选中项切视图：data-view 取按钮 data-panel 的小写，
+       CSS 只留对应的那一页（右栏四页：gestures / emotions / shortcuts / edit） */
     const body = rail.querySelector('[data-panel-body]');
     if (body) {
       body.dataset.view = String((item && item.dataset.panel) || '').toLowerCase();
@@ -72,11 +72,12 @@
 })();
 
 /* 右栏动作面板：先用空白卡占好四列的位置，手势与表情模块随后往这些节点里
-   填内容（动作名 / 表情屏），只填不换节点 —— 磁吸脚本在加载时把卡收进自己的
+   填内容（缩略图 / 表情屏），只填不换节点 —— 磁吸脚本在加载时把卡收进自己的
    列表，换掉 DOM 就得重扫一遍。
-   手势页 13 张（全部手势动作含街舞与捧腹大笑）、表情页 16 张（四行），都是一行四张 */
+   手势页 10 张（除左栏那三张动作卡之外的其余手势）、表情页 16 张（四行），
+   都是一行四张 */
 (function () {
-  var COUNTS = { motions: 13, emotions: 16 };
+  var COUNTS = { gestures: 10, emotions: 16 };
   document.querySelectorAll('[data-rail-grid]').forEach(function (grid) {
     var total = COUNTS[grid.dataset.railGrid] || 8;
     var html = '';
@@ -87,24 +88,12 @@
   });
 })();
 
-/* 卡片图钉：点一下钉进 Pinned（按所在分组归位）。取钉要两步：
-   已钉的卡片第一次点只换成对勾（确认取消），第二次点才真的取出，
-   避免在 Pinned 页里误点一下卡片就消失。
-   状态写在 localStorage，刷新后还在；键是「分组:编号」，同一编号在三个分组里各算一张。
-
-   这一段还管新增卡片：左栏编辑页填的类型 / 名字 / 简介从这里落成一张 .sc，
-   追加到该组末尾、编号按位置重排、当场绑上图钉。新增的卡片同样进 localStorage，
-   刷新后按顺序重放一遍，编号因此始终和 pinned 的键对得上 */
+/* 快捷指令合集：卡片排在右栏 Shortcuts 页里，三组一次全出 —— 没有钉 / 取钉，
+   也不再按组切页。这一段只管新增卡片：编辑页填的类型 / 名字 / 简介从这里落成一张 .sc，
+   追加到该组末尾、编号按位置重排；新增的同样进 localStorage，刷新后按顺序重放一遍 */
 (function () {
-  var KEY = 'intellibot:pinned';
   var STORE = 'intellibot:cards';   /* 新增卡片：{ type, name, brief } */
-  var CONFIRM_MS = 2800;   /* 对勾停留多久后自动退回「已钉」态 */
   var LABEL = { action: 'Action', dialog: 'Dialog', tendance: 'Tendance' };
-  var pinned = Object.create(null);
-  try {
-    var saved = JSON.parse(localStorage.getItem(KEY) || '[]');
-    if (Array.isArray(saved)) saved.forEach(function (k) { pinned[k] = true; });
-  } catch (e) {}
 
   var made = [];
   try {
@@ -114,115 +103,18 @@
     });
   } catch (e) {}
 
-  function keyOf(card) {
-    var g = card.closest('.sc-group');
-    var m = g ? /sc-group--([a-z]+)/.exec(g.className) : null;
-    var id = card.querySelector('.sc__id');
-    return (m ? m[1] : 'x') + ':' + (id ? id.textContent.trim() : '');
-  }
-
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(Object.keys(pinned))); } catch (e) {}
-  }
-
   function saveMade() {
     try { localStorage.setItem(STORE, JSON.stringify(made)); } catch (e) {}
   }
 
-  /* 退出确认态，标签回到「已钉」该有的 Unpin */
-  function resetConfirm(card) {
-    if (!card.classList.contains('is-confirm-unpin')) return;
-    card.classList.remove('is-confirm-unpin');
-    clearTimeout(card.__pinTimer);
-    var b = card.querySelector('.sc__pin');
-    if (b) b.setAttribute('aria-label', card.classList.contains('is-pinned') ? 'Unpin' : 'Pin');
-  }
-
-  function askConfirm(card) {
-    resetConfirm(card);
-    card.classList.add('is-confirm-unpin');
-    var b = card.querySelector('.sc__pin');
-    if (b) b.setAttribute('aria-label', 'Confirm unpin');
-    card.__pinTimer = setTimeout(function () { resetConfirm(card); }, CONFIRM_MS);
-  }
-
-  /* 一组里一张都没钉 → 整组收起（CSS 里 .is-vacant 只在 pinned 视图生效）。
-     全页一张都没有时面板就空着，此时给一段空态说明（.panel__empty），
-     判据挂在 body 的 data-pin-empty 上，样式那边只认 pinned 视图 */
-  function paint(body) {
-    var total = 0, firstShown = null;
-    var groups = Array.prototype.slice.call(body.querySelectorAll('.sc-group'));
-    groups.forEach(function (g) {
-      var any = false;
-      g.querySelectorAll('.sc').forEach(function (c) {
-        if (pinned[c.dataset.pinKey]) { any = true; total++; }
-      });
-      g.classList.toggle('is-vacant', !any);
-      if (any && !firstShown) firstShown = g;
-    });
-    /* pinned 视图里空组整组收起，排在最上面的因此可能不是 DOM 第一个组。
-       标记出来给 CSS 用：那一组的标题要跟 :first-child 一样贴到遮罩处，
-       否则它比 Action 组当第一时低 20px，滚动一吸顶又跳回来 */
-    groups.forEach(function (g) { g.classList.toggle('is-first', g === firstShown); });
-    body.setAttribute('data-pin-empty', total ? '0' : '1');
-  }
-
-  /* 绑定一张卡片的图钉行为。新增的卡片插进来之后也要走这一段，
-     所以从原来的遍历里提出来，用 __pinBound 防止重复挂事件 */
-  function bindCard(card) {
-    if (card.__pinBound) return;
-    card.__pinBound = true;
-
-    var body = card.closest('[data-panel-body]');
-    var k = keyOf(card);
-    var btn = card.querySelector('.sc__pin');
-    card.dataset.pinKey = k;
-
-    function show(on) {
-      card.classList.toggle('is-pinned', on);
-      if (!btn) return;
-      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      btn.setAttribute('aria-label', on ? 'Unpin' : 'Pin');
-    }
-
-    show(!!pinned[k]);
-    if (!btn) return;
-    /* 指针离开卡片就撤掉确认态，避免对勾挂着不动 */
-    card.addEventListener('mouseleave', function () { resetConfirm(card); });
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      /* 冒泡被截断了，这里手动把别的卡片的确认态收掉 */
-      document.querySelectorAll('.sc.is-confirm-unpin').forEach(function (c) {
-        if (c !== card) resetConfirm(c);
-      });
-      var on = card.classList.contains('is-pinned');
-      /* 已钉且还没进确认态 → 这一下只换成对勾，不改数据 */
-      if (on && !card.classList.contains('is-confirm-unpin')) {
-        askConfirm(card);
-        return;
-      }
-      resetConfirm(card);
-      on = !on;
-      show(on);
-      if (on) pinned[k] = true; else delete pinned[k];
-      save();
-      if (body) {
-        paint(body);
-        /* 显示/隐藏改了高度与滚动行程，带着标题补间一起重量 */
-        body.dispatchEvent(new CustomEvent('pinchange'));
-      }
-    });
-  }
-
-  /* ---- 新增卡片 ---- */
-  /* 照第一张现成的卡克隆：描边、内层排版、两枚圆钮的图标全沿用，
-     只换编号、名字、简介三个文本位。模板在 pinned 视图里可能被隐藏，节点仍在 */
-  var cardTpl = document.querySelector('[data-panel-body] .sc');
+  /* 照第一张现成的卡克隆：描边、内层排版、右下圆钮的图标全沿用，
+     只换编号、名字、简介三个文本位 */
+  var cardTpl = document.querySelector('[data-rail-view="shortcuts"] .sc');
 
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
   function gridOf(type) {
-    var g = document.querySelector('.panel__body .sc-group--' + type);
+    var g = document.querySelector('[data-rail-view="shortcuts"] .sc-group--' + type);
     return g ? g.querySelector('.sc-grid') : null;
   }
 
@@ -236,20 +128,12 @@
 
   function makeCard(id, name, brief) {
     var card = cardTpl.cloneNode(true);
-    card.classList.remove('is-pinned', 'is-confirm-unpin');
-    card.removeAttribute('data-pin-key');
-    card.__pinBound = false;
     var i = card.querySelector('.sc__id');
     var n = card.querySelector('.sc__brief');
     var b = card.querySelector('.sc__time');
-    var p = card.querySelector('.sc__pin');
     if (i) i.textContent = id;
     if (n) n.textContent = name;
     if (b) b.textContent = brief;
-    if (p) {
-      p.setAttribute('aria-pressed', 'false');
-      p.setAttribute('aria-label', 'Pin');
-    }
     return card;
   }
 
@@ -259,14 +143,6 @@
     var card = makeCard(pad2(grid.children.length + 1), name, brief);
     grid.appendChild(card);
     renumber(grid);
-    bindCard(card);
-
-    /* 新卡片是未钉状态：pinned 视图下它自己不显示，但组的空壳判定要重跑 */
-    var body = card.closest('[data-panel-body]');
-    if (body) {
-      paint(body);
-      body.dispatchEvent(new CustomEvent('pinchange'));
-    }
     /* 磁吸脚本在加载时就收过一遍元素，新插进来的这张要补收 */
     if (window.magnetRescan) window.magnetRescan();
     if (keep) {
@@ -276,29 +152,26 @@
     return card;
   }
 
-  /* 加完得让人当场看见：把同一块面板切到该组。
-     编辑页和卡片组现在共用左栏这一块面板，所以这一步只是换 data-view，
-     不涉及栏体开合 —— 窄屏也一样适用 */
+  /* 加完得让人当场看见：右栏切到快捷指令页（键在右栏，栏体不在开着的状态就先点开），
+     再把这组最后一张 —— 也就是刚加的那张 —— 滚进视野。
+     滚动作放在下一帧：点完按钮面板才开始展开，宽度还在 0.3s 的过渡里 */
   function reveal(type) {
-    var rail = document.getElementById('rail-shortcuts');
+    var rail = document.getElementById('rail-tools');
     if (!rail) return;
-    var item = rail.querySelector('.item[data-panel="' + LABEL[type] + '"]');
-    if (!item) return;
+    var item = rail.querySelector('.item[data-panel="Shortcuts"]');
     var body = rail.querySelector('[data-panel-body]');
-    /* 已经停在这一组就别点：这一下会把它收起 */
-    if (rail.classList.contains('is-open') && body && body.dataset.view === type) return;
-    item.click();
+    if (!item || !body) return;
+    if (!rail.classList.contains('is-open') || body.dataset.view !== 'shortcuts') item.click();
+    var grid = gridOf(type);
+    var card = grid && grid.lastElementChild;
+    if (!card || !card.scrollIntoView) return;
+    requestAnimationFrame(function () {
+      card.scrollIntoView({ block: 'nearest' });
+    });
   }
 
-  /* 上次新增的卡片先补回 DOM，再统一绑定（绑定循环扫的是全部 .sc） */
+  /* 上次新增的卡片先补回 DOM */
   if (cardTpl) made.forEach(function (c) { addCard(c.type, c.name, c.brief, false); });
-
-  Array.prototype.forEach.call(document.querySelectorAll('[data-panel-body]'), function (body) {
-    var cards = body.querySelectorAll('.sc');
-    if (!cards.length) return;
-    Array.prototype.forEach.call(cards, bindCard);
-    paint(body);
-  });
 
   /* ---- 编辑页：先选类型，再填名字与简介 ---- */
   (function () {
@@ -353,13 +226,6 @@
       }
     });
   })();
-
-  /* 点了别处也算放弃取钉 */
-  document.addEventListener('click', function (e) {
-    document.querySelectorAll('.sc.is-confirm-unpin').forEach(function (card) {
-      if (!card.contains(e.target)) resetConfirm(card);
-    });
-  });
 })();
 
 /* 顶栏胶囊：组内单选，点击即选中；再次点击当前选中项重复触发按压反馈 */
@@ -419,7 +285,7 @@
   });
 })();
 
-/* 快捷指令卡片触发主页动作：卡上带 data-motion 时，点一下就在主页模型上播放同名动作。
+/* 快捷指令卡触发主页动作：卡上带 data-motion 时，点一下就在主页模型上播放同名动作。
    模型是 6.4MB 的 GLB，比这段脚本晚就绪，早到的点击先记下来，等 robot-ready 补播一次。
    播放期间给卡挂 .is-on（配色与悬停同一套），按时长自己收掉；
    时长读 getGestureInfo，读不到就按默认 4 秒兜底 */
@@ -446,7 +312,8 @@
   });
 
   function bind(card) {
-    var id = card.dataset.motion;
+    /* 卡有两种写法：普通动作挂在 data-motion，街舞那张用 data-action-motion */
+    var id = card.dataset.motion || card.dataset.actionMotion;
     if (!id) return;
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
@@ -473,5 +340,5 @@
     });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll('.sc[data-motion]'), bind);
+  Array.prototype.forEach.call(document.querySelectorAll('.sc[data-motion], .sc[data-action-motion]'), bind);
 })();

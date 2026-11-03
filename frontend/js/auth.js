@@ -39,10 +39,19 @@
   const nameEl = account ? account.querySelector('.user__name') : null;
   const trigger = account ? account.querySelector('.user__trigger') : null;
   const logoutBtn = account ? account.querySelector('[data-auth-logout]') : null;
+  const logoutLabel = logoutBtn ? logoutBtn.querySelector('.pill__label') : null;
 
   let user = null;
   let mode = 'login';
   let busy = false;
+
+  /* 退出的两段式确认：第一下只上膛 —— 这一项染成 warning、字换成 Confirm，
+     3 秒内再点一下才真的退。3 秒与 Advance 里「断连」的确认态等长
+     （sim.js 的 armTimer 也是 3000），两处都是「留一下反悔的时间」，
+     时长不一致的话一处会显得拖、另一处像手滑 */
+  const LOGOUT_HOLD = 3000;
+  let logoutArmed = false;
+  let logoutTimer = 0;
 
   /* ---------- 存取 ---------- */
 
@@ -116,6 +125,9 @@
     const key = mode === 'register' ? 'register' : 'login';
     if (submitLabel) submitLabel.textContent = t('auth.' + key);
     if (!user && nameEl) nameEl.textContent = t('auth.entry');
+    /* 退出项的字是脚本按状态写的（上膛时是 Confirm），而 i18n 切语言时会先
+       照 data-i18n 刷回 Log out —— 这里按当前状态再写一遍，别让确认态丢字 */
+    paintLogout();
   }
 
   /* 提交钮的宽度由 flex 吃满整列，CSS 能算出来，但卡片的宽度会随视口伸缩；
@@ -281,6 +293,8 @@
       account.classList.add('is-guest');
     }
     if (logoutBtn) {
+      /* 掉线 / 退出之后这一项要回到「Log out」的样子，别把确认态带到下一次登录 */
+      disarmLogout();
       logoutBtn.hidden = true;
       logoutBtn.classList.remove('is-active');
       logoutBtn.setAttribute('aria-pressed', 'false');
@@ -304,7 +318,37 @@
     broadcast();
   }
 
+  /* ---------- 退出登录的确认态 ---------- */
+
+  /* 画法只有一条依据：logoutArmed。菜单那套组内单选会在点击时抢先给这一项挂
+     is-active，这里立刻收回 —— 亮不亮只该由确认态决定，与「选中」无关 */
+  function paintLogout() {
+    if (!logoutBtn) return;
+    logoutBtn.classList.remove('is-active');
+    logoutBtn.setAttribute('aria-pressed', 'false');
+    logoutBtn.classList.toggle('is-arm', logoutArmed);
+    if (logoutLabel) logoutLabel.textContent = t(logoutArmed ? 'auth.logout.confirm' : 'auth.logout');
+  }
+
+  function disarmLogout() {
+    if (logoutTimer) { clearTimeout(logoutTimer); logoutTimer = 0; }
+    if (!logoutArmed) return;
+    logoutArmed = false;
+    paintLogout();
+  }
+
+  function armLogout() {
+    if (logoutArmed) return;
+    logoutArmed = true;
+    paintLogout();
+    /* 固定 3 秒、不随指针进出提前收回：这里的确认靠「再点一下」完成，
+       指针停不停在按钮上都不是信号（与 sim.js 的 armDisconnect 同一条规矩） */
+    if (logoutTimer) clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(disarmLogout, LOGOUT_HOLD);
+  }
+
   async function logout() {
+    disarmLogout();
     if (logoutBtn) logoutBtn.disabled = true;
     try {
       await api('/auth/logout', { method: 'POST', body: {} });
@@ -408,10 +452,11 @@
 
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
-        /* 账号菜单那套组内单选会给这一项也挂上 is-active，先摘掉再退，
-           否则收起前会闪一下「选中」的样子 */
-        logoutBtn.classList.remove('is-active');
-        logoutBtn.setAttribute('aria-pressed', 'false');
+        /* 第一下只上膛：这一项染成 warning、字换成 Confirm，不真的退 ——
+           顺手也把菜单那套组内单选会挂上的「选中」摘掉（在 paintLogout 里）。
+           第二下才走；想反悔就等 3 秒，或干脆不点 */
+        if (!logoutArmed) { armLogout(); return; }
+        disarmLogout();
         logout();
       });
     }

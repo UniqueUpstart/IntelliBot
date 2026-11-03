@@ -138,10 +138,12 @@
    表面拆成 .user__surface 承担底色与圆角，外层保持 48 高，顶栏不重排。 */
 .user{
   position:relative;
-  /* 收起态由名字的自然宽度决定：左右各留出一段可呼吸的留白，
-     但仍设上下限，避免长名字撑满顶栏或短名字缩成一小团。 */
+  /* 收起态与展开的面板同长：胶囊只往下长成面板，开合时左右不抽那一下。
+     名字的长短仍参与算宽度（--user-name-width 由 js/avatar.js 量出来写回），
+     只是下限就压在面板那条 288 上，短名字也不会缩成一小团 */
   --user-name-width: 92px;
-  --user-w: clamp(176px, calc(82px + var(--user-name-width)), 320px);
+  --user-panel-w: clamp(288px, calc(120px + var(--user-name-width) * 1.25), 380px);
+  --user-w: var(--user-panel-w);
   --user-half: calc(var(--user-w) / 2);   /* 半宽：头像收起态的横向位移要用 */
   width:var(--user-w); height:var(--top-h);
   flex:0 0 var(--user-w);
@@ -158,7 +160,7 @@
   transition:width .3s var(--ease), flex-basis .3s var(--ease);
 }
 .user.is-picking{--tray:60px;}
-.user.is-open{--user-w:clamp(288px, calc(120px + var(--user-name-width) * 1.25), 380px);}
+/* 展开只长高、不长宽：宽度已经在 .user 上与面板对齐，这里不再改 --user-w */
 .user__surface{
   position:absolute; top:0; left:0;
   width:100%; height:var(--top-h);
@@ -338,6 +340,17 @@
 }
 .user__menu .pill.is-link:hover .pill__label{transform:translateY(-50%)}
 .user__menu .pill.is-link .pill__arrow{opacity:0; transform:translateY(-50%) translateX(-4px)}
+
+/* 退出登录的确认态：第一下不真退，只把这一项染成 warning、字换成 Confirm。
+   底片复用 hover / is-active 那层 ::before，只把颜色换成 --warning ——
+   与 Advance 里「断连」那颗按钮的确认态是同一套说法（modal.css 的 is-arm）。
+   字反白、位置不动：这是「再点一次就真退」，不是要滑向下一页，所以 hover 的
+   右移与箭头一并停掉，免得箭头压在新字上 */
+.user__menu .pill[data-auth-logout].is-arm,
+.user__menu .pill[data-auth-logout].is-arm:hover{color:var(--text-invert)}
+.user__menu .pill[data-auth-logout].is-arm::before{scale:1; background:var(--warning)}
+.user__menu .pill[data-auth-logout].is-arm:hover .pill__label{transform:translateY(-50%)}
+.user__menu .pill[data-auth-logout].is-arm .pill__arrow{opacity:0; transform:translateY(-50%) translateX(-4px)}
 
 /* Contact 换字的两段动画：旧字淡出并轻轻上浮 → 换文案 → 新字从下方淡入。
    位移走独立的 translate 属性，不碰 label 自己的 transform（那条管居中与 hover 右移），

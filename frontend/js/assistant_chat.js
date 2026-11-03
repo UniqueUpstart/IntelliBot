@@ -18,11 +18,14 @@
   var sendButton = composer.querySelector('[data-assistant-send]');
   var clearButton = findInPanel('[data-assistant-clear]');
   var stopButton = findInPanel('[data-assistant-stop]');
-  var status = findInPanel('[data-assistant-status]');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
-  if (!log || !input || !sendButton || !clearButton || !stopButton || !status) return;
+  if (!log || !input || !sendButton || !clearButton || !stopButton) return;
+
+  /* 发送钮里那两枚箭头叠在同一个格子上（见 chat.css 尾部的 composer-send-*），
+     is-flying 一挂就是一次「发出去」的动画，收尾在 animationend */
+  var sendIcon = sendButton.querySelector('.composer__send-icon');
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -30,7 +33,7 @@
   var records = [];
   var pending = false;
   var sequenceToken = 0;
-  var bubbleTimer = 0;
+  var STAGE_LIMIT = 60;   /* 舞台每侧最多留 60 条，更早的看左栏完整对话流 */
   var STARTED_KEY = 'intellibot.chat.started';
   var welcomeShown = false;
   var welcomeMotionPlayed = false;
@@ -45,8 +48,8 @@
     requestAnimationFrame(function () { log.scrollTop = log.scrollHeight; });
   }
 
-  function stageBubble(role) {
-    return stage && stage.querySelector('[data-stage-message="' + role + '"]');
+  function stageStream(role) {
+    return stage && stage.querySelector('[data-stage-stream="' + role + '"]');
   }
 
   function decorateBubble(node, role, recordId) {
@@ -57,30 +60,56 @@
     node.dataset.author = role === 'user' ? tr('chat.you', '你') : 'IntelliBot';
   }
 
+  /* 贴底判定：离底不到一行就当还停在最新。新消息只在贴底时才把记录流
+     带下去；已经往上翻过去看旧对话的人，不会被新消息硬拽回底部 */
+  function atStageBottom(stream) {
+    return stream.scrollHeight - stream.scrollTop - stream.clientHeight < 32;
+  }
+
+  function stageToBottom(stream) {
+    requestAnimationFrame(function () { stream.scrollTop = stream.scrollHeight; });
+  }
+
+  /* 只有真的滚出内容时才给顶上那截渐隐：一条消息的板子不该是半透明的 */
+  function stageSync(stream) {
+    stream.classList.toggle('is-overflow', stream.scrollHeight > stream.clientHeight + 4);
+  }
+
+  /* 舞台两侧各是一条记录流，按角色分开：这一侧已有的气泡按 recordId 复用，
+     新的追加到末尾（流自己向上滚，最新一条总在底边）。
+     同一条记录会走两遍 —— 先「正在思考…」再回填正文，所以复用优先于新建 */
   function showStage(role, text, recordId) {
-    var node = stageBubble(role);
-    if (!node) return;
-    decorateBubble(node, role, recordId);
+    var stream = stageStream(role);
+    if (!stream) return;
+    var key = String(recordId || '');
+    var node = key ? stream.querySelector('[data-record-id="' + key + '"]') : null;
+    var follow = !node || atStageBottom(stream);
+    if (!node) {
+      node = document.createElement('button');
+      node.type = 'button';
+      node.className = 'stage-chat__bubble stage-chat__bubble--' + role;
+      node.dataset.stageMessage = role;
+      node.setAttribute('aria-label', tr('chat.openHistory', '打开完整聊天记录'));
+      var label = node.appendChild(document.createElement('span'));
+      label.setAttribute('data-stage-text', '');
+      decorateBubble(node, role, recordId);
+      stream.appendChild(node);
+      /* 只留最近 STAGE_LIMIT 条：更早的还在左栏完整对话流里，舞台这块板不必无限长 */
+      while (stream.children.length > STAGE_LIMIT) stream.firstElementChild.remove();
+    }
     var textNode = node.querySelector('[data-stage-text]');
     if (textNode) textNode.textContent = text;
     else node.textContent = text;
-    node.dataset.recordId = String(recordId || '');
-    node.hidden = false;
-    node.classList.remove('is-leaving');
+    node.dataset.recordId = key;
+    if (follow) stageToBottom(stream);
+    stageSync(stream);
   }
 
   function hideStage() {
-    clearTimeout(bubbleTimer);
     if (!stage) return;
-    stage.querySelectorAll('[data-stage-message]').forEach(function (node) {
-      node.classList.add('is-leaving');
-      setTimeout(function () { node.hidden = true; node.classList.remove('is-leaving'); }, 220);
+    stage.querySelectorAll('[data-stage-stream]').forEach(function (stream) {
+      stream.replaceChildren();
     });
-  }
-
-  function scheduleStageHide() {
-    clearTimeout(bubbleTimer);
-    bubbleTimer = setTimeout(hideStage, 8000);
   }
 
   function addRecord(role, text, modifier) {
@@ -128,10 +157,41 @@
   }
 
   function paintSend() {
+    /* 飞行途中不换态：提交那一刻输入框已经被清空，但按钮还得保持实心，
+       等箭头从下方落回来（animationend）再退回空心，否则它是在半路换的衣服 */
+    if (sendIcon && sendIcon.classList.contains('is-flying')) return;
     var hasText = input.value.trim().length > 0;
     sendButton.classList.toggle('is-filled', hasText);
     if (!pending) sendButton.disabled = !hasText;
   }
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var flyTimer = 0;
+
+  /* 收尾：摘掉 is-flying，再按当前输入框重新判一次实心/空心 */
+  function endFly() {
+    if (flyTimer) { clearTimeout(flyTimer); flyTimer = 0; }
+    if (!sendIcon || !sendIcon.classList.contains('is-flying')) return;
+    sendIcon.classList.remove('is-flying');
+    paintSend();
+  }
+
+  function flySendIcon() {
+    /* 关掉动效的人不发这一帧：CSS 那边 animation:none 之后
+       animationend 不会触发，is-flying 会一直挂着，按钮就再也不会换态了 */
+    if (!sendIcon || reduceMotion.matches) return;
+    /* 连按时把动画重头放一遍：先摘类、强制一次回流再挂上，
+       不然类名没变，浏览器不会重启同一条 animation */
+    sendIcon.classList.remove('is-flying');
+    void sendIcon.offsetWidth;
+    sendIcon.classList.add('is-flying');
+    /* animationend 是主路径，这条 700 的定时器只是兜底（动画 .62s）：
+       标签页被挂起时动画会被取消、不派发 end，少了这一手按钮会永远停在实心态 */
+    clearTimeout(flyTimer);
+    flyTimer = setTimeout(endFly, 700);
+  }
+
+  if (sendIcon) sendIcon.addEventListener('animationend', endFly);
 
   function setPending(value) {
     pending = value;
@@ -159,7 +219,7 @@
       var payload = await response.json().catch(function () { throw new Error('AI 服务返回了无法解析的响应'); });
       if (response.status === 401) {
         sessionStorage.removeItem('intellibot.auth.token');
-        stopActions('请先登录');
+        stopActions();
         window.dispatchEvent(new CustomEvent('intellibot-auth-required'));
       }
       if (!response.ok || payload.error) {
@@ -172,11 +232,11 @@
     } finally { clearTimeout(timer); }
   }
 
-  function stopActions(label) {
+  /* 状态胶囊已从界面上撤掉，停止动作只剩两件事：作废正在跑的序列、收起停止钮 */
+  function stopActions() {
     sequenceToken += 1;
     if (window.robot3d && window.robot3d.ready) window.robot3d.stopGesture();
     stopButton.hidden = true;
-    status.textContent = label || tr('chat.status.ready', '待命');
   }
 
   function wait(milliseconds) { return new Promise(function (resolve) { setTimeout(resolve, milliseconds); }); }
@@ -273,25 +333,24 @@
         note('命令未执行：' + result.label);
         continue;
       }
-      status.textContent = '正在执行：' + result.label + '（' + (index + 1) + '/' + commands.length + '）';
       if (commands[index].type === 'motion') {
         await wait(Math.max(300, result.duration * 1000 + 250));
       }
     }
-    if (token === sequenceToken) { stopButton.hidden = true; status.textContent = '动作完成'; }
+    if (token === sequenceToken) stopButton.hidden = true;
   }
 
   async function send(text) {
     text = String(text || '').trim();
     if (!text || pending) return false;
+    /* 空框与「正在等回复」都退到上面去了，所以箭头只在真的发出东西时才飞 */
+    flySendIcon();
     setStarted();
-    clearTimeout(bubbleTimer);
     var previous = history.slice(-10);
     addRecord('user', text);
     input.value = '';
     input.dispatchEvent(new Event('input'));
     var thinking = addRecord('ai', tr('chat.thinking', '正在思考…'), 'pending');
-    status.textContent = tr('chat.thinking', '正在思考…');
     setPending(true);
     try {
       var data = await requestReply(text, previous);
@@ -305,15 +364,11 @@
         {role: 'user', content: text},
         {role: 'assistant', content: data.reply.slice(0, 500 - actionRecord.length) + actionRecord},
       ]).slice(-10);
-      if (data.stop) stopActions('已按指令停止');
+      if (data.stop) stopActions();
       else if (commands.length) playCommands(commands);
-      else status.textContent = tr('chat.status.ready', '待命');
-      scheduleStageHide();
       return true;
     } catch (error) {
       updateRecord(thinking, error.message || '对话失败，请稍后重试', 'error');
-      status.textContent = tr('chat.status.failed', '请求失败');
-      scheduleStageHide();
       return false;
     } finally { setPending(false); }
   }
@@ -352,7 +407,6 @@
     records = [];
     log.replaceChildren();
     hideStage();
-    status.textContent = tr('chat.status.ready', '待命');
     try { sessionStorage.removeItem(STARTED_KEY); } catch (_error) {}
     if (suggestions) suggestions.hidden = false;
     input.focus();
@@ -362,7 +416,6 @@
     if (!welcomeShown) {
       welcomeShown = true;
       addRecord('ai', tr('chat.welcome', '你好，我是 IntelliBot，很高兴见到你！想看看我能做什么吗？'));
-      scheduleStageHide();
     }
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (playMotion && !welcomeMotionPlayed && !reduced &&
@@ -377,7 +430,7 @@
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(input.value); }
   });
   sendButton.addEventListener('click', function () { send(input.value); });
-  stopButton.addEventListener('click', function () { stopActions('已手动停止'); });
+  stopButton.addEventListener('click', function () { stopActions(); });
   clearButton.addEventListener('click', clear);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
@@ -402,7 +455,11 @@
   }
   if (window.addEventListener) {
     window.addEventListener('robot-manual-motion', function () {
-      sequenceToken += 1; stopButton.hidden = true; status.textContent = '已切换为手动动作';
+      sequenceToken += 1; stopButton.hidden = true;
+    });
+    window.addEventListener('resize', function () {
+      if (!stage) return;
+      stage.querySelectorAll('[data-stage-stream]').forEach(stageSync);
     });
     window.addEventListener('robot-ready', function () { welcome(true); }, {once: true});
     setTimeout(function () { welcome(false); }, 5000);

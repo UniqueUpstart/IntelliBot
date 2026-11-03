@@ -65,10 +65,8 @@
 }
 [data-panel-body][data-view="persona"] .model-view,
 [data-panel-body][data-view="persona"] .chat-flow-view,
-[data-panel-body][data-view="persona"] .sc-group,
 [data-panel-body][data-view="chat"] .model-view,
 [data-panel-body][data-view="chat"] .persona-view,
-[data-panel-body][data-view="chat"] .sc-group,
 [data-panel-body][data-view="model"] .persona-view,
 [data-panel-body][data-view="model"] .chat-flow-view{
   display:none;
@@ -383,14 +381,8 @@
   text-align:center;
 }
 
-/* 右栏视图映射：Poses / Emotions / Robot style */
-[data-panel-body][data-view="poses"] [data-rail-view="poses"],
-[data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
-[data-panel-body][data-view="robotstyle"] [data-rail-view="skin"],
-[data-panel-body][data-view="skin"] [data-rail-view="skin"],
-[data-panel-body]:not([data-view]) [data-rail-view="poses"]{
-  display:block;
-}
+/* 右栏视图映射已统一写在 rail.css（gestures / emotions / chat 三条），
+   这里原来那套 poses / robot style / skin 的映射随旧外观页一并删掉 */
 .rail__intro{
   margin:-2px 0 12px;
   color:var(--text-muted);
@@ -476,13 +468,7 @@
 .pose-note.is-error{color:var(--warning)}
 .rail__title--section{margin-top:16px}
 
-/* 换皮页移到右栏后沿用原有卡片，不改它的选择与 IndexedDB 逻辑 */
-.rail__view--skin{padding-bottom:8px}
-.rail__view--skin .skin-view{display:flex}
-.rail__view--skin .skin-view__title{
-  font-size:24px;
-  letter-spacing:.3px;
-}
+/* 换皮页整块搬进 Preference 弹窗，右栏不再有外观视图，这一组随之删掉 */
 
 /* The panel body owns its visible content; stray decorative SVGs stay hidden. */
 #panel-tools .panel__body > svg{display:none}

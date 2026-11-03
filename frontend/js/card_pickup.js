@@ -1,4 +1,4 @@
-/* 把左栏的卡片拖到机器人身上。
+/* 把快捷指令卡片（右栏 Shortcuts 页）拖到机器人身上。
    指针按下满 5px 才算拖（不到就还是点击，交给 rails.js 播动作）；
    拖起来时把卡片克隆一份挂到 body 上做影子，原卡从栏里收起来（visibility: hidden，
    位置照旧占着，不放一张半透明的底在那里）。
@@ -134,8 +134,7 @@
     var cs = getComputedStyle(card);
     var node = card.cloneNode(true);
 
-    node.classList.remove('is-pinned', 'is-on', 'is-confirm-unpin');
-    node.removeAttribute('data-pin-key');
+    node.classList.remove('is-on');
     /* is-lit 就是 hover 那一整套（填充层、文字反白、右下圆钮）。
        影子挂在 body 下、又 pointer-events:none，指针压不到它身上，
        原卡这会儿是 hidden 也不接悬停 —— 不手动点亮，卡从栏里拎出来就熄了 */
@@ -144,9 +143,6 @@
     node.style.height = rect.height + 'px';
     /* 组的系列色来自祖先 .sc-group，影子挂到 body 下会丢，手动搬一份过来 */
     node.style.setProperty('--sc', cs.getPropertyValue('--sc').trim() || '#91d2c3');
-    var pin = node.querySelector('.sc__pin');
-    if (pin) pin.remove();
-
     document.body.appendChild(node);
     card.classList.add('is-dragging');
     document.body.classList.add('is-card-drag');
@@ -181,7 +177,6 @@
     if (!e.target.closest) return;
     var card = e.target.closest('.sc');
     if (!card || state) return;
-    if (e.target.closest('.sc__pin')) return;      /* 图钉那枚只负责钉，不参与拖 */
     pending = {card: card, x: e.clientX, y: e.clientY, id: e.pointerId};
   });
 
@@ -210,8 +205,11 @@
     var card = state.card;
     var over = hitAt(e.clientX, e.clientY);
     var api = window.robot3d;
+    /* 街舞那张挂在 data-action-motion 上（它在 rails.js 里走另一套绑定），
+       两个属性都要认，否则接住之后仪式走完没有动作可播 */
+    var motionId = card.dataset.motion || card.dataset.actionMotion || '';
     var picked = over && api && typeof api.pickUpCard === 'function'
-      ? api.pickUpCard(card.dataset.motion || '', readCard(state.node))
+      ? api.pickUpCard(motionId, readCard(state.node))
       : false;
 
     /* 松手就收掉下载图标：接住了要马上换成思考脸，没接住也别拖着这张图飞回去 */
