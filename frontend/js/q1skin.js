@@ -11,15 +11,19 @@ skinStyle.textContent = [
   '.robofx.is-skinned{visibility:hidden}',
   '.skinfx{position:absolute;inset:0;z-index:2;pointer-events:none}',
   '.skinfx canvas{display:block;width:100%;height:100%}',
-  '.skinbar{position:fixed;top:calc(var(--top-h) + 28px);left:var(--edge);z-index:30;',
+  '.skinbar{position:fixed;top:calc(var(--top-h) + 28px);left:calc(var(--edge) + var(--rail-w) + 12px);z-index:30;',
   'display:flex;flex-direction:column;align-items:stretch;gap:2px;width:max-content;max-width:132px;',
   'padding:4px;border-radius:16px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(20,24,28,.1);',
-  'pointer-events:auto;font:13px/1 "Segoe UI",sans-serif;color:#1c1e22}',
+  'pointer-events:auto;font:13px/1 "Segoe UI",sans-serif;color:#1c1e22;transition:left .3s var(--ease)}',
+  'body:has(.rail--left.is-open) .skinbar{left:calc(var(--edge) + min(var(--rail-expanded),78vw) + 12px)}',
+  'body:has(.rail--left.is-hidden) .skinbar{left:var(--edge)}',
   '.skinbar button,.skinbar select,.skinbar__file{border:0;background:transparent;border-radius:12px;',
   'padding:7px 10px;cursor:pointer;color:inherit;font:inherit;text-align:left}',
   '.skinbar select{width:100%;max-width:124px}',
   '.skinbar button:hover,.skinbar__file:hover{background:rgba(0,0,0,.05)}',
   '.skinbar__note{color:#5c6570;padding:4px 8px;white-space:normal}',
+  '@media (max-width:640px){.skinbar{left:var(--edge)}body:has(.rail--left.is-open) .skinbar{left:var(--edge)}}',
+  '@media (prefers-reduced-motion:reduce){.skinbar{transition:none}}',
 ].join('');
 document.head.appendChild(skinStyle);
 

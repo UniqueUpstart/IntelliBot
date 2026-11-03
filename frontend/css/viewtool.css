@@ -4,7 +4,7 @@
   position:fixed;
   z-index:21;
   top:calc(var(--top-h) + var(--edge) + 26px);
-  right:calc(var(--edge) + (var(--rail-w) - 48px) / 2);
+  right:calc(var(--edge) + var(--rail-w) + 12px);
   width:48px;
   height:48px;
   display:grid;
@@ -23,8 +23,13 @@
   font-weight:var(--fw);
   letter-spacing:.02em;
   line-height:1;
-  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,
+             transform .1s ease,right .3s var(--ease);
 }
+body:has(.rail--right.is-open) .pose-reset-trigger{
+  right:calc(var(--edge) + min(var(--rail-expanded),78vw) + 12px);
+}
+body:has(.rail--right.is-hidden) .pose-reset-trigger{right:var(--edge)}
 .pose-reset-trigger:hover,
 .pose-reset-trigger:active{
   background:var(--theme);
@@ -51,4 +56,8 @@
 
 @media (prefers-reduced-motion:reduce){
   .pose-reset-trigger{transition:none}
+}
+@media (max-width:640px){
+  .pose-reset-trigger,
+  body:has(.rail--right.is-open) .pose-reset-trigger{right:var(--edge)}
 }

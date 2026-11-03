@@ -28,6 +28,18 @@ MAX_HISTORY_ITEMS = 10
 CACHE_TTL_S = 600
 CACHE_LIMIT = 1024
 
+# 主页拥有一段不属于 MuJoCo 动作库的全身街舞。单独列出可以让 AI 调用它，
+# 又不会把无法在 MuJoCo 中执行的动作混进 sim.motion_library.GESTURES。
+HOME_ACTIONS = (
+    {
+        "id": "street_dance",
+        "name": "街舞",
+        "description": "20 秒全身 Hip-hop 演示舞，包含摆臂、踏步、走位和转身",
+        "aliases": ["街舞", "跳街舞", "来段街舞", "hip-hop", "hiphop"],
+    },
+)
+SUPPORTED_ACTION_IDS = frozenset(GESTURES) | {item["id"] for item in HOME_ACTIONS}
+
 
 class BridgeError(RuntimeError):
     def __init__(self, status: int, code: str, message: str):
@@ -112,13 +124,18 @@ def _system_prompt() -> str:
             "aliases": item["aliases"],
         }
         for item in gesture_metadata()
-    ]
+    ] + list(HOME_ACTIONS)
     return (
         "你是 IntelliBot，一台友好、简洁的机器人助手。请用用户使用的语言回答。"
-        "你可以在用户明确要求动作，或自然打招呼时，从动作白名单选择动作。"
-        "用户要求先后执行多个动作时，按顺序返回，最多四个。用户要求停止时 stop=true。"
+        "只有用户明确要求机器人做动作时，才从白名单选择动作；普通问答和自我介绍不得执行动作。"
+        "用户用‘先、再、然后、接着’要求多个动作时，actions 必须按原顺序返回，最多四个；"
+        "同一动作要求多次时可以重复相同 ID。"
+        "用户明确说‘街舞、跳街舞、hip-hop’时选择 street_dance；只说‘舞动’时选择 dance。"
+        "用户要求停止、别动或取消动作时 stop=true，回复中明确说明已经停止。"
+        "含有‘不要、别、无需’的动作不得执行，除非整句是在要求停止当前动作。"
         "不支持的动作必须说明暂不支持，不得选择相似动作代替。"
-        "普通问答不要执行动作。只输出 JSON，不要输出 Markdown 或额外文字。"
+        "结合最近对话理解‘再来一次、继续、换一个’等指代，但不得凭空增加动作。"
+        "只输出 JSON，不要输出 Markdown 或额外文字。"
         "JSON 格式固定为 {\"reply\":\"回复文字\",\"actions\":[动作ID],\"stop\":false}。"
         "stop=true 时 actions 必须为空。"
         "禁止输出关节角度、代码或白名单以外的动作。动作白名单："
@@ -215,8 +232,12 @@ def chat(
         raise BridgeError(502, "AI_INVALID_RESPONSE", "DeepSeek 回复缺少 reply")
     if not isinstance(raw_actions, list) or len(raw_actions) > 4 or not isinstance(stop, bool):
         raise BridgeError(502, "AI_INVALID_RESPONSE", "DeepSeek 动作指令格式不正确")
-    reply = reply.strip()[:1000]
-    actions = [action for action in raw_actions if isinstance(action, str) and action in GESTURES]
+    reply = reply.strip()[:MAX_MESSAGE_CHARS]
+    actions = [
+        action
+        for action in raw_actions
+        if isinstance(action, str) and action in SUPPORTED_ACTION_IDS
+    ]
     if stop:
         actions = []
     return {
