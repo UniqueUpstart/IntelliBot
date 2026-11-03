@@ -96,18 +96,26 @@
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 35000);
     try {
+      var headers = {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': crypto.randomUUID(),
+      };
+      var token = sessionStorage.getItem('intellibot.auth.token');
+      if (token) headers.Authorization = 'Bearer ' + token;
       var response = await fetch(api + '/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': crypto.randomUUID(),
-        },
+        headers: headers,
         body: JSON.stringify({message: text, history: previous}),
         signal: controller.signal,
       });
       var payload;
       try { payload = await response.json(); }
       catch (_error) { throw new Error('AI 服务返回了无法解析的响应'); }
+      if (response.status === 401) {
+        sessionStorage.removeItem('intellibot.auth.token');
+        stopActions('请先登录');
+        window.dispatchEvent(new CustomEvent('intellibot-auth-required'));
+      }
       if (!response.ok || payload.error) {
         throw new Error(payload.error && payload.error.message ? payload.error.message : '请求失败');
       }

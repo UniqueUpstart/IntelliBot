@@ -1,6 +1,7 @@
 #include <httplib.h>
 #include "intellibot/ai_proxy.h"
 #include "intellibot/web_system.h"
+#include <sodium.h>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <atomic>
@@ -81,7 +82,7 @@ int main(int argc, char** argv) {
       std::cerr << "Invalid frontend directory\n"; return 2;
     }
     server.Get("/", [&](const httplib::Request&, httplib::Response& res) {
-      res.set_redirect(legacy_dev ? "/ui/IntelliBot.html" : "/ui/experience.html");
+      res.set_redirect("/ui/IntelliBot.html");
     });
   }
   std::mutex mutex;
@@ -231,7 +232,22 @@ int main(int argc, char** argv) {
           }
         }
       }
-      const auto upstream = ai->chat(req.body, key);
+      // Namespace upstream idempotency keys by authenticated session.
+      std::string upstream_key = key;
+      if (web) {
+        const auto identity = req.get_header_value("Authorization");
+        unsigned char hash[crypto_hash_sha256_BYTES];
+        crypto_hash_sha256(hash, reinterpret_cast<const unsigned char*>(identity.data()),
+                           identity.size());
+        char hex[crypto_hash_sha256_BYTES * 2 + 1];
+        sodium_bin2hex(hex, sizeof hex, hash, sizeof hash);
+        const auto scoped = std::string(hex) + ":" + key;
+        crypto_hash_sha256(hash, reinterpret_cast<const unsigned char*>(scoped.data()),
+                           scoped.size());
+        sodium_bin2hex(hex, sizeof hex, hash, sizeof hash);
+        upstream_key = hex;
+      }
+      const auto upstream = ai->chat(req.body, upstream_key);
       if (!upstream.connected) {
         fail(502, "AI_UNAVAILABLE", "本地 AI 服务未响应，请确认 deepseek_bridge.py 已启动");
         return;
