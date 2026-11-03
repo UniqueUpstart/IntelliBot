@@ -16,13 +16,17 @@
   var log = findInPanel('[data-assistant-log]');
   var input = composer.querySelector('[data-assistant-input]');
   var sendButton = composer.querySelector('[data-assistant-send]');
-  var settingsButton = findInPanel('[data-chat-settings]');
-  var stopButton = findInPanel('[data-assistant-stop]');
+  var settingsButton = document.querySelector('[data-chat-settings]');
+  var historyMenu = document.querySelector('[data-chat-history-menu]');
+  var exportButton = document.querySelector('[data-chat-export]');
+  var clearButton = document.querySelector('[data-chat-clear]');
+  var stopButton = document.querySelector('[data-assistant-stop]');
   var status = findInPanel('[data-assistant-status]') || document.createElement('span');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
-  if (!log || !input || !sendButton || !settingsButton || !stopButton) return;
+  if (!log || !input || !sendButton || !settingsButton || !historyMenu ||
+      !clearButton || !stopButton) return;
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -105,6 +109,7 @@
     log.appendChild(node);
     scrollBottom();
     showStage(role === 'ai' ? 'assistant' : role, text, record.id);
+    syncHistoryActions();
     return {node: node, record: record};
   }
 
@@ -357,9 +362,35 @@
     else openChat();
   }
 
-  function openSettings() {
-    var tab = document.querySelector('.rail--left .item[data-panel="Model"]');
-    if (tab && tab.getAttribute('aria-expanded') !== 'true') tab.click();
+  function setHistoryMenu(open) {
+    historyMenu.hidden = !open;
+    settingsButton.setAttribute('aria-expanded', String(open));
+  }
+
+  function syncHistoryActions() {
+    var empty = records.length === 0;
+    if (exportButton) exportButton.disabled = empty;
+    clearButton.disabled = empty;
+  }
+
+  function toggleHistoryMenu() {
+    setHistoryMenu(historyMenu.hidden);
+  }
+
+  function exportHistory() {
+    if (!records.length) return;
+    var text = records.map(function (record) {
+      var author = record.role === 'user' ? tr('chat.you', '你') : 'IntelliBot';
+      return author + ': ' + record.content;
+    }).join('\n\n');
+    var blob = new Blob([text], {type: 'text/markdown;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'intellibot-chat-' + new Date().toISOString().slice(0, 10) + '.md';
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    setHistoryMenu(false);
   }
 
   function clear() {
@@ -370,6 +401,8 @@
     status.textContent = tr('chat.status.ready', '待命');
     try { sessionStorage.removeItem(STARTED_KEY); } catch (_error) {}
     if (suggestions) suggestions.hidden = false;
+    setHistoryMenu(false);
+    syncHistoryActions();
     input.focus();
   }
 
@@ -393,7 +426,9 @@
   });
   sendButton.addEventListener('click', function () { send(input.value); });
   stopButton.addEventListener('click', function () { stopActions('已手动停止'); });
-  settingsButton.addEventListener('click', openSettings);
+  settingsButton.addEventListener('click', toggleHistoryMenu);
+  clearButton.addEventListener('click', clear);
+  if (exportButton) exportButton.addEventListener('click', exportHistory);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
     if (button) send(button.dataset.chatPrompt || button.textContent.trim());
@@ -425,8 +460,19 @@
     window.addEventListener('robot-ready', function () { welcome(true); }, {once: true});
     setTimeout(function () { welcome(false); }, 5000);
   }
+  document.addEventListener('pointerdown', function (event) {
+    if (historyMenu.hidden || event.target.closest('.chat-view__actions')) return;
+    setHistoryMenu(false);
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !historyMenu.hidden) {
+      setHistoryMenu(false);
+      settingsButton.focus();
+    }
+  });
   paintSuggestions();
   paintSend();
+  syncHistoryActions();
 
   window.intellibotChat = {
     send: send,

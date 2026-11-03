@@ -10,7 +10,7 @@
   var menuList = document.querySelector('[data-model-menu-list]');
   if (!panel || !form || !trigger || !label || !effort || !menu || !menuList) return;
 
-  var providerInput = form.querySelector('[data-model-provider]');
+  var formatInput = form.querySelector('[data-model-format]');
   var baseInput = form.querySelector('[data-model-base-url]');
   var modelInput = form.querySelector('[data-model-name]');
   var keyInput = form.querySelector('[data-model-key]');
@@ -19,7 +19,7 @@
   var saveButton = form.querySelector('[data-model-save]');
   var fetchButton = form.querySelector('[data-model-fetch]');
   var options = document.querySelector('#model-name-options');
-  if (!providerInput || !baseInput || !modelInput || !keyInput || !statusNode ||
+  if (!formatInput || !baseInput || !modelInput || !keyInput || !statusNode ||
       !note || !saveButton || !fetchButton || !options) return;
   var presetButtons = Array.prototype.slice.call(form.querySelectorAll('[data-model-preset]'));
   var queryApi = new URLSearchParams(location.search).get('api');
@@ -49,6 +49,7 @@
     provider: 'deepseek',
     base_url: PRESETS.deepseek.baseUrl,
     model: 'deepseek-flash',
+    api_format: 'openai',
     configured: false,
     key_hint: '',
   };
@@ -57,12 +58,16 @@
     return typeof window.t === 'function' ? window.t(key) : fallback;
   }
 
-  function providerName(provider) {
-    return (PRESETS[provider] && PRESETS[provider].label) || provider || 'AI';
+  function formatLabel(format) {
+    return format === 'anthropic' ? 'Anthropic' : 'OpenAI';
   }
 
   function normalizeProvider(provider) {
     return provider === 'openai' ? 'custom' : (PRESETS[provider] ? provider : 'custom');
+  }
+
+  function normalizeFormat(format) {
+    return format === 'anthropic' ? 'anthropic' : 'openai';
   }
 
   function normalizeModel(provider, model) {
@@ -176,10 +181,11 @@
       provider: provider,
       base_url: config.base_url || '',
       model: normalizeModel(provider, config.model || ''),
+      api_format: normalizeFormat(config.api_format),
       configured: !!config.configured,
       key_hint: config.key_hint || '',
     };
-    providerInput.value = current.provider;
+    formatInput.value = current.api_format;
     baseInput.value = current.base_url;
     modelInput.value = current.model;
     keyInput.value = '';
@@ -194,7 +200,7 @@
     effort.hidden = !current.configured;
     trigger.classList.toggle('is-ready', current.configured);
     trigger.setAttribute('aria-label', current.configured
-      ? providerName(current.provider) + ' · ' + modelLabel(current.model)
+      ? formatLabel(current.api_format) + ' · ' + modelLabel(current.model)
       : t('model.choose', '选择模型'));
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
@@ -262,7 +268,8 @@
     setStatus('loading', t('model.fetch.loading', '正在获取模型'));
     try {
       var draft = {
-        provider: providerInput.value,
+        provider: current.provider,
+        api_format: formatInput.value,
         base_url: baseInput.value.trim(),
       };
       if (keyInput.value.trim()) draft.api_key = keyInput.value.trim();
@@ -270,8 +277,8 @@
       var models = Array.isArray(data.models) ? data.models.filter(function (item) {
         return typeof item === 'string' && item.trim();
       }) : [];
-      inventories[providerInput.value] = models;
-      renderDatalist(providerInput.value);
+      inventories[current.provider] = models;
+      renderDatalist(current.provider);
       renderMenu();
       if (models.length && !models.includes(modelInput.value.trim())) {
         modelInput.value = models[0];
@@ -300,21 +307,16 @@
     trigger.setAttribute('aria-expanded', 'true');
   }
 
-  providerInput.addEventListener('change', function () {
-    var provider = providerInput.value;
-    var preset = PRESETS[provider] || PRESETS.custom;
-    baseInput.value = preset.baseUrl;
-    modelInput.value = preset.models[0] || '';
-    renderDatalist(provider);
-  });
-
   presetButtons.forEach(function (button) {
     button.addEventListener('click', function () {
-      providerInput.value = button.dataset.provider || 'custom';
+      var provider = button.dataset.provider || 'custom';
+      current.provider = provider;
+      current.api_format = normalizeFormat(button.dataset.apiFormat);
+      formatInput.value = current.api_format;
       baseInput.value = button.dataset.baseUrl || '';
       modelInput.value = button.dataset.prefillModel || '';
-      renderDatalist(providerInput.value);
-      paintPreset(providerInput.value, baseInput.value, modelInput.value);
+      renderDatalist(provider);
+      paintPreset(provider, baseInput.value, modelInput.value);
       setStatus('idle', t('model.status.preset', '待保存'));
       setNote(t('model.preset.filled', '已填入预设，补全 API Key 后保存即可。'));
       if (!baseInput.value) baseInput.focus();
@@ -325,7 +327,8 @@
 
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
-    var provider = providerInput.value;
+    var provider = current.provider;
+    var apiFormat = formatInput.value;
     var baseUrl = baseInput.value.trim();
     var model = modelInput.value.trim();
     if (!baseUrl || !model) {
@@ -333,7 +336,12 @@
       setNote(t('model.required', 'API 地址和模型名称不能为空。'), true);
       return;
     }
-    var patch = { provider: provider, base_url: baseUrl, model: model };
+    var patch = {
+      provider: provider,
+      api_format: apiFormat,
+      base_url: baseUrl,
+      model: model,
+    };
     if (keyInput.value.trim()) patch.api_key = keyInput.value.trim();
     if (await save(patch)) keyInput.value = '';
   });
@@ -353,6 +361,7 @@
       if (model === current.model && current.configured) return;
       await save({
         provider: current.provider,
+        api_format: current.api_format,
         base_url: current.base_url,
         model: model,
       }, t('model.switched', '已切换模型'));
@@ -385,7 +394,12 @@
     refresh: load,
     get current() { return Object.assign({}, current); },
     setModel: function (model) {
-      return save({ provider: current.provider, base_url: current.base_url, model: model });
+      return save({
+        provider: current.provider,
+        api_format: current.api_format,
+        base_url: current.base_url,
+        model: model,
+      });
     },
   };
 
