@@ -1,16 +1,19 @@
 /* 主页皮肤。
    下拉里的「原模型」是 q1_ff.glb，自己播片段。
-   「示意人形」和导入的 Mixamo / glTF 跟主页 Gestures 的同一套关节角走。
+   「示意人形」和导入的 Mixamo / glTF 跟主页 Gestures、以及 Action 05 街舞的同一套关节角走。
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js';
+import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=2';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
 
 const skinStyle = document.createElement('style');
 skinStyle.textContent = [
   '.robofx.is-skinned{visibility:hidden}',
   '.skinfx{position:absolute;inset:0;z-index:2;pointer-events:none}',
-  '.skinfx canvas{display:block;width:100%;height:100%}',
+  '.skinfx:not([hidden]) canvas{display:block;width:100%;height:100%;pointer-events:auto;touch-action:none;cursor:grab}',
+  '.skinfx.is-joint canvas{cursor:crosshair}',
+  '.skinfx.is-cam canvas,.skinfx.is-drag canvas{cursor:grabbing}',
   '.skinbar{position:fixed;top:calc(var(--top-h) + 28px);left:calc(var(--edge) + var(--rail-w) + 12px);z-index:30;',
   'display:flex;flex-direction:column;align-items:stretch;gap:2px;width:max-content;max-width:132px;',
   'padding:4px;border-radius:16px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(20,24,28,.1);',
@@ -75,6 +78,7 @@ function init() {
 
   const wrap = document.createElement('div');
   wrap.className = 'skinfx';
+  wrap.hidden = true;
   wrap.appendChild(renderer.domElement);
   stage.appendChild(wrap);
 
@@ -97,7 +101,9 @@ function init() {
     hair: new THREE.MeshLambertMaterial({ color: 0x2a2420 }),
   };
   const { root, bones } = buildFigure(mats);
-  scene.add(root);
+  const motion = new THREE.Group();
+  scene.add(motion);
+  motion.add(root);
   const proc = captureReference(root, bones);
 
   const shadow = new THREE.Mesh(
@@ -142,45 +148,110 @@ function init() {
     return pose;
   }
 
+  function sampleTrack(points, beat) {
+    if (!points || !points.length) return 0;
+    if (beat <= points[0][0]) return points[0][1];
+    const last = points[points.length - 1];
+    if (beat >= last[0]) return last[1];
+    for (let index = 1; index < points.length; index += 1) {
+      const [endBeat, endValue] = points[index];
+      if (beat > endBeat) continue;
+      const [startBeat, startValue] = points[index - 1];
+      const t = (beat - startBeat) / (endBeat - startBeat || 1);
+      const s = t * t * (3 - 2 * t);
+      return startValue + (endValue - startValue) * s;
+    }
+    return last[1];
+  }
+
+  function sampleDancePose(time) {
+    const beat = time * STREET_DANCE.bpm / 60;
+    const pose = { ...STREET_DANCE_REST_POSE };
+    Object.entries(STREET_DANCE.tracks).forEach(([joint, points]) => {
+      pose[joint] = sampleTrack(points, beat);
+    });
+    danceRoot = {
+      side: sampleTrack(STREET_DANCE.root.side, beat),
+      yaw: sampleTrack(STREET_DANCE.root.yaw, beat),
+    };
+    return pose;
+  }
+
   function poseNow() {
     const gesture = window.__homeGesture;
+    danceRoot = null;
     if (!gesture || !gesture.id) return Q1_REST_POSE;
     const progress = (performance.now() - gesture.startedAt) / (gesture.duration * 1000);
     if (progress >= 1) return Q1_REST_POSE;
+    if (gesture.id === STREET_DANCE.id) return sampleDancePose(progress * STREET_DANCE.duration);
     return sampleHomePose(gesture.id, progress);
   }
 
   function watchGestures() {
     const grid = document.querySelector('[data-rail-grid="gestures"]');
+    const danceCard = document.querySelector('[data-action-motion="street_dance"]');
     if (!grid) {
       requestAnimationFrame(watchGestures);
       return;
     }
     const sync = () => {
-      const card = grid.querySelector('.is-on[data-motion]');
-      const id = card && card.dataset.motion;
+      const danceOn = danceCard && danceCard.classList.contains('is-on');
+      const card = danceOn ? null : grid.querySelector('.is-on[data-motion]');
+      const id = danceOn ? STREET_DANCE.id : (card && card.dataset.motion);
       if (!id) {
         window.__homeGesture = null;
         return;
       }
       if (window.__homeGesture && window.__homeGesture.id === id) return;
+      poseHold = null;
+      if (id === STREET_DANCE.id) {
+        window.__homeGesture = { id, startedAt: performance.now(), duration: STREET_DANCE.duration };
+        return;
+      }
       const motion = HOME_MOTIONS.find((item) => item.id === id);
       window.__homeGesture = motion
         ? { id, startedAt: performance.now(), duration: motion.duration }
         : null;
     };
     new MutationObserver(sync).observe(grid, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    if (danceCard) {
+      new MutationObserver(sync).observe(danceCard, { attributes: true, attributeFilter: ['class'] });
+    }
   }
   watchGestures();
 
-  /* 和原模型同一套取景：身高 1、脚在地面、正面朝镜头，腰和头落在同一块画面里。 */
+  /* 和原模型同一套取景，再叠上同一套环绕、缩放。正面朝 +X。 */
+  const view = { azimuth: 0, elevation: 0, distance: 1 };
+  let baseDist = 2.4;
+  let baseEye = 0.5;
+  let poseHold = null;
+  let danceRoot = null;
+  let footRestZ = null;
+  let pointerDrag = null;
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const _a = new THREE.Vector3();
+  const _b = new THREE.Vector3();
+  const _hit = new THREE.Vector3();
+  const _axis = new THREE.Vector3();
+  const _q = new THREE.Quaternion();
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 16, 12),
+    new THREE.MeshBasicMaterial({
+      color: 0x91d2c3, transparent: true, opacity: 0.78, depthTest: false, depthWrite: false,
+    })
+  );
+  marker.visible = false;
+  marker.renderOrder = 999;
+  scene.add(marker);
+
   function resize() {
-    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const host = document.querySelector('.robofx') || stage;
+    const w = host.clientWidth, h = host.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    const host = document.querySelector('.robofx') || wrap;
     const style = getComputedStyle(host);
     const topInset = parseFloat(style.getPropertyValue('--robofx-top')) || 88;
     const bottomInset = parseFloat(style.getPropertyValue('--robofx-bottom')) || 208;
@@ -188,11 +259,26 @@ function init() {
     const tanV = Math.tan((camera.fov * Math.PI) / 180 / 2);
     const distV = h / (avail * 2 * tanV);
     const distH = 0.5 / (2 * tanV * camera.aspect);
-    const dist = Math.max(distV, distH) / 0.9;
+    baseDist = Math.max(distV, distH) / 0.9;
     const contentCenter = (topInset + h - bottomInset) / 2;
-    const eye = 0.5 + (contentCenter - h / 2) * (2 * dist * tanV) / h;
-    camera.position.set(dist, 0, eye);
-    camera.lookAt(0, 0, eye);
+    baseEye = 0.5 + (contentCenter - h / 2) * (2 * baseDist * tanV) / h;
+    applyView();
+  }
+
+  function applyView() {
+    const azimuth = view.azimuth * Math.PI / 180;
+    const elevation = view.elevation * Math.PI / 180;
+    const dist = baseDist * view.distance;
+    const horizontal = Math.cos(elevation) * dist;
+    camera.position.set(
+      Math.cos(azimuth) * horizontal,
+      Math.sin(azimuth) * horizontal,
+      baseEye + Math.sin(elevation) * dist
+    );
+    if (view.elevation >= 89.99) camera.up.set(-Math.cos(azimuth), -Math.sin(azimuth), 0);
+    else if (view.elevation <= -89.99) camera.up.set(Math.cos(azimuth), Math.sin(azimuth), 0);
+    else camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, baseEye);
   }
   resize();
   window.addEventListener('resize', resize);
@@ -213,6 +299,7 @@ function init() {
     const rob = originalNode();
     if (rob) rob.classList.toggle('is-skinned', on);
     if (on) {
+      resize();
       applyPose(poseNow());
       renderer.setAnimationLoop(draw);
     } else {
@@ -220,12 +307,337 @@ function init() {
     }
   }
 
+  function footLevel() {
+    const nodes = [];
+    if (active && active.object.visible && active.bones) {
+      if (active.bones.leftFoot) nodes.push(active.bones.leftFoot);
+      if (active.bones.rightFoot) nodes.push(active.bones.rightFoot);
+    } else {
+      nodes.push(bones.lToe, bones.rToe);
+    }
+    let lowest = Infinity;
+    nodes.forEach((node) => {
+      node.getWorldPosition(_a);
+      if (_a.z < lowest) lowest = _a.z;
+    });
+    return lowest;
+  }
+
+  /* 街舞的 side 是角色左侧位移，yaw 是转身。脚保持在起舞前的高度。 */
+  function applyDanceRoot() {
+    const side = danceRoot ? danceRoot.side : 0;
+    const yaw = danceRoot ? danceRoot.yaw * Math.PI / 180 : 0;
+    motion.rotation.z = yaw;
+    motion.position.set(0, side, 0);
+    motion.updateMatrixWorld(true);
+    const level = footLevel();
+    if (!danceRoot && Number.isFinite(level)) footRestZ = level;
+    if (danceRoot && Number.isFinite(level) && footRestZ !== null) {
+      motion.position.z = footRestZ - level;
+    }
+    shadow.position.x = 0;
+    shadow.position.y = side;
+  }
+
   function draw() {
-    applyPose(poseNow());
-    const follow = active ? active.object : root;
-    shadow.position.x = follow.position.x;
-    shadow.position.y = follow.position.y;
+    const live = poseNow();
+    applyPose(poseHold || live);
+    applyDanceRoot();
+    if (marker.visible && marker.userData.anchor) {
+      marker.userData.anchor.getWorldPosition(marker.position);
+      marker.scale.setScalar(0.024);
+    }
     renderer.render(scene, camera);
+  }
+
+  function shownRoot() {
+    return active && active.object.visible ? active.object : root;
+  }
+
+  function anchorOf(id, role) {
+    if (active && active.object.visible && role) {
+      const link = active.links.find((item) => item.role === role);
+      if (link) return link.bone;
+    }
+    return bones[id];
+  }
+
+  function segmentDistance(point, start, end) {
+    _hit.subVectors(end, start);
+    const len2 = _hit.lengthSq();
+    if (len2 < 1e-8) return point.distanceTo(start);
+    const t = Math.min(1, Math.max(0, point.clone().sub(start).dot(_hit) / len2));
+    return point.distanceTo(_a.copy(start).addScaledVector(_hit, t));
+  }
+
+  function consider(best, dist, limit, spec, bone) {
+    if (!bone || dist > limit) return best;
+    if (!best || dist < best.dist) return { dist, spec, bone };
+    return best;
+  }
+
+  function pickJoint(point) {
+    let best = null;
+    const arms = [
+      ['lShPitch', 'leftArm', 'lElbow', 'leftForeArm',
+        ['left_shoulder_pitch_joint', -3.142, 1.571],
+        ['left_shoulder_roll_joint', -0.087, 2.792, 'vertical', -1],
+        ['left_shoulder_yaw_joint', -1.571, 1.571, 'horizontal', 1],
+        ['left_elbow_joint', -0.873, 1.658]],
+      ['rShPitch', 'rightArm', 'rElbow', 'rightForeArm',
+        ['right_shoulder_pitch_joint', -3.142, 1.571],
+        ['right_shoulder_roll_joint', -2.792, 0.087, 'vertical', 1],
+        ['right_shoulder_yaw_joint', -1.571, 1.571, 'horizontal', -1],
+        ['right_elbow_joint', -0.873, 1.658]],
+    ];
+    for (const [shId, shRole, elId, elRole, pitch, roll, yaw, elbow] of arms) {
+      const shoulder = anchorOf(shId, shRole);
+      const elbowBone = anchorOf(elId, elRole);
+      if (!shoulder || !elbowBone) continue;
+      shoulder.getWorldPosition(_a);
+      elbowBone.getWorldPosition(_b);
+      const nearShoulder = point.distanceTo(_a);
+      const nearElbow = point.distanceTo(_b);
+      const along = segmentDistance(point, _a.clone(), _b.clone());
+      best = consider(best, nearShoulder, 0.06, pitch, shoulder);
+      best = consider(best, nearElbow, 0.06, elbow, elbowBone);
+      if (along <= 0.09 && nearShoulder > 0.06 && nearElbow > 0.06) {
+        best = consider(best, along, 0.09, nearShoulder < nearElbow ? roll : yaw, nearShoulder < nearElbow ? shoulder : elbowBone);
+      }
+    }
+    const legs = [
+      ['lHipPitch', 'leftUpLeg', 'lKnee', 'leftLeg', 'lAnkleRoll', 'leftFoot',
+        ['left_hip_pitch_joint', -3.054, 1.571],
+        ['left_hip_roll_joint', -0.698, 1.571],
+        ['left_hip_yaw_joint', -1.571, 1.571],
+        ['left_knee_joint', 0, 2.443],
+        ['left_ankle_pitch_joint', -0.785, 0.436],
+        ['left_ankle_roll_joint', -0.349, 0.349]],
+      ['rHipPitch', 'rightUpLeg', 'rKnee', 'rightLeg', 'rAnkleRoll', 'rightFoot',
+        ['right_hip_pitch_joint', -3.054, 1.571],
+        ['right_hip_roll_joint', -1.571, 0.698],
+        ['right_hip_yaw_joint', -1.571, 1.571],
+        ['right_knee_joint', 0, 2.443],
+        ['right_ankle_pitch_joint', -0.785, 0.436],
+        ['right_ankle_roll_joint', -0.349, 0.349]],
+    ];
+    for (const [hipId, hipRole, kneeId, shinRole, ankleId, footRole, pitch, roll, yaw, knee, anklePitch, ankleRoll] of legs) {
+      const hip = anchorOf(hipId, hipRole);
+      const kneeBone = anchorOf(kneeId, shinRole);
+      const ankle = anchorOf(ankleId, footRole);
+      if (!hip || !kneeBone || !ankle) continue;
+      hip.getWorldPosition(_a);
+      kneeBone.getWorldPosition(_b);
+      const hipP = _a.clone();
+      const kneeP = _b.clone();
+      ankle.getWorldPosition(_a);
+      const ankleP = _a.clone();
+      const nearHip = point.distanceTo(hipP);
+      const nearKnee = point.distanceTo(kneeP);
+      const nearAnkle = point.distanceTo(ankleP);
+      const thigh = segmentDistance(point, hipP, kneeP);
+      const shin = segmentDistance(point, kneeP, ankleP);
+      best = consider(best, nearHip, 0.06, pitch, hip);
+      best = consider(best, nearKnee, 0.06, knee, kneeBone);
+      best = consider(best, nearAnkle, 0.05, anklePitch, ankle);
+      if (thigh <= 0.09 && nearHip > 0.06 && nearKnee > 0.06) best = consider(best, thigh, 0.09, roll, hip);
+      if (shin <= 0.09 && nearKnee > 0.06 && nearAnkle > 0.05) best = consider(best, shin, 0.09, yaw, kneeBone);
+      if (nearAnkle > 0.05 && nearAnkle < 0.16 && shin > nearAnkle) best = consider(best, nearAnkle, 0.16, ankleRoll, ankle);
+    }
+    const waist = anchorOf('waistYaw', 'chest') || anchorOf('waistRoll', 'hips');
+    if (waist) {
+      waist.getWorldPosition(_a);
+      const dist = point.distanceTo(_a);
+      const above = point.z >= _a.z;
+      best = consider(best, dist, 0.12, above
+        ? ['waist_yaw_joint', -1.571, 1.571, 'horizontal', 1]
+        : ['waist_roll_joint', -0.35, 0.35, 'vertical', -1], waist);
+    }
+    if (!best) return null;
+    const [name, min, max, input, sign] = best.spec;
+    return { name, min, max, input, sign: sign || 1, bone: best.bone };
+  }
+
+  function jointAt(clientX, clientY) {
+    const rect = wrap.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    ndc.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(shownRoot(), true);
+    const hit = hits.find((entry) => entry.object.isMesh && entry.object !== marker);
+    if (!hit) return null;
+    const joint = pickJoint(hit.point);
+    if (!joint) return null;
+    joint.point = hit.point.clone();
+    return joint;
+  }
+
+  function showMarker(bone) {
+    if (!bone) {
+      marker.visible = false;
+      marker.userData.anchor = null;
+      wrap.classList.remove('is-joint');
+      return;
+    }
+    marker.userData.anchor = bone;
+    marker.visible = true;
+    wrap.classList.add('is-joint');
+  }
+
+  function project(point) {
+    const projected = point.clone().project(camera);
+    const rect = wrap.getBoundingClientRect();
+    return {
+      x: rect.left + (projected.x * 0.5 + 0.5) * rect.width,
+      y: rect.top + (-projected.y * 0.5 + 0.5) * rect.height,
+    };
+  }
+
+  function dragTangent(joint) {
+    if (joint.input === 'vertical') return { x: 0, y: joint.sign };
+    if (joint.input === 'horizontal') return { x: joint.sign, y: 0 };
+    const hinge = HINGES.find((item) => item[0] === joint.name);
+    const node = hinge ? bones[hinge[1]] : null;
+    const axisName = hinge ? hinge[2] : 'y';
+    _axis.set(axisName === 'x' ? 1 : 0, axisName === 'y' ? 1 : 0, axisName === 'z' ? 1 : 0);
+    if (node && node.parent) {
+      node.parent.updateWorldMatrix(true, false);
+      node.parent.getWorldQuaternion(_q);
+      _axis.applyQuaternion(_q).normalize();
+      node.getWorldPosition(_a);
+    }
+    const pivot = _a.clone();
+    const hit = joint.point || pivot;
+    const start = project(pivot);
+    const end = project(pivot.clone().addScaledVector(_axis, 0.08));
+    const axisX = end.x - start.x;
+    const axisY = end.y - start.y;
+    const axisLength = Math.hypot(axisX, axisY);
+    const tangent = new THREE.Vector3().crossVectors(_axis, hit.clone().sub(pivot));
+    let tx = 0;
+    let ty = 0;
+    if (tangent.lengthSq() > 1e-10) {
+      tangent.normalize();
+      const tangentEnd = project(hit.clone().addScaledVector(tangent, 0.08));
+      const hitScreen = project(hit);
+      tx = tangentEnd.x - hitScreen.x;
+      ty = tangentEnd.y - hitScreen.y;
+    }
+    const tangentLength = Math.hypot(tx, ty);
+    if (tangentLength > 1.5) return { x: tx / tangentLength, y: ty / tangentLength };
+    if (axisLength > 0.5) {
+      let x = -axisY / axisLength;
+      let y = axisX / axisLength;
+      if (x * tx + y * ty < 0) { x = -x; y = -y; }
+      return { x, y };
+    }
+    return { x: 1, y: 0 };
+  }
+
+  function holdPose() {
+    if (poseHold) return;
+    const src = poseNow();
+    poseHold = {};
+    for (const [name] of HINGES) poseHold[name] = typeof src[name] === 'number' ? src[name] : 0;
+  }
+
+  function onPointerDown(event) {
+    if (!shown || (event.button !== 0 && event.button !== 1)) return;
+    const joint = event.button === 0 ? jointAt(event.clientX, event.clientY) : null;
+    if (joint) {
+      pointerDrag = {
+        kind: 'joint-pending',
+        pointerId: event.pointerId,
+        joint,
+        hit: null,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+      showMarker(joint.bone);
+      wrap.setPointerCapture(event.pointerId);
+      return;
+    }
+    pointerDrag = { kind: 'camera', pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    showMarker(null);
+    wrap.classList.add('is-cam');
+    wrap.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event) {
+    if (!shown) return;
+    if (!pointerDrag) {
+      const joint = jointAt(event.clientX, event.clientY);
+      showMarker(joint && joint.bone);
+      return;
+    }
+    if (pointerDrag.pointerId !== event.pointerId) return;
+    if (pointerDrag.kind === 'joint-pending') {
+      if (Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY) < 3) return;
+      holdPose();
+      const joint = pointerDrag.joint;
+      pointerDrag = {
+        kind: 'joint',
+        pointerId: event.pointerId,
+        joint,
+        angle: poseHold[joint.name] || 0,
+        tangent: dragTangent(joint),
+        x: event.clientX,
+        y: event.clientY,
+      };
+      wrap.classList.remove('is-joint');
+      wrap.classList.add('is-drag');
+    }
+    const dx = event.clientX - pointerDrag.x;
+    const dy = event.clientY - pointerDrag.y;
+    if (pointerDrag.kind === 'camera') {
+      view.azimuth = ((view.azimuth - dx * 0.35 + 180) % 360 + 360) % 360 - 180;
+      view.elevation = Math.min(89, Math.max(-89, view.elevation - dy * 0.3));
+      pointerDrag.x = event.clientX;
+      pointerDrag.y = event.clientY;
+      applyView();
+      return;
+    }
+    if (pointerDrag.kind === 'joint') {
+      const delta = (dx * pointerDrag.tangent.x + dy * pointerDrag.tangent.y) * 0.009;
+      const { min, max, name } = pointerDrag.joint;
+      pointerDrag.angle = Math.min(max, Math.max(min, pointerDrag.angle + delta));
+      poseHold[name] = pointerDrag.angle;
+      pointerDrag.x = event.clientX;
+      pointerDrag.y = event.clientY;
+    }
+  }
+
+  function onPointerUp(event) {
+    if (!pointerDrag || (event && pointerDrag.pointerId !== event.pointerId)) return;
+    if (wrap.hasPointerCapture(pointerDrag.pointerId)) wrap.releasePointerCapture(pointerDrag.pointerId);
+    pointerDrag = null;
+    wrap.classList.remove('is-cam', 'is-drag');
+  }
+
+  wrap.addEventListener('pointerdown', onPointerDown);
+  wrap.addEventListener('pointermove', onPointerMove);
+  wrap.addEventListener('pointerup', onPointerUp);
+  wrap.addEventListener('pointercancel', onPointerUp);
+  wrap.addEventListener('pointerleave', () => { if (!pointerDrag) showMarker(null); });
+  wrap.addEventListener('wheel', (event) => {
+    if (!shown) return;
+    event.preventDefault();
+    view.distance = Math.min(3.2, Math.max(0.5, view.distance * Math.exp(event.deltaY * 0.0012)));
+    applyView();
+  }, { passive: false });
+  const poseReset = document.querySelector('.pose-reset-trigger');
+  if (poseReset) {
+    poseReset.addEventListener('click', () => {
+      poseHold = null;
+      view.azimuth = 0;
+      view.elevation = 0;
+      view.distance = 1;
+      applyView();
+      showMarker(null);
+    });
   }
 
   function applyJoints(angles) {
@@ -259,7 +671,7 @@ function init() {
       const bound = bindRetarget(mounted, proc);
       bound.name = name;
       loaded.set(id, bound);
-      scene.add(bound.object);
+      motion.add(bound.object);
       bound.object.visible = false;
     }
     return loaded.get(id);
@@ -274,7 +686,7 @@ function init() {
       const bound = bindRetarget(mounted, proc);
       bound.name = row.name;
       loaded.set(id, bound);
-      scene.add(bound.object);
+      motion.add(bound.object);
       bound.object.visible = false;
     }
     return loaded.get(id);
@@ -282,6 +694,7 @@ function init() {
 
   async function selectSkin(id) {
     current = id;
+    footRestZ = null;
     try { localStorage.setItem(SKIN_KEY, id); } catch (err) { /* 隐私模式可能拒绝写入 */ }
     if (active) active.object.visible = false;
     active = null;
@@ -341,7 +754,7 @@ function init() {
       const id = await dbPut({ name: file.name, data });
       bound.name = file.name;
       loaded.set(id, bound);
-      scene.add(bound.object);
+      motion.add(bound.object);
       bound.object.visible = false;
       addOption(id, file.name.replace(/\.[^.]+$/, ''));
       pick.value = id;
@@ -360,7 +773,7 @@ function init() {
     await dbDelete(id);
     const entry = loaded.get(id);
     if (entry) {
-      scene.remove(entry.object);
+      motion.remove(entry.object);
       loaded.delete(id);
     }
     pick.querySelector('option[value="' + id + '"]').remove();

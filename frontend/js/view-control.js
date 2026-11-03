@@ -320,8 +320,7 @@ function bindInteractions() {
   });
 }
 
-/* 左键拖动在任何位置都环绕视角；Alt/Option + 左键才进入关节编辑。
-   两套手势因此不会争同一次按下，普通浏览也不会误扭到肢体。 */
+/* 点在关节上就转动那一节；点在空白处拖动才环绕视角。 */
 function onPointerDown(event) {
   if (!ready) return;
 
@@ -330,7 +329,7 @@ function onPointerDown(event) {
   pointer.x = event.clientX;
   pointer.y = event.clientY;
 
-  const joint = event.button === 0 && event.altKey
+  const joint = event.button === 0
     ? findJointAt(event.clientX, event.clientY)
     : null;
   if (joint) {
@@ -392,7 +391,7 @@ function onPointerMove(event) {
     }
   }
 
-  queueHover(event.clientX, event.clientY, event.altKey);
+  queueHover(event.clientX, event.clientY, true);
 }
 
 function startJointDrag(event) {

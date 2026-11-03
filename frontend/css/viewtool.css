@@ -1,5 +1,5 @@
 /* 机器人视角与关节的指针反馈。
-   左键拖动始终环绕视角；按住 Alt/Option 时，悬停到关节上才会出现编辑标记。 */
+   拖动关节转动那一节，拖动空白处环绕视角。 */
 .pose-reset-trigger{
   position:fixed;
   z-index:21;
