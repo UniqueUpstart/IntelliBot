@@ -53,7 +53,9 @@
        右栏手势 / 表情卡比指令卡再小一号，透视相应拉近，
        倾斜收一档、浮起保留，抬起来时不至于翻出面板边界 */
     { sel: '.sc',            persp: 800,  tiltX: 6, tiltY: 6, lift: 10, grow: HOVER_SCALE },
-    { sel: '.rail__card',    persp: 700,  tiltX: 5, tiltY: 5, lift: 8,  grow: HOVER_SCALE }
+    { sel: '.rail__card',    persp: 700,  tiltX: 5, tiltY: 5, lift: 8,  grow: HOVER_SCALE },
+    /* 左栏角色卡与右栏动作卡同一档：两块卡的面积相当，翻角与浮起也照抄 */
+    { sel: '.persona-card',  persp: 700,  tiltX: 5, tiltY: 5, lift: 8,  grow: HOVER_SCALE }
   ];
 
   var items = [];
@@ -105,8 +107,9 @@
     var rail = t.el.closest('.rail');
     if (rail) {
       var open = rail.classList.contains('is-open');
-      /* 指令卡与右栏动作卡都算「卡片」：展开时吸它们、收起时吸栏体 */
-      var isCard = t.el.classList.contains('sc') || t.el.classList.contains('rail__card');
+      /* 指令卡、右栏动作卡与左栏角色卡都算「卡片」：展开时吸它们、收起时吸栏体 */
+      var isCard = t.el.classList.contains('sc') || t.el.classList.contains('rail__card') ||
+        t.el.classList.contains('persona-card');
       if (isCard ? !open : open) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
       /* 开合动画（scale 胀开 + elastic 回弹）没走完之前，卡片不参与：
          父级的缩放与卡片的透视叠在一起，两层每帧各自重投影，边线会跳。
@@ -211,6 +214,9 @@
      所以这件事得能重跑：已经收过的元素打上 __magnet 标记，
      重扫只补新的，不碰正在动的那些（它们的 rx/ry/z 停在半路，重建会跳） */
   function collect() {
+    /* 角色卡每选一次就整组重绘，旧节点离开了文档却还挂在表里，
+       弹簧照样每帧算一遍，白白拖着循环。收新块之前先清掉这些 */
+    items = items.filter(function (t) { return t.el.isConnected; });
     CONF.forEach(function (cfg) {
       document.querySelectorAll(cfg.sel).forEach(function (el) {
         if (el.__magnet) return;

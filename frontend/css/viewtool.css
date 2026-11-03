@@ -64,8 +64,12 @@
   scale:1;
   transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
 }
+/* 图标一律取「顶栏字号 + 4」见方：托盘里五枚（眼睛、罗盘、俯仰、取景框、复位）
+   共用这一个尺寸，图形本身都画在 3…21 的同一格里，并排时才是同一个视觉大小。
+   24 的视框不放大、只放大盒子，线宽跟着走，笔触仍然是细的一条 */
 .view-adjust-trigger svg{
-  width:24px; height:24px;
+  width:calc(var(--pill-fs) + 4px);
+  height:calc(var(--pill-fs) + 4px);
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;
@@ -153,11 +157,12 @@
    改成负偏移画在圆内，键盘走到它时仍然是一整圈 */
 .vt-round:focus-visible{outline:2px solid var(--theme-dark); outline-offset:-2px}
 
-/* 图标：24 见方（与右端那枚眼睛、更右边的复位同一档）、1.8 描边，
+/* 图标：尺寸与右端那枚眼睛同一档（顶栏字号 + 4），1.8 描边，
    颜色跟 currentColor —— hover 时和底片一起反白，
    尺寸固定，不随档位变化跳动 */
 .vt-round svg{
-  width:24px; height:24px;
+  width:calc(var(--pill-fs) + 4px);
+  height:calc(var(--pill-fs) + 4px);
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;
@@ -187,7 +192,8 @@
   transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
 .pose-reset-trigger svg{
-  width:24px; height:24px;
+  width:calc(var(--pill-fs) + 4px);
+  height:calc(var(--pill-fs) + 4px);
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;

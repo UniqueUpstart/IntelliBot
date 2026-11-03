@@ -11,7 +11,7 @@
      右下视角条里那三枚圆钮，以及同一簇的眼睛与复位，
      同样是「底片 + --press」结构，一并接管 */
   var SEL = '.pill, .vt-round, .view-adjust-trigger, .pose-reset-trigger, .item, .seg__opt,' +
-            '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn,' +
+            '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn, .persona-new,' +
             '.edit__type, .edit__reset, .edit__add';
   var PRESS_PILL = 1.0;   // 顶栏胶囊压入档位（× --press-k 得缩放比例）
   var PRESS_MENU = 1.2;   // 账号面板菜单项

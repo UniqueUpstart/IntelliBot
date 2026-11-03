@@ -126,6 +126,7 @@ html[lang="zh-CN"] .skin-view__title{
 }
 .persona-card{
   appearance:none; -webkit-appearance:none;
+  position:relative;
   min-width:0;
   min-height:76px;
   display:flex;
@@ -144,11 +145,12 @@ html[lang="zh-CN"] .skin-view__title{
 }
 .persona-card:hover,
 .persona-card:focus-visible{
-  box-shadow:inset 0 0 0 1.5px var(--persona-color,var(--theme));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--persona-color,var(--theme)) 55%,transparent);
   outline:none;
 }
+/* 选中只加一圈实边，不换底色：磁吸把它抬起来的时候，
+   底片始终是那块 --card，翻动才不会忽明忽暗 */
 .persona-card.is-on{
-  background:color-mix(in srgb,var(--persona-color,var(--theme)) 24%,var(--card-solid));
   box-shadow:inset 0 0 0 1.5px var(--persona-color,var(--theme));
 }
 .persona-card__avatar{
@@ -170,72 +172,157 @@ html[lang="zh-CN"] .skin-view__title{
   background:var(--card-solid);
   box-shadow:0 0 0 2px var(--persona-color,var(--theme));
 }
-.persona-card__copy{min-width:0;display:grid;gap:5px}
+.persona-card__copy{
+  min-width:0;display:grid;gap:5px;
+  transition:padding-right .2s var(--ease);
+}
 .persona-card__copy strong,
 .persona-card__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .persona-card__copy strong{font-size:var(--fs-14);font-weight:var(--fw)}
 .persona-card__copy span{color:var(--text-muted);font-size:var(--fs-12)}
-.persona-new{
-  appearance:none;-webkit-appearance:none;
-  align-self:flex-start;
-  min-height:38px;
+/* 自定义角色卡右侧那枚删除钮：指针停在卡上（或键盘聚焦进来）才在竖直中线浮现。
+   点第一下不删，先横向长成 Confirm 胶囊 —— 3 秒内不再点就自动收回，
+   和账号面板的退出确认同一档时长，避免误触把角色点没了。
+   形状与颜色都取警告色系，和保存钮的主题色分开 */
+.persona-card.is-removable:hover .persona-card__copy,
+.persona-card.is-removable:focus-within .persona-card__copy{
+  padding-right:28px;
+}
+.persona-card__remove{
+  position:absolute;
+  top:50%;
+  right:8px;
+  height:26px;
+  min-width:26px;
   display:inline-flex;
   align-items:center;
-  gap:8px;
-  padding:0 14px;
+  justify-content:center;
+  padding:0;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--persona-color,var(--theme)) 18%,transparent);
+  color:var(--text-muted);
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(-50%) scale(.86);
+  transition:opacity .16s ease, transform .16s var(--ease),
+             background-color .16s ease, color .16s ease,
+             min-width .26s var(--ease), padding .26s var(--ease);
+}
+.persona-card.is-removable:hover .persona-card__remove,
+.persona-card.is-removable:focus-within .persona-card__remove{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateY(-50%) scale(1);
+}
+.persona-card__remove:hover{color:var(--warning)}
+.persona-card__remove:focus-visible{outline:2px solid var(--theme-dark);outline-offset:2px}
+.persona-card__remove-x{
+  flex:0 0 auto;
+  width:12px;height:12px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  transition:width .26s var(--ease), opacity .14s ease;
+}
+/* 文字先只占 0 宽，arm 时把可用宽度放开 —— 胶囊是被这段字撑长的，
+   所以不用给确认态写死一个宽度，中英文各自贴合 */
+.persona-card__remove-text{
+  display:block;
+  max-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  font-size:var(--fs-12);
+  line-height:1;
+  opacity:0;
+  transition:max-width .26s var(--ease), opacity .16s ease;
+}
+/* 确认态：叉号收成 0 宽让位给 Confirm，圆钮横向长成胶囊、反白压在警告色上 */
+.persona-card__remove.is-armed{
+  padding:0 10px;
+  background:var(--warning);
+  color:var(--text-invert);
+}
+.persona-card__remove.is-armed .persona-card__remove-x{width:0; opacity:0}
+.persona-card__remove.is-armed .persona-card__remove-text{max-width:72px; opacity:1}
+/* 新增角色：一枚主题色圆钮钉在标题行右端，加号反白。
+   指针压上去时就地长成胶囊 —— 右边缘不动、宽度朝左伸，加号随左缘一起左移，
+   提示文字排在加号右侧，贴着右内边距一格一格让出位置。
+   行内的 --press 由 js/press.js 逐帧写，按下时整体缩进一格再弹回 */
+.persona-new{
+  appearance:none;-webkit-appearance:none;
+  position:relative;
+  flex:0 0 auto;
+  margin-left:auto;
+  height:38px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 11px;
   border:0;
   border-radius:999px;
-  background:var(--card);
-  color:var(--text-secondary);
+  background:var(--theme);
+  color:var(--text-invert);
   font:inherit;
-  font-size:var(--fs-14);
   cursor:pointer;
+  transform:scale(calc(1 - var(--press,0) * var(--press-k)));
+  transition:background-color .2s ease, color .2s ease,
+             transform .16s var(--ease), box-shadow .2s ease;
 }
+.persona-new__plus{
+  flex:0 0 auto;
+  width:16px;
+  height:16px;
+  fill:none;
+  stroke:currentColor;
+  /* 加号只有两笔，细描边在实底主题色上会显得发灰，比同栏其它图标重一档 */
+  stroke-width:2.6;
+  stroke-linecap:round;
+}
+/* 提示文字先只占 0 宽，悬停时把可用宽度与左边距一起放开，
+   胶囊是被这段文字撑长的，所以不需要给按钮写死一个宽度。
+   内层那枚 span 不收缩、靠右对齐：宽度不够时被裁掉的是字头，
+   露出来的字尾始终贴着右内边距，跟着胶囊一起往左展开 */
+.persona-new__text{
+  display:flex;
+  justify-content:flex-end;
+  max-width:0;
+  margin-left:0;
+  opacity:0;
+  overflow:hidden;
+  white-space:nowrap;
+  font-size:var(--fs-14);
+  line-height:1;
+  transition:max-width .32s var(--ease), margin-left .32s var(--ease), opacity .16s ease;
+}
+.persona-new__text > span{flex:0 0 auto}
 .persona-new:hover,
-.persona-new:focus-visible{background:var(--theme);color:var(--text-invert);outline:none}
-.persona-new span:first-child{font-size:20px;line-height:1}
+.persona-new:focus-visible{outline:none}
+.persona-new:hover .persona-new__text,
+.persona-new:focus-visible .persona-new__text{
+  max-width:112px;
+  margin-left:7px;
+  opacity:1;
+  transition:max-width .32s var(--ease), margin-left .32s var(--ease),
+             opacity .24s ease .06s;
+}
+/* 按压期间几何交给 GSAP 逐帧写，别让 transform 的过渡把它拉回去 */
+.persona-new.is-press{
+  transition:background-color .2s ease, color .2s ease;
+}
 
+/* 表单与上方角色列表之间不再画分割线，只留一点额外留白分层 */
 .persona-form{
   display:grid;
   gap:14px;
-  padding-top:16px;
-  border-top:1px solid color-mix(in srgb,var(--border) 72%,transparent);
-}
-.persona-preview{
-  min-height:58px;
-  display:flex;
-  align-items:center;
-  gap:11px;
-  padding:9px 12px;
-  border-radius:16px;
-  background:var(--card);
-}
-.persona-preview__avatar{
-  flex:0 0 auto;
-  width:40px;height:40px;
-  display:grid;place-items:center;
-  border-radius:50%;
-  background:var(--theme);
-  color:var(--text-invert);
-  font-size:var(--fs-14);
-}
-.persona-preview__copy{min-width:0;display:grid;gap:5px}
-.persona-preview__copy strong,
-.persona-preview__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.persona-preview__copy strong{font-size:var(--fs-16)}
-.persona-preview__copy span{color:var(--text-muted);font-size:var(--fs-12)}
-.persona-preview__dot{
-  flex:0 0 auto;
-  width:8px;height:8px;
-  margin-left:auto;
-  border-radius:50%;
+  padding-top:8px;
 }
 .persona-form__grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px;
 }
-.persona-field{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
+.persona-field{display:grid;gap:8px;color:var(--text-primary);font-size:var(--fs-14)}
 .persona-field input,
 .persona-field textarea{
   appearance:none;-webkit-appearance:none;
@@ -252,11 +339,14 @@ html[lang="zh-CN"] .skin-view__title{
   transition:box-shadow .12s linear;
 }
 .persona-field input{height:42px;padding:0 13px}
-.persona-field textarea{min-height:118px;padding:12px 13px;line-height:1.5;resize:vertical}
+/* 角色设定这一格随内容长高：高度由 js/persona.js 按行数写死，
+   所以关掉右下角的拖拽手柄、也不留纵向滚动条 */
+.persona-field textarea{min-height:42px;padding:10px 13px;line-height:1.5;resize:none;overflow-y:hidden}
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
-.persona-view .view-badge,
-.persona-preview__dot{display:none}
+.persona-view .view-badge{display:none}
+/* 标题行里只有标题与那枚加号，按中线对齐才不会让按钮吊在标题上沿 */
+.persona-view .view-head{align-items:center}
 .persona-field--color input{
   width:96px;
   max-width:100%;
@@ -272,24 +362,71 @@ html[lang="zh-CN"] .skin-view__title{
   line-height:1.45;
 }
 .persona-note.is-error{color:var(--warning)}
-.persona-actions{display:flex;justify-content:flex-end;gap:8px}
-.persona-delete,
+/* 动作行两枚钮平分整行，与右栏编辑页的 Reset / Add 同一格律（两列 1fr、间隔 8）。
+   左边 Reset 直接沿用 .edit__reset 那套：透明底、文字 --text-reduced，
+   hover 时主题色底片从中心涨满、文字滑向右侧、箭头从左边淡入。
+   只把高度改成跟右边 Save 同一条公式，窄屏下 --pill-fs 变小两枚也不会错位 */
+.persona-actions{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:8px;
+}
+/* 高度用两层次压过 chat.css 里 .edit__reset 的 40px（同特异性时那边后加载） */
+.persona-actions .persona-reset{height:calc(var(--pill-fs) + 16px)}
 .persona-save{
   appearance:none;-webkit-appearance:none;
-  min-height:40px;
-  padding:0 18px;
+  position:relative;
+  width:100%;
+  min-height:calc(var(--pill-fs) + 16px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 20px;
   border:0;
   border-radius:999px;
+  background:var(--theme);
+  color:var(--text-invert);
   font:inherit;
-  font-size:var(--fs-14);
+  font-size:var(--pill-fs);
+  line-height:1;
   cursor:pointer;
+  overflow:hidden;
+  container-type:inline-size;
+  transition:transform .12s ease;
 }
-.persona-delete{background:var(--card);color:var(--warning)}
-.persona-save{background:var(--theme);color:var(--text-invert)}
-.persona-delete:hover{background:var(--warning);color:var(--text-invert)}
-.persona-save:hover{filter:brightness(.96)}
-.persona-delete:focus-visible,
+.persona-save__label{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  white-space:nowrap;
+  transition:transform var(--dur) var(--ease);
+}
+/* 箭头：与顶栏胶囊同一枚图形、同一档 1em，悬停时从左侧浮现 */
+.persona-save__arrow{
+  position:absolute;
+  top:50%;
+  left:20px;
+  width:1em;
+  height:1em;
+  display:block;
+  fill:currentColor;
+  opacity:0;
+  transform:translateY(-50%) translateX(-4px);
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+/* 内容盒宽 = 按钮宽 − 左右各 20，所以 50cqw − 100%（字宽）正好把右缘推到 20 处，
+   和顶栏胶囊那条 calc(var(--pill-w) / 2 - 12px - 100%) 是同一笔 */
+.persona-save:hover .persona-save__label{transform:translate(calc(50cqw - 100%),-50%)}
+.persona-save:hover .persona-save__arrow{opacity:1; transform:translateY(-50%) translateX(0)}
+.persona-save:active{transform:scale(.985)}
 .persona-save:focus-visible{outline:2px solid var(--theme-dark);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  .persona-save,
+  .persona-save__label,
+  .persona-save__arrow{transition:none}
+  .persona-save:hover .persona-save__label{transform:translate(-50%,-50%)}
+  .persona-new,
+  .persona-new__text{transition:none}
+}
 
 @media(max-width:640px){
   .persona-form__grid{grid-template-columns:repeat(2,minmax(0,1fr))}

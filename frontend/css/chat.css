@@ -531,7 +531,6 @@
   min-height:40px;
   margin-top:6px;
   padding:0 10px;
-  border-top:1px solid var(--border);
   font-size:var(--fs-14);
 }
 .model-menu__manage:hover{color:var(--theme-dark)}
@@ -628,7 +627,6 @@
   align-items:center;
   gap:12px;
   padding:2px 2px 14px;
-  border-bottom:1px solid color-mix(in srgb,var(--border) 68%,transparent);
 }
 .chat-view__actions{
   position:relative;
@@ -903,7 +901,7 @@ body:has(.rail.is-open) .composer{
   width:100%;
   height:60px;
   min-height:60px;
-  padding:15px 21px 3px;
+  padding:16px 16px 4px;
   border:0;
   border-radius:0;
   background:transparent;
@@ -941,22 +939,43 @@ body:has(.rail.is-open) .composer{
   align-items:center;
   gap:8px;
 }
+/* 左下角那枚：与右边发送钮等大的圆（38 见方、半高圆角），
+   两枚圆钮分列输入框两端，中间那条模型胶囊是长条。
+   静止时是一枚透明的圆，悬停时主题色从圆心涨满、三横反白 ——
+   与顶栏那几枚圆钮同一套填色，而不是先铺一层浅底再换边 */
 .composer__history{
-  position:static;
+  position:relative;
+  /* 旧布局给这枚钮留过 left:calc(100% + 10px)/bottom:4px，相对定位下
+     left 是会生效的 —— 不显式归零，它就被推到输入框外头去 */
+  inset:auto;
   flex:0 0 auto;
-  width:34px;
-  height:34px;
+  width:38px;
+  height:38px;
   display:grid;
   place-items:center;
   padding:0;
   border:0;
   border:1px solid transparent;
-  border-radius:11px;
+  border-radius:50%;
   background:transparent;
   color:var(--text-primary);
   box-shadow:none;
   cursor:pointer;
-  transition:background-color .16s ease,border-color .16s ease,color .16s ease;
+  /* 负层级的底片停在这枚按钮内部，只压自己的透明底 */
+  isolation:isolate;
+  transition:border-color .16s ease,color .16s cubic-bezier(.7,0,.84,.16);
+}
+.composer__history::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  scale:0;
+  transform-origin:50% 50%;
+  transition:scale .1s cubic-bezier(.7,0,.84,.16);
 }
 /* 菜单图标：三横各自浮动，打开对话流时上下两条往中间收并斜成叉，中间那条淡出。
    每条线单独做变换，所以 transform-box 指到 viewBox，旋转中心才是整枚图标的中点 */
@@ -976,33 +995,39 @@ body:has(.rail.is-open) .composer{
 }
 .composer__history:hover,
 .composer__history:focus-visible{
-  background:color-mix(in srgb,var(--text-primary) 7%,transparent);
-  border-color:color-mix(in srgb,var(--border) 55%,transparent);
-  color:var(--text-primary);
+  background:transparent;
+  border-color:transparent;
+  color:var(--text-invert);
   outline:none;
   transform:none;
   box-shadow:none;
+  transition:border-color .16s ease,color .16s cubic-bezier(.16,.84,.3,1);
+}
+.composer__history:hover::before,
+.composer__history:focus-visible::before{
+  scale:1;
+  transition:scale .12s cubic-bezier(.16,.84,.3,1);
 }
 /* 先平移到中心、再绕中心转，两条斜线才会交叉在正中（写成 translate 在前就变成
    先转后挪，斜线会滑到一边去） */
-.composer__history.is-open{
-  background:color-mix(in srgb,var(--text-primary) 7%,transparent);
-}
+.composer__history.is-open::before{scale:1}
 .composer__history.is-open .composer__menu-line:first-child{transform:rotate(45deg) translateY(5px)}
 .composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
 .composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
+/* 模型胶囊：高与右边发送钮同档（38），圆角取半高 —— 两端是完整的圆头，
+   和方形的三横钮、圆形的发送钮并排时，这一条是中间唯一的长条 */
 .composer__model{
   position:static;
   z-index:auto;
   width:auto;
-  height:32px;
+  height:38px;
   max-width:min(280px,38vw);
   display:flex;
   align-items:center;
   gap:5px;
-  padding:0 9px;
+  padding:0 12px;
   border:1px solid color-mix(in srgb,#e8e8e8 84%,var(--border));
-  border-radius:11px;
+  border-radius:999px;
   background:color-mix(in srgb,var(--bg) 72%,var(--card-solid));
   color:var(--text-primary);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
@@ -1045,6 +1070,9 @@ body:has(.rail.is-open) .composer{
   transition:transform .16s ease;
 }
 .composer__model[aria-expanded="true"] > svg{transform:rotate(180deg)}
+/* 发送钮：不可用时只有一枚淡的箭头（--text-muted），底子是透明的；
+   一旦输入框里有字，底色整片涨成主题色、箭头反白 —— 颜色过渡和
+   顶栏那几枚圆钮同一条曲线，看起来是「填上了」而不是换了个灰块 */
 .composer__send{
   position:static;
   flex:0 0 auto;
@@ -1055,20 +1083,22 @@ body:has(.rail.is-open) .composer{
   padding:0;
   border:0;
   border-radius:50%;
-  background:#a5a5a5;
-  color:#fff;
+  background:transparent;
+  color:var(--text-muted);
   cursor:pointer;
   box-shadow:none;
   /* 箭头飞出去的那一帧要落在按钮外面，不裁掉就会压在输入框上 */
   overflow:hidden;
-  transition:background-color .15s ease,transform .15s ease,opacity .15s ease;
+  transition:background-color .2s cubic-bezier(.16,.84,.3,1),color .2s cubic-bezier(.16,.84,.3,1),transform .15s ease,opacity .15s ease;
 }
 .composer__send.is-filled{
-  background:#242424;
-  color:#fff;
+  background:var(--theme);
+  color:var(--text-invert);
   box-shadow:none;
 }
-.composer__send:hover:not(:disabled){transform:scale(1.035)}
+/* 悬停不放大：按钮大小保持一格，反馈只交给底色与箭头的换色；
+   只有按下去那一下还有一点回弹 */
+.composer__send:hover:not(:disabled){transform:none}
 .composer__send:active:not(:disabled){transform:scale(.97)}
 .composer__send:disabled{
   opacity:1;
@@ -1445,4 +1475,8 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 }
 @media(prefers-reduced-motion:reduce){
   .stage-chat__bubble{animation:none}
+  /* 三横钮的填色不做涨开，悬停直接到位 */
+  .composer__history::before,
+  .composer__history:hover::before,
+  .composer__history:focus-visible::before{transition:none}
 }

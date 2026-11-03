@@ -10,17 +10,13 @@
   var form = panel.querySelector('[data-persona-form]');
   var status = panel.querySelector('[data-persona-status]');
   var newButton = panel.querySelector('[data-persona-new]');
+  var resetButton = panel.querySelector('[data-persona-reset]');
   var nameInput = form.querySelector('[data-persona-name]');
   var styleInput = form.querySelector('[data-persona-style]');
   var colorInput = form.querySelector('[data-persona-color]');
   var initialsInput = form.querySelector('[data-persona-initials]');
   var promptInput = form.querySelector('[data-persona-prompt]');
   var note = panel.querySelector('[data-persona-note]');
-  var deleteButton = form.querySelector('[data-persona-delete]');
-  var previewAvatar = panel.querySelector('[data-persona-preview-avatar]');
-  var previewName = panel.querySelector('[data-persona-preview-name]');
-  var previewStyle = panel.querySelector('[data-persona-preview-style]');
-  var previewDot = panel.querySelector('[data-persona-preview-dot]');
   var PREFS_KEY = 'intellibot:personas';
   var ACTIVE_KEY = 'intellibot:persona';
 
@@ -69,6 +65,13 @@
 
   function lang() {
     return typeof window.getLang === 'function' && window.getLang() === 'zh' ? 'zh' : 'en';
+  }
+
+  /* 取词条；t() 拿不到时会原样返回 key，这里换成一句兜底英文 */
+  function L(key, fallback) {
+    if (typeof t !== 'function') return fallback;
+    var text = t(key);
+    return text === key ? fallback : text;
   }
 
   function displayName(persona) {
@@ -122,14 +125,20 @@
     note.classList.toggle('is-error', !!error);
   }
 
-  function paintPreview(persona) {
-    var color = persona.color || '#91d2c3';
-    var initials = (persona.initials || displayName(persona).slice(0, 2) || 'AI').slice(0, 3);
-    previewAvatar.textContent = initials;
-    previewName.textContent = displayName(persona) || 'AI';
-    previewStyle.textContent = displayStyle(persona) || '';
-    previewAvatar.style.background = color;
-    previewDot.style.background = color;
+  /* 角色设定这一格随内容长高：先把高度放回 auto 量出内容，
+     再夹在单行（42）与八行之间，超出的部分交给纵向滚动。
+     行高 14 × 1.5 = 21，上下内边距 10+10，八行即 8×21+20 = 188 */
+  var PROMPT_MIN_H = 42;
+  var PROMPT_MAX_H = 188;
+
+  function layoutPrompt() {
+    /* 面板被切走时是 display:none，这一格量不出内容高度，
+       写回去就成了单行 —— 等它重新出现在视口里再算 */
+    if (!promptInput.offsetParent) return;
+    promptInput.style.height = 'auto';
+    var content = promptInput.scrollHeight;
+    promptInput.style.height = Math.min(Math.max(content, PROMPT_MIN_H), PROMPT_MAX_H) + 'px';
+    promptInput.style.overflowY = content > PROMPT_MAX_H + 1 ? 'auto' : 'hidden';
   }
 
   function fillForm(persona) {
@@ -140,16 +149,88 @@
     colorInput.value = /^#[0-9a-f]{6}$/i.test(persona.color || '') ? persona.color : '#91d2c3';
     initialsInput.value = (persona.initials || '').slice(0, 3);
     promptInput.value = persona.prompt || '';
-    deleteButton.hidden = !editingCustom || !byId(persona.id);
-    paintPreview(persona);
     status.textContent = editingCustom
       ? (typeof t === 'function' ? t('persona.custom') : '自定义角色')
       : (typeof t === 'function' ? t('persona.builtin') : '内置预设');
+    layoutPrompt();
+  }
+
+  /* 卡片右侧的删除确认：点第一下只 arm，3 秒内不再点就自动收回。
+     时长与账号面板的退出确认一致（auth.js 里的 LOGOUT_HOLD），
+     两个动作都是不可逆的，误触的代价一样大 */
+  var REMOVE_HOLD = 3000;
+  var armedRemove = null;
+  var removeTimer = 0;
+
+  function disarmRemove() {
+    if (removeTimer) { clearTimeout(removeTimer); removeTimer = 0; }
+    if (!armedRemove) return;
+    armedRemove.classList.remove('is-armed');
+    armedRemove.setAttribute('aria-label', L('persona.delete', 'Delete'));
+    armedRemove = null;
+  }
+
+  function buildRemove(persona) {
+    var node = document.createElement('span');
+    node.className = 'persona-card__remove';
+    node.setAttribute('role', 'button');
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('aria-label', L('persona.delete', 'Delete'));
+    node.innerHTML =
+      '<svg class="persona-card__remove-x" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M7 7l10 10M17 7 7 17"/></svg>' +
+      '<span class="persona-card__remove-text"></span>';
+    node.querySelector('.persona-card__remove-text').textContent =
+      L('persona.deleteConfirm', 'Confirm');
+
+    node.addEventListener('click', function (event) {
+      /* 卡片本身是一枚 button，这一下不能顺带把角色切走 */
+      event.preventDefault();
+      event.stopPropagation();
+      if (armedRemove !== node) {
+        disarmRemove();
+        armedRemove = node;
+        node.classList.add('is-armed');
+        node.setAttribute('aria-label',
+          L('persona.deleteConfirm', 'Confirm') + ' ' + displayName(persona));
+        removeTimer = setTimeout(disarmRemove, REMOVE_HOLD);
+        return;
+      }
+      disarmRemove();
+      removeCustom(persona.id);
+    });
+    node.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      node.click();
+    });
+    return node;
+  }
+
+  function removeCustom(id) {
+    var index = custom.findIndex(function (item) { return item.id === id; });
+    if (index < 0) return;
+    custom = custom.slice();
+    custom.splice(index, 1);
+    saveCustom();
+    if (selectedId === id) {
+      selectedId = DEFAULTS[0].id;
+      saveActiveId(selectedId);
+      paintActive();
+      emitChange();
+    } else {
+      /* 删的不是当前选中的那只：只重画列表，别把表单里正在编辑的内容冲掉 */
+      paintList();
+    }
+    setNote(L('persona.deleted', 'Custom persona deleted.'));
   }
 
   function paintList() {
+    disarmRemove();
     list.replaceChildren();
     all().forEach(function (persona) {
+      var removable = persona.id.indexOf('custom:') === 0;
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'persona-card';
@@ -158,7 +239,9 @@
       button.setAttribute('aria-selected', String(persona.id === selectedId));
       button.style.setProperty('--persona-color', persona.color || '#91d2c3');
       button.classList.toggle('is-on', persona.id === selectedId);
-      button.classList.toggle('is-custom', persona.id.indexOf('custom:') === 0);
+      button.classList.toggle('is-custom', removable);
+      /* 删除钮只在自定义卡上有，类名挂在卡上是为了让文字让位只发生在这种卡上 */
+      button.classList.toggle('is-removable', removable);
 
       var avatar = document.createElement('span');
       avatar.className = 'persona-card__avatar';
@@ -171,11 +254,15 @@
       style.textContent = displayStyle(persona);
       copy.append(name, style);
       button.append(avatar, copy);
+      if (removable) button.appendChild(buildRemove(persona));
       button.addEventListener('click', function () {
         select(persona.id);
       });
       list.appendChild(button);
     });
+    /* 卡片是这一轮才建出来的，磁吸脚本启动时扫不到：补收一次，
+       光标正好停在原处时也会按新元素重新瞄一遍 */
+    if (typeof window.magnetRescan === 'function') window.magnetRescan();
   }
 
   function paintActive() {
@@ -219,7 +306,6 @@
       initials: initialsInput.value,
       prompt: promptInput.value
     });
-    deleteButton.hidden = !editingCustom || !byId(editing.id);
   }
 
   form.addEventListener('input', function (event) {
@@ -231,6 +317,29 @@
     }
   });
 
+  /* 敲字这一路不用单独绑：form 的 input 事件会走 previewFromInputs →
+     fillForm，末尾已经算过一次高度。这里只管窗口尺寸变化 */
+  window.addEventListener('resize', layoutPrompt);
+  /* 视图切回 persona、或栏从收起状态展开时，这一格重新进入视口再补算一次。
+     用 IntersectionObserver 而不是 ResizeObserver：后者会被我们自己写入的
+     高度反过来触发，量一次改一次来回打转 */
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) layoutPrompt();
+      });
+    }).observe(promptInput);
+  }
+
+  /* 丢掉未保存的改动，回到当前选中角色已存下的样子。
+     新建态下 selectedId 仍是上一个选中的角色，所以按一下也顺便退出新建 */
+  if (resetButton) {
+    resetButton.addEventListener('click', function () {
+      fillForm(byId(selectedId) || DEFAULTS[0]);
+      setNote(L('persona.resetNote', 'Reverted to the saved version of this persona.'));
+    });
+  }
+
   newButton.addEventListener('click', function () {
     editingCustom = true;
     fillForm({
@@ -241,7 +350,6 @@
       initials: '',
       prompt: ''
     });
-    deleteButton.hidden = true;
     setNote(typeof t === 'function' ? t('persona.newNote') : '填写角色设定后保存，就会出现在这里的角色列表中。');
     nameInput.focus();
   });
@@ -275,19 +383,6 @@
     saveActiveId(id);
     paintActive();
     setNote(typeof t === 'function' ? t('persona.saved') : '角色已保存在本机，并设为当前角色。');
-    emitChange();
-  });
-
-  deleteButton.addEventListener('click', function () {
-    if (editing.id.indexOf('custom:') !== 0) return;
-    var active = editing;
-    if (!confirm((typeof t === 'function' ? t('persona.deleteAsk') : '删除这个自定义角色？') + ' ' + displayName(active))) return;
-    custom = custom.filter(function (item) { return item.id !== active.id; });
-    saveCustom();
-    selectedId = DEFAULTS[0].id;
-    saveActiveId(selectedId);
-    paintActive();
-    setNote(typeof t === 'function' ? t('persona.deleted') : '自定义角色已删除。');
     emitChange();
   });
 

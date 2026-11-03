@@ -19,18 +19,18 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=31"></script>
+<script src="js/i18n.js?v=34"></script>
   <link rel="stylesheet" href="css/base.css?v=14">
-  <link rel="stylesheet" href="css/topbar.css?v=19">
+  <link rel="stylesheet" href="css/topbar.css?v=20">
   <link rel="stylesheet" href="css/rail.css?v=38">
-  <link rel="stylesheet" href="css/workspace.css?v=10">
+  <link rel="stylesheet" href="css/workspace.css?v=17">
   <link rel="stylesheet" href="css/cards.css?v=25">
   <link rel="stylesheet" href="css/modal.css?v=34">
-  <link rel="stylesheet" href="css/chat.css?v=52">
+  <link rel="stylesheet" href="css/chat.css?v=58">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=33">
+<link rel="stylesheet" href="css/viewtool.css?v=34">
 <link rel="stylesheet" href="css/auth.css?v=12">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
@@ -66,16 +66,16 @@
         <button class="view-adjust-trigger" type="button" aria-label="视角调整"
                 aria-pressed="false" aria-expanded="false" aria-controls="robot-view-panel">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M2 12C4.6 7.4 8 5 12 5s7.4 2.4 10 7c-2.6 4.6-6 7-10 7s-7.4-2.4-10-7Z"/>
-            <circle cx="12" cy="12" r="4"/>
+            <path d="M3 12c2.4-4.1 5.4-6.2 9-6.2s6.6 2.1 9 6.2c-2.4 4.1-5.4 6.2-9 6.2s-6.6-2.1-9-6.2Z"/>
+            <circle cx="12" cy="12" r="3.4"/>
           </svg>
         </button>
         <div class="viewdock__body" id="robot-view-panel" role="toolbar" aria-label="视角调整"></div>
       </div>
       <button class="pose-reset-trigger" type="button" aria-label="复位机器人姿态">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M1.92 12a10.08 10.08 0 1 0 10.08-10.08 10.92 10.92 0 0 0-7.55 3.07L1.92 7.52"/>
-          <path d="M1.92 1.92v5.6h5.6"/>
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
         </svg>
       </button>
     </div>
@@ -278,21 +278,19 @@
           <div>
             <h3 class="view-title" data-i18n="persona.title">AI Persona</h3>
           </div>
+          <!-- 新增角色收成一枚加号圆钮，钉在标题行右端；指针压上去时
+               向左长成胶囊并把提示文字推出来。文字挂在 span 上是因为
+               data-i18n 会整块改写 textContent，按钮里还要留图标 -->
+          <button class="persona-new" type="button" data-persona-new>
+            <svg class="persona-new__plus" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14"/><path d="M5 12h14"/>
+            </svg>
+            <span class="persona-new__text"><span data-i18n="persona.new">new persona</span></span>
+          </button>
           <span class="view-badge" data-persona-status>默认角色</span>
         </div>
         <div class="persona-list" data-persona-list role="listbox" data-i18n-aria="persona.title"></div>
-        <button class="persona-new" type="button" data-persona-new>
-          <span aria-hidden="true">+</span><span data-i18n="persona.new">新建自定义角色</span>
-        </button>
         <form class="persona-form" data-persona-form>
-          <div class="persona-preview">
-            <span class="persona-preview__avatar" data-persona-preview-avatar>IB</span>
-            <span class="persona-preview__copy">
-              <strong data-persona-preview-name>IntelliBot</strong>
-              <span data-persona-preview-style>温柔知性</span>
-            </span>
-            <span class="persona-preview__dot" data-persona-preview-dot aria-hidden="true"></span>
-          </div>
           <div class="persona-form__grid">
             <div class="persona-field">
               <span data-i18n="persona.fields.name">角色名称</span>
@@ -317,15 +315,27 @@
           </div>
           <div class="persona-field persona-field--prompt">
             <span data-i18n="persona.fields.prompt">角色设定</span>
-            <textarea data-persona-prompt rows="5" maxlength="1200"
+            <!-- 高度由 js/persona.js 按内容行数算，rows 只决定首帧 -->
+            <textarea data-persona-prompt rows="1" maxlength="1200"
                       data-i18n-aria="persona.fields.prompt" aria-label="角色设定"></textarea>
           </div>
           <p class="persona-note visually-hidden" data-persona-note data-i18n="persona.localNote">
             角色样式和设定只保存在本机浏览器，发送消息时会作为语气设定交给当前模型。
           </p>
+          <!-- 两枚钮平分整行：左边 Reset 丢掉未保存的改动、回到选中角色的已存内容，
+               右边 Save 落到本机。Reset 直接套用右栏编辑页那枚的实现 ——
+               透明底、hover 时主题色底片涨满、文字右滑、左侧箭头淡入，
+               连 press.js 的按压也是同一套（选择器里已有 .edit__reset） -->
           <div class="persona-actions">
-            <button class="persona-delete" type="button" data-persona-delete hidden data-i18n="persona.delete">删除</button>
-            <button class="persona-save" type="submit" data-i18n="persona.save">保存并使用</button>
+            <button class="edit__reset persona-reset" type="button" data-persona-reset>
+              <span class="edit__label" data-i18n="persona.reset">Reset</span>
+              <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+            <button class="persona-save" type="submit">
+              <span class="persona-save__label" data-i18n="persona.save">保存</span>
+              <!-- 箭头取顶栏胶囊那一枚，尺寸跟着字号（1em），悬停时从左侧淡入 -->
+              <svg class="persona-save__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
           </div>
         </form>
       </div>
@@ -600,11 +610,11 @@
 <script src="lib/gsap.min.js"></script>
 <!-- 滚动驱动：ScrollTrigger 与 GSAP 同版本，组标题的交接淡出挂在这上面 -->
 <script src="lib/ScrollTrigger.min.js"></script>
-<script src="js/press.js?v=13"></script>
+<script src="js/press.js?v=14"></script>
 
 <script src="js/panels.js?v=4"></script>
 
-<script src="js/magnet.js?v=12"></script>
+<script src="js/magnet.js?v=13"></script>
 
 <script src="js/sticky.js?v=3"></script>
 
@@ -1098,7 +1108,7 @@
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=13"></script>
-<script src="js/persona.js?v=1"></script>
+<script src="js/persona.js?v=4"></script>
 <script src="js/assistant_chat.js?v=16"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
@@ -1119,7 +1129,7 @@
 }
 </script>
 <script type="module" src="js/robot3d.js?v=68"></script>
-<script type="module" src="js/view-control.js?v=48"></script>
+<script type="module" src="js/view-control.js?v=49"></script>
 <script type="module" src="js/q1skin.js?v=34"></script>
 
 </body>

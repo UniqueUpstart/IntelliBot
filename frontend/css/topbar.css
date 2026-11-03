@@ -225,8 +225,14 @@
 .user.is-guest .avatar{background-image:none; cursor:default}
 .user.is-guest.is-open .avatar{cursor:default}
 /* 未登录：名字那格是入口，接指针、压过 trigger；字色与登录后的用户名一致，
-   都取顶栏胶囊那档 --text-reduced，指针上来也不换色 */
+   都取顶栏胶囊那档 --text-reduced。它是唯一可以点的一行字，所以指针上来
+   换成主题色 —— 登录后的用户名是纯文本，不给这条反馈 */
 .user.is-guest .user__name{pointer-events:auto; cursor:pointer; z-index:4}
+.user.is-guest .user__name:hover,
+.user.is-guest .user__name:focus-visible{
+  color:var(--theme);
+  transition:color .16s var(--ease);
+}
 
 /* 头像选择区：贴着头像下沿 8（头像 8–88，这里 96 起、高 40）。
    收起态不只淡到 0，还用 visibility 从 Tab 序列里摘掉 ——
