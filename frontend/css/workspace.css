@@ -258,7 +258,8 @@ html[lang="zh-CN"] .skin-view__title{
 .persona-view .view-badge,
 .persona-preview__dot{display:none}
 .persona-field--color input{
-  width:42px;
+  width:96px;
+  max-width:100%;
   padding:4px;
   justify-self:start;
 }

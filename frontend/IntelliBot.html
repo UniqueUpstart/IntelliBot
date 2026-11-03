@@ -22,8 +22,8 @@
 <script src="js/i18n.js?v=31"></script>
   <link rel="stylesheet" href="css/base.css?v=14">
   <link rel="stylesheet" href="css/topbar.css?v=19">
-  <link rel="stylesheet" href="css/rail.css?v=37">
-  <link rel="stylesheet" href="css/workspace.css?v=9">
+  <link rel="stylesheet" href="css/rail.css?v=38">
+  <link rel="stylesheet" href="css/workspace.css?v=10">
   <link rel="stylesheet" href="css/cards.css?v=25">
   <link rel="stylesheet" href="css/modal.css?v=34">
   <link rel="stylesheet" href="css/chat.css?v=52">
@@ -150,6 +150,128 @@
     <span class="frost frost--top" aria-hidden="true"></span>
     <span class="frost frost--bottom" aria-hidden="true"></span>
     <div class="panel__body" data-panel-body data-view="persona">
+    <template id="legacy-left-panel">
+    <div class="panel__body" data-panel-body data-view="pinned">
+      <!-- 一张都没钉时的空态：两段之间留一行空行，整块在面板里居中，见 .panel__empty -->
+      <div class="panel__empty">
+        <span data-i18n="rail.left.empty">暂无已标记卡片</span>
+        <span data-i18n="rail.left.empty.hint">请点击 动作 / 语言 / 照护类 卡片左下角的标记按钮以添加</span>
+      </div>
+
+      <!-- 编辑页：左栏 Edit 钮把本面板切到 data-view="edit" 时出现。
+           先选类型（对应下面三组卡片），再填名字与简介；提交后追加到该组末尾，
+           编号自动续，绑定与持久化见 js/rails.js 的卡片那段 -->
+      <div class="edit" data-edit-only>
+        <div class="edit__fields">
+          <div class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.type">Type</span>
+            <div class="edit__types" role="group" aria-label="Card type">
+              <button class="edit__type is-active" type="button" data-edit-type="action" aria-pressed="true">
+                <span class="edit__label" data-i18n="rail.left.action">Action</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+              <button class="edit__type" type="button" data-edit-type="dialog" aria-pressed="false">
+                <span class="edit__label" data-i18n="rail.left.dialog">Dialog</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+              <button class="edit__type" type="button" data-edit-type="tendance" aria-pressed="false">
+                <span class="edit__label" data-i18n="rail.left.tendance">Tendance</span>
+                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <label class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.name">Name</span>
+            <input class="edit__input" data-edit-name type="text" placeholder="Enter…"
+                   maxlength="24" autocomplete="off" data-i18n-placeholder="rail.left.name.ph">
+          </label>
+          <label class="edit__field">
+            <span class="edit__lab" data-i18n="rail.left.intro">Intro</span>
+            <input class="edit__input" data-edit-brief type="text" placeholder="Enter…"
+                   maxlength="40" autocomplete="off" data-i18n-placeholder="rail.left.intro.ph">
+          </label>
+        </div>
+        <div class="edit__acts">
+          <button class="edit__reset" data-edit-reset type="button">
+            <span class="edit__label" data-i18n="rail.left.reset">Reset</span>
+            <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+          </button>
+          <button class="edit__add" data-edit-add type="button">
+            <span class="edit__label" data-i18n="rail.left.add">Add</span>
+            <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 模型配置页：配置保存在本机 AI 服务，聊天栏只同步展示当前模型。 -->
+      <div class="model-view" data-model-panel>
+        <div class="model-view__head">
+          <h3 class="model-view__title" data-i18n="rail.left.model">模型设置</h3>
+          <span class="model-view__status" data-model-status data-i18n="model.status.loading">正在读取</span>
+        </div>
+        <form class="model-form" data-model-form>
+          <div class="model-presets" role="group" data-i18n-aria="model.presets">
+            <button class="model-preset is-on" type="button" data-model-preset
+                    data-provider="deepseek" data-base-url="https://api.deepseek.com"
+                    data-api-format="openai" data-prefill-model="deepseek-flash">
+              <strong>DeepSeek Flash</strong><span>deepseek-flash</span>
+            </button>
+            <button class="model-preset" type="button" data-model-preset
+                    data-provider="deepseek" data-base-url="https://api.deepseek.com"
+                    data-api-format="openai" data-prefill-model="deepseek-v4-pro">
+              <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
+            </button>
+            <button class="model-preset" type="button" data-model-preset
+                    data-provider="custom" data-base-url="" data-api-format="openai"
+                    data-prefill-model="">
+              <strong data-i18n="model.preset.custom">自定义模型</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
+            </button>
+          </div>
+          <div class="model-field">
+            <span data-i18n="model.provider">模型格式</span>
+            <select data-model-format data-i18n-aria="model.provider" aria-label="模型格式">
+              <option value="openai" data-i18n="model.format.openai">OpenAI</option>
+              <option value="anthropic" data-i18n="model.format.anthropic">Anthropic</option>
+            </select>
+          </div>
+          <div class="model-field">
+            <span data-i18n="model.apiKey">API Key</span>
+            <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
+                   data-i18n-aria="model.apiKey" aria-label="API Key" placeholder="sk-…">
+          </div>
+          <div class="model-field">
+            <span data-i18n="model.baseUrl">接口网址</span>
+            <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
+                   data-i18n-aria="model.baseUrl" aria-label="接口网址"
+                   placeholder="https://api.example.com/v1">
+          </div>
+          <div class="model-field">
+            <span data-i18n="model.model">模型名称</span>
+            <span class="model-field__control">
+              <input data-model-name type="text" spellcheck="false" autocomplete="off"
+                     data-i18n-aria="model.model" aria-label="模型名称"
+                     list="model-name-options" placeholder="deepseek-flash">
+              <button class="model-field__fetch" type="button" data-model-fetch
+                      data-i18n-title="model.fetch.list" data-i18n-aria="model.fetch.list"
+                      title="获取模型列表" aria-label="获取模型列表">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>
+                </svg>
+                <span data-i18n="model.fetch.short">获取</span>
+              </button>
+            </span>
+            <datalist id="model-name-options"></datalist>
+          </div>
+          <p class="model-view__note visually-hidden" data-model-note data-i18n="model.key.local">
+            API Key 只保存在本机，不会写入浏览器。
+          </p>
+          <button class="model-save" data-model-save type="submit">
+            <span data-i18n="model.save">保存并应用</span>
+          </button>
+        </form>
+      </div>
+
+    </template>
       <!-- AI 角色：内置角色负责开局，用户可调整姓名、语气与视觉标记，并保存到本机 -->
       <div class="persona-view" data-persona-view>
         <div class="view-head">
@@ -172,27 +294,32 @@
             <span class="persona-preview__dot" data-persona-preview-dot aria-hidden="true"></span>
           </div>
           <div class="persona-form__grid">
-            <label class="persona-field">
+            <div class="persona-field">
               <span data-i18n="persona.fields.name">角色名称</span>
-              <input data-persona-name type="text" maxlength="32" autocomplete="off">
-            </label>
-            <label class="persona-field">
+              <input data-persona-name type="text" maxlength="32" autocomplete="off"
+                     data-i18n-aria="persona.fields.name" aria-label="角色名称">
+            </div>
+            <div class="persona-field">
               <span data-i18n="persona.fields.style">表达风格</span>
-              <input data-persona-style type="text" maxlength="64" autocomplete="off">
-            </label>
-            <label class="persona-field persona-field--color">
+              <input data-persona-style type="text" maxlength="64" autocomplete="off"
+                     data-i18n-aria="persona.fields.style" aria-label="表达风格">
+            </div>
+            <div class="persona-field persona-field--color">
               <span data-i18n="persona.fields.color">标记色</span>
-              <input data-persona-color type="color" value="#91d2c3">
-            </label>
-            <label class="persona-field persona-field--initials">
+              <input data-persona-color type="color" value="#91d2c3"
+                     data-i18n-aria="persona.fields.color" aria-label="标记色">
+            </div>
+            <div class="persona-field persona-field--initials">
               <span data-i18n="persona.fields.initials">缩写</span>
-              <input data-persona-initials type="text" maxlength="3" autocomplete="off">
-            </label>
+              <input data-persona-initials type="text" maxlength="3" autocomplete="off"
+                     data-i18n-aria="persona.fields.initials" aria-label="缩写">
+            </div>
           </div>
-          <label class="persona-field persona-field--prompt">
+          <div class="persona-field persona-field--prompt">
             <span data-i18n="persona.fields.prompt">角色设定</span>
-            <textarea data-persona-prompt rows="5" maxlength="1200"></textarea>
-          </label>
+            <textarea data-persona-prompt rows="5" maxlength="1200"
+                      data-i18n-aria="persona.fields.prompt" aria-label="角色设定"></textarea>
+          </div>
           <p class="persona-note visually-hidden" data-persona-note data-i18n="persona.localNote">
             角色样式和设定只保存在本机浏览器，发送消息时会作为语气设定交给当前模型。
           </p>
@@ -894,11 +1021,6 @@
                   <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
                 </button>
                 <button class="model-preset" type="button" data-model-preset
-                        data-provider="custom" data-base-url="https://api.openai.com/v1"
-                        data-api-format="openai" data-prefill-model="gpt-4.1-mini">
-                  <strong>GPT-4.1 mini</strong><span>快速均衡</span>
-                </button>
-                <button class="model-preset" type="button" data-model-preset
                         data-provider="zhipu" data-base-url="https://open.bigmodel.cn/api/paas/v4"
                         data-api-format="openai" data-prefill-model="glm-4-flash">
                   <strong>GLM-4-Flash</strong><span>免费 · 国内直连</span>
@@ -909,22 +1031,29 @@
                   <strong data-i18n="model.preset.custom">自定义</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
                 </button>
               </div>
-              <label class="model-field">
+              <div class="model-field">
                 <span data-i18n="model.provider">模型格式</span>
-                <select data-model-format>
+                <select data-model-format data-i18n-aria="model.provider" aria-label="模型格式">
                   <option value="openai" data-i18n="model.format.openai">OpenAI</option>
                   <option value="anthropic" data-i18n="model.format.anthropic">Anthropic</option>
                 </select>
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.baseUrl">API 地址</span>
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.apiKey">API Key</span>
+                <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
+                       data-i18n-aria="model.apiKey" aria-label="API Key" placeholder="sk-…">
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.baseUrl">接口网址</span>
                 <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
+                       data-i18n-aria="model.baseUrl" aria-label="接口网址"
                        placeholder="https://api.example.com/v1">
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.model">模型</span>
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.model">模型名称</span>
                 <span class="model-field__control">
                   <input data-model-name type="text" spellcheck="false" autocomplete="off"
+                         data-i18n-aria="model.model" aria-label="模型名称"
                          list="model-name-options" placeholder="deepseek-flash">
                   <button class="model-field__fetch" type="button" data-model-fetch
                           data-i18n-title="model.fetch.list" data-i18n-aria="model.fetch.list"
@@ -936,12 +1065,7 @@
                   </button>
                 </span>
                 <datalist id="model-name-options"></datalist>
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.apiKey">API Key</span>
-                <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
-                       placeholder="sk-…">
-              </label>
+              </div>
               <!-- 说明行平时是空的，只在保存成功或报错时由脚本填一句；
                    空着时由 css/rail.css 里的 .model-view__note:empty 收掉，不占格 -->
               <p class="model-view__note" data-model-note></p>
