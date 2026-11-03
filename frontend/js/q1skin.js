@@ -29,6 +29,7 @@ document.head.appendChild(skinStyle);
 
 const SKIN_KEY = 'intellibot.skin';
 const HIP_Z = 0.50;
+const Q1_BODY_TARGET_Z = 0.70;
 const TPOSE = {
   left_shoulder_roll_joint: 1.45,
   right_shoulder_roll_joint: -1.45,
@@ -257,7 +258,10 @@ function init() {
     const distH = 0.5 / (2 * tanV * camera.aspect);
     baseDist = Math.max(distV, distH) / 0.9;
     const contentCenter = (topInset + h - bottomInset) / 2;
-    baseEye = 0.5 + (contentCenter - h / 2) * (2 * baseDist * tanV) / h;
+    /* q1 的 body 取景会额外把注视点抬高 0.2；导入皮肤沿用同一个落点，
+       否则模型会整体悬在原模型上方。 */
+    baseEye = Q1_BODY_TARGET_Z
+      + (contentCenter - h / 2) * (2 * baseDist * tanV) / h;
     applyView();
   }
 
