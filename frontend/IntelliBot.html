@@ -29,7 +29,7 @@
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=7">
+<link rel="stylesheet" href="css/viewtool.css?v=11">
 </head>
 <body>
 
@@ -75,6 +75,15 @@
     </div>
   </nav>
 </header>
+
+<button class="view-adjust-trigger" type="button" aria-label="视角调整" title="视角调整"
+        aria-pressed="false" aria-expanded="false" aria-controls="robot-view-panel">
+  <svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16Z"/>
+    <circle cx="16" cy="16" r="4.5"/>
+  </svg>
+</button>
+<button class="pose-reset-trigger" type="button" aria-label="复位机器人姿态" title="复位机器人姿态">复位</button>
 
 <!-- ===================== Stage ===================== -->
 <main class="stage" aria-hidden="true"><canvas class="bgfx" id="bgfx"></canvas></main>
@@ -562,7 +571,7 @@
 }
 </script>
 <script type="module" src="js/robot3d.js?v=21"></script>
-<script type="module" src="js/view-control.js?v=16"></script>
+<script type="module" src="js/view-control.js?v=18"></script>
 
 </body>
 </html>
