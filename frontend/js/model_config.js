@@ -5,9 +5,10 @@
   var form = document.querySelector('[data-model-form]');
   var trigger = document.querySelector('[data-model-trigger]');
   var label = document.querySelector('[data-model-label]');
+  var effort = document.querySelector('[data-model-effort]');
   var menu = document.querySelector('[data-model-menu]');
   var menuList = document.querySelector('[data-model-menu-list]');
-  if (!panel || !form || !trigger || !label || !menu || !menuList) return;
+  if (!panel || !form || !trigger || !label || !effort || !menu || !menuList) return;
 
   var providerInput = form.querySelector('[data-model-provider]');
   var baseInput = form.querySelector('[data-model-base-url]');
@@ -69,16 +70,6 @@
     if (model === 'deepseek-flash') return 'DeepSeek Flash';
     if (model === 'deepseek-v4-pro') return 'DeepSeek V4 Pro';
     return model;
-  }
-
-  function modelDescription(provider, model) {
-    if (provider === 'deepseek' && model === 'deepseek-flash') {
-      return t('model.desc.deepseekFlash', '响应快、成本较低，适合日常对话和机器人动作理解');
-    }
-    if (provider === 'deepseek' && model === 'deepseek-v4-pro') {
-      return t('model.desc.deepseekV4Pro', '综合能力更强，适合复杂指令和较长对话');
-    }
-    return t('model.desc.custom', '自定义模型');
   }
 
   function readHistory() {
@@ -157,30 +148,17 @@
       item.setAttribute('aria-checked', String(model === current.model));
       if (model === current.model) item.classList.add('is-on');
 
-      var icon = document.createElement('span');
-      icon.className = 'model-menu__icon';
-      icon.setAttribute('aria-hidden', 'true');
-      if (model === 'deepseek-flash') icon.textContent = 'F';
-      else if (model === 'deepseek-v4-pro') icon.textContent = 'P';
-      else icon.textContent = 'AI';
-
-      var copy = document.createElement('span');
-      copy.className = 'model-menu__copy';
       var name = document.createElement('span');
       name.className = 'model-menu__name';
-      name.textContent = modelLabel(model);
-      var provider = document.createElement('span');
-      provider.className = 'model-menu__provider';
-      provider.textContent = modelDescription(current.provider, model);
-      copy.append(name, provider);
+      name.textContent = model;
 
       var check = document.createElement('span');
       check.className = 'model-menu__check';
       check.setAttribute('aria-hidden', 'true');
       check.textContent = '✓';
 
-      item.setAttribute('aria-label', modelLabel(model) + ': ' + modelDescription(current.provider, model));
-      item.append(icon, copy, check);
+      item.setAttribute('aria-label', model);
+      item.append(name, check);
       menuList.appendChild(item);
     });
   }
@@ -203,8 +181,9 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = current.configured
-      ? modelLabel(current.model)
+      ? current.model
       : t('model.choose', '选择模型');
+    effort.hidden = !current.configured;
     trigger.classList.toggle('is-ready', current.configured);
     trigger.setAttribute('aria-label', current.configured
       ? providerName(current.provider) + ' · ' + modelLabel(current.model)
