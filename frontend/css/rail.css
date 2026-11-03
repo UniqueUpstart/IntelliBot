@@ -113,6 +113,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 [data-panel-body][data-view="chat"] [data-rail-view="chat"],
 [data-panel-body]:not([data-view]) [data-rail-view="motions"]{display:block}
 
+/* 聊天页从右栏移入左栏后，与原有快捷卡片共用同一个 panel__body。
+   进入 chat 视图时只保留聊天页，避免旧卡片把历史记录挤到滚动区下方。 */
+[data-panel-body][data-view="chat"] > :not([data-rail-view="chat"]){display:none}
+
 /* 分栏标题：字号、字距、字色、行盒与吸顶位置都对齐左栏的 .sc-group__title（24 号）
    —— 两边是同一级标题，只是左边按指令组排、右边按视图排。
    吸顶位置仍是「雾带中线减半个标题盒」那一套：--title-top 由 .rail__panel 给，
