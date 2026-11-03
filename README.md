@@ -15,6 +15,7 @@ IntelliBot 是一个基于 MuJoCo 的机器人仿真与 AI 交互界面。你可
 - 在浏览器中查看 MuJoCo 渲染的 Q1 机器人画面。
 - 拖动滑块控制关节，切换站姿、挥手、敬礼、跳舞等动作。
 - 控制底盘前后左右移动、转向、行走和踏步。
+- 通过 DeepSeek 进行多轮对话，并将自然语言指令转换为主页机器人的动作序列。
 - 通过 C++ 后端校验参数并转发到仿真桥，避免前端直接操作仿真内部。
 - 在独立的体验页中使用账号登录，并体验浏览器端动作授权和页面会话隔离。
 
@@ -25,6 +26,7 @@ IntelliBot 是一个基于 MuJoCo 的机器人仿真与 AI 交互界面。你可
 ```text
 frontend/            网页、样式、前端控制和 3D 机器人资源
 backend/             C++17 HTTP 后端、认证与业务接口
+ai/                  DeepSeek 本地对话服务
 sim/                 MuJoCo 仿真桥和动作库
 scripts/             环境准备、构建、启动与验收脚本
 backend/tests/        后端接口和认证测试
@@ -97,6 +99,15 @@ py -3.11 -m venv .venv
 ```
 
 本文后面的命令直接使用 `.venv\Scripts\python.exe`，所以不需要每次先执行 `Activate.ps1`。这样也能避免“明明装了 MuJoCo，运行时却用了另一个 Python”的问题。
+
+如需使用 AI 对话，复制配置模板并填写自己的 DeepSeek API Key：
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+`.env` 已被 Git 忽略，不要提交真实 Key。未配置 Key 时，网页和 MuJoCo 仿真仍可正常使用，只会关闭 AI 对话。
 
 ### 4. 安装后端所需的 Windows 编译库
 
@@ -174,7 +185,7 @@ scripts\run_sim_stack.cmd
 .\scripts\run_sim_stack.cmd
 ```
 
-这个脚本会先启动 `8090` 端口的 MuJoCo 仿真桥，确认它可用后，再启动 `8080` 端口的后端。看到下面类似的提示就表示启动成功：
+这个脚本会启动 `8090` 端口的 MuJoCo 仿真桥、可选的 `8091` 端口 AI 服务，以及 `8080` 端口的后端。没有配置 DeepSeek Key 时会跳过 AI 服务。看到下面类似的提示就表示启动成功：
 
 ```text
 SIM MODE: http://127.0.0.1:8080 -> mujoco bridge 127.0.0.1:8090
@@ -184,7 +195,7 @@ SIM MODE: http://127.0.0.1:8080 -> mujoco bridge 127.0.0.1:8090
 
 <http://127.0.0.1:8080/ui/IntelliBot.html>
 
-然后在页面顶栏打开 `Advance`，点击「连接仿真」。连接成功后可以打开左侧画面、拖动关节、切换姿态或动作。
+然后在页面顶栏打开 `Advance`，点击「连接仿真」。连接成功后可以打开左侧画面、拖动关节、切换姿态或动作；配置了 DeepSeek 时，也可以在底部输入框中对话并触发主页动作。
 
 ### 8. 确认服务是否正常
 
@@ -193,6 +204,8 @@ SIM MODE: http://127.0.0.1:8080 -> mujoco bridge 127.0.0.1:8090
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
 Invoke-RestMethod http://127.0.0.1:8090/health
+# 配置了 DeepSeek 时再检查：
+Invoke-RestMethod http://127.0.0.1:8091/health
 ```
 
 也可以运行项目自带的链路验收脚本：
@@ -205,7 +218,7 @@ Invoke-RestMethod http://127.0.0.1:8090/health
 
 ## 分开启动仿真
 
-如果希望分别观察两个进程的日志，可以打开两个 PowerShell，并都把当前目录切到项目根目录。
+如果希望分别观察各个进程的日志，可以打开三个 PowerShell，并都把当前目录切到项目根目录。未配置 DeepSeek 时可跳过 AI 服务，并从后端命令中去掉 `--ai-url`。
 
 **终端 1：MuJoCo 仿真桥（8090）**
 
@@ -215,14 +228,21 @@ Invoke-RestMethod http://127.0.0.1:8090/health
 
 `--headless` 表示不弹 MuJoCo 原生窗口，画面由仿真桥离屏渲染后提供给网页。
 
-**终端 2：C++ 后端（8080）**
+**终端 2：DeepSeek AI 服务（8091，可选）**
+
+```powershell
+.\.venv\Scripts\python.exe ai\deepseek_bridge.py --port 8091
+```
+
+**终端 3：C++ 后端（8080）**
 
 ```powershell
 .\backend-build\intellibot_backend.exe `
   --legacy-dev `
   --port 8080 `
   --web-root frontend `
-  --sim-url http://127.0.0.1:8090
+  --sim-url http://127.0.0.1:8090 `
+  --ai-url http://127.0.0.1:8091
 ```
 
 仍然打开 <http://127.0.0.1:8080/ui/IntelliBot.html>，再点击「连接仿真」。
@@ -263,14 +283,15 @@ PowerShell 中先设置环境变量再启动：
 
 ```powershell
 $env:PORT = "8081"
-$env:SIM_PORT = "8091"
+$env:SIM_PORT = "8092"
+$env:AI_PORT = "8093"
 .\scripts\run_sim_stack.cmd
 ```
 
 启动后访问 `http://127.0.0.1:8081/ui/IntelliBot.html`。需要恢复默认端口时，删除这两个临时环境变量即可：
 
 ```powershell
-Remove-Item Env:PORT,Env:SIM_PORT -ErrorAction SilentlyContinue
+Remove-Item Env:PORT,Env:SIM_PORT,Env:AI_PORT -ErrorAction SilentlyContinue
 ```
 
 ### 账号体验页
@@ -446,10 +467,10 @@ Windows 原生运行通常不需要设置 `MUJOCO_GL`，设置了反而可能产
 
 ### 端口已被占用
 
-先查看占用 `8080`、`8090` 的进程：
+先查看占用 `8080`、`8090`、`8091` 的进程：
 
 ```powershell
-Get-NetTCPConnection -State Listen -LocalPort 8080,8090 |
+Get-NetTCPConnection -State Listen -LocalPort 8080,8090,8091 |
   Select-Object LocalPort,OwningProcess
 ```
 
@@ -469,16 +490,18 @@ Stop-Process -Id <PID>
 
 ## 关闭服务
 
-使用 `run_sim_stack.cmd` 时，在运行它的窗口中按一次 `Ctrl+C`。脚本会同时收掉仿真桥和后端，避免端口残留。
+使用 `run_sim_stack.cmd` 时，在运行它的窗口中按一次 `Ctrl+C`。脚本会同时关闭仿真桥、AI 服务和后端，避免端口残留。
 
-如果是按「分开启动仿真」的方式开了两个终端，建议先在后端终端按 `Ctrl+C`，再到仿真桥终端按一次 `Ctrl+C`。
+如果是按「分开启动仿真」的方式打开多个终端，建议先关闭后端，再关闭 AI 服务和仿真桥。
 
 ## 配置与边界
 
 - `frontend/` 只能通过后端访问，后端默认只监听 `127.0.0.1`。
-- `8090` 是 MuJoCo 仿真桥，`8080` 是 C++ 后端和网页入口。
+- `8090` 是 MuJoCo 仿真桥，`8091` 是可选 AI 服务，`8080` 是 C++ 后端和网页入口。
 - 不传 `--sim-url` 时，后端处于纯 mock 模式，仿真控制接口会返回 422。
 - 仿真桥不可用时，后端返回 502，不会把未执行的命令报告为成功。
 - `--legacy-dev` 用于本机仿真演示，会关闭账号认证；不要把该模式暴露到局域网或公网。
-- 当前不包含 ROS 2、真机连接、找回密码、邮箱验证、私人动作库或大模型对话。
+- 当前不包含 ROS 2、真机连接、找回密码、邮箱验证或私人动作库。
+- DeepSeek 只返回回复文字和现有动作 ID；主页动作仍由本地白名单校验，不接受任意关节角度或代码。
+- 对话支持最多四个动作依次执行，也支持文字或界面停止；聊天栏会显示当前动作。
 - 更多接口与联调细节见 [docs/仿真联调.md](docs/仿真联调.md)，后端认证和会话接口见 [backend/README.md](backend/README.md)。

@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="css/rail.css?v=12">
   <link rel="stylesheet" href="css/cards.css?v=16">
   <link rel="stylesheet" href="css/modal.css?v=22">
-  <link rel="stylesheet" href="css/chat.css?v=24">
+  <link rel="stylesheet" href="css/chat.css?v=25">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -542,17 +542,29 @@
 
 <!-- ===================== 底部 AI 输入胶囊 =====================
      悬浮在视口底边正中：距底 64，默认一行 48 高、宽占页面 1/4。
+     对话记录在桌面端停靠到输入框右侧，窄屏时才收回输入框上方，避免遮住机器人。
      宽度和高度由 js/composer.js 按内容逐键改写：一行装不下先横向长到
      半页宽，再装不下纵向长到四行，超过四行转成滚动。
      底片与聚焦描边沿用左栏编辑表单的输入框，见 css/chat.css 末尾 -->
 <div class="composer">
+  <section class="assistant-chat" data-assistant-chat hidden aria-label="IntelliBot conversation">
+    <header class="assistant-chat__toolbar">
+      <span class="assistant-chat__status" data-assistant-status>待命</span>
+      <button class="assistant-chat__tool" type="button" data-assistant-stop hidden>停止动作</button>
+      <button class="assistant-chat__tool" type="button" data-assistant-clear>清空</button>
+    </header>
+    <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
+  </section>
   <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
+            maxlength="500" data-assistant-input
             data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
             placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
+  <button class="composer__send" type="button" data-assistant-send>发送</button>
 </div>
 
 <script src="js/modal.js?v=17"></script>
 <script src="js/composer.js?v=1"></script>
+<script src="js/assistant_chat.js?v=2"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js"></script>

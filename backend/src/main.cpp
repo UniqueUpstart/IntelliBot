@@ -1,4 +1,5 @@
 #include <httplib.h>
+#include "intellibot/ai_proxy.h"
 #include "intellibot/web_system.h"
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -11,6 +12,7 @@
 #include <string>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 using json = nlohmann::json;
 using Clock = std::chrono::steady_clock;
@@ -22,6 +24,7 @@ int main(int argc, char** argv) {
   std::string db_path="data/intellibot.db";
   std::string web_root;
   std::string sim_url;
+  std::string ai_url;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--legacy-dev") legacy_dev=true;
@@ -33,8 +36,9 @@ int main(int argc, char** argv) {
         if (end != value.size()) return 2;
       } catch (...) { return 2; }
     } else if (arg == "--web-root" && i + 1 < argc) web_root = argv[++i];
-      else if (arg == "--sim-url" && i + 1 < argc) sim_url = argv[++i];
-    else { std::cerr << "Usage: intellibot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090] [--db-path data/intellibot.db] [--legacy-dev]\n"; return 2; }
+    else if (arg == "--sim-url" && i + 1 < argc) sim_url = argv[++i];
+    else if (arg == "--ai-url" && i + 1 < argc) ai_url = argv[++i];
+    else { std::cerr << "Usage: intellibot_backend [--port 8080] [--web-root frontend] [--sim-url http://127.0.0.1:8090] [--ai-url http://127.0.0.1:8091] [--db-path data/intellibot.db] [--legacy-dev]\n"; return 2; }
   }
   if (port < 1 || port > 65535) return 2;
 
@@ -61,6 +65,11 @@ int main(int argc, char** argv) {
     try { web=std::make_unique<intellibot::WebSystem>(db_path); }
     catch(const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
   }
+  std::unique_ptr<intellibot::AiProxy> ai;
+  if (!ai_url.empty()) {
+    try { ai=std::make_unique<intellibot::AiProxy>(ai_url); }
+    catch(const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
+  }
   httplib::Server server;
   /* 静态资源带 no-cache：浏览器每次拿 If-Modified-Since 回来问一次，文件没改走 304、
      改了就立刻生效。调页面时最容易被旧 CSS/JS 骗到，这条省掉反复强刷 */
@@ -85,6 +94,7 @@ int main(int argc, char** argv) {
   std::unordered_map<std::string, Cached> cache;
   bool sim_session = false;   /* sim: MuJoCo 桥；mock: 纯内存模拟 */
   std::atomic<unsigned long long> sim_serial{0};
+  std::atomic<unsigned long long> ai_serial{0};
 
   /* 仿真桥是独立进程，这里只转发、不缓存、不重试：
      桥挂掉必须立刻体现为 502，不能让页面以为指令已经执行。 */
@@ -116,6 +126,9 @@ int main(int argc, char** argv) {
     res.set_content(json{{"request_id", request_id}, {"data", data}, {"error", error}}.dump(), "application/json; charset=utf-8");
   };
   const std::unordered_map<std::string,int> actions{{"q1.wave",3004},{"q1.heart",3007},{"q1.cheer",3008}};
+  const std::unordered_set<std::string> ai_actions{
+    "wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch"
+  };
   /* 页面若从别的本地端口打开（静态服务器、预览器），接口就是跨源的。
      只对 localhost / 127.0.0.1 来源放行，别把本机控制口暴露给任意网页。 */
   auto is_local_origin = [](const std::string& origin) {
@@ -155,6 +168,113 @@ int main(int argc, char** argv) {
       } else {
         try { response(res, 200, rid, json::parse(out)); }
         catch (...) { response(res, 502, rid, nullptr, "SIM_ERROR", "仿真桥返回了非法 JSON"); }
+      }
+      return;
+    }
+    /* DeepSeek 可能等待数十秒，必须放在全局业务锁外；否则等待回复时，
+       仿真控制、状态轮询和页面其他请求都会被同一把锁卡住。 */
+    if (req.method == "POST" && req.path == "/api/v1/chat") {
+      const auto request_id = "req-ai-" + std::to_string(ai_serial.fetch_add(1) + 1);
+      auto fail = [&](int status, const std::string& code, const std::string& message) {
+        response(res, status, request_id, nullptr, code, message);
+      };
+      if (!ai) {
+        fail(503, "AI_NOT_CONFIGURED", "未配置 DeepSeek，请先设置 .env 并重新启动");
+        return;
+      }
+      const auto key = req.get_header_value("Idempotency-Key");
+      if (key.empty() || key.size() > 128) {
+        fail(400, "INVALID_IDEMPOTENCY_KEY", "写操作需要1至128字节的 Idempotency-Key");
+        return;
+      }
+      if (req.body.empty() || req.body.size() > 8192) {
+        fail(413, "BODY_TOO_LARGE", "请求体需为1至8192字节");
+        return;
+      }
+      json input;
+      try { input = json::parse(req.body); }
+      catch (...) { fail(400, "INVALID_JSON", "请求体必须为JSON对象"); return; }
+      const auto text_length = [](const std::string& text) {
+        size_t count = 0;
+        for (unsigned char byte : text) if ((byte & 0xc0) != 0x80) ++count;
+        return count;
+      };
+      if (!input.is_object() || !input.contains("message") || !input["message"].is_string()) {
+        fail(400, "INVALID_CHAT_MESSAGE", "message 需为1至500个字符");
+        return;
+      }
+      const auto message = input["message"].get<std::string>();
+      const auto visible = message.find_first_not_of(" \t\r\n") != std::string::npos;
+      if (!visible || text_length(message) > 500) {
+        fail(400, "INVALID_CHAT_MESSAGE", "message 需为1至500个字符");
+        return;
+      }
+      if (input.contains("history")) {
+        if (!input["history"].is_array() || input["history"].size() > 10) {
+          fail(400, "INVALID_CHAT_HISTORY", "history 最多包含10条消息");
+          return;
+        }
+        for (const auto& item : input["history"]) {
+          if (!item.is_object() || !item.contains("role") || !item["role"].is_string() ||
+              !item.contains("content") || !item["content"].is_string()) {
+            fail(400, "INVALID_CHAT_HISTORY", "history 中的消息格式不正确");
+            return;
+          }
+          const auto role = item["role"].get<std::string>();
+          const auto content = item["content"].get<std::string>();
+          if ((role != "user" && role != "assistant") ||
+              content.find_first_not_of(" \t\r\n") == std::string::npos ||
+              text_length(content) > 500) {
+            fail(400, "INVALID_CHAT_HISTORY", "history 只接受1至500字符的 user 和 assistant 文本");
+            return;
+          }
+        }
+      }
+      const auto upstream = ai->chat(req.body, key);
+      if (!upstream.connected) {
+        fail(502, "AI_UNAVAILABLE", "本地 AI 服务未响应，请确认 deepseek_bridge.py 已启动");
+        return;
+      }
+      if (upstream.status != 200) {
+        int status = upstream.status;
+        if (status != 400 && status != 409 && status != 429 && status != 502 && status != 503) status = 502;
+        try {
+          const auto error = json::parse(upstream.body).at("error");
+          fail(status, error.value("code", "AI_UPSTREAM_ERROR"),
+               error.value("message", "AI 服务返回异常"));
+        } catch (...) {
+          fail(502, "AI_UPSTREAM_ERROR", "AI 服务返回异常");
+        }
+        return;
+      }
+      try {
+        const auto data = json::parse(upstream.body);
+        if (!data.is_object() || !data.contains("reply") || !data["reply"].is_string() ||
+            !data.contains("action_id") ||
+            !(data["action_id"].is_null() || data["action_id"].is_string()) ||
+            !data.contains("model") || !data["model"].is_string()) {
+          throw std::runtime_error("invalid ai response");
+        }
+        if (data["action_id"].is_string() &&
+            ai_actions.find(data["action_id"].get<std::string>()) == ai_actions.end()) {
+          throw std::runtime_error("unknown ai action");
+        }
+        if (data.contains("actions")) {
+          if (!data["actions"].is_array() || data["actions"].size() > 4) {
+            throw std::runtime_error("invalid ai action sequence");
+          }
+          for (const auto& action : data["actions"]) {
+            if (!action.is_string() || ai_actions.find(action.get<std::string>()) == ai_actions.end()) {
+              throw std::runtime_error("unknown ai action");
+            }
+          }
+        }
+        if (data.contains("stop") && !data["stop"].is_boolean()) {
+          throw std::runtime_error("invalid ai stop command");
+        }
+        response(res, 200, request_id, data);
+      } catch (...) {
+        fail(502, "AI_INVALID_RESPONSE", "AI 服务返回了非法响应");
       }
       return;
     }
@@ -231,7 +351,7 @@ int main(int argc, char** argv) {
           try { gestures=json::parse(out).value("gestures",json::array()); }
           catch (...) { fail(502,"SIM_ERROR","仿真动作库返回了非法 JSON"); return; }
         }
-        response(res,200,request_id,{{"actions",list},{"emotions",json::array()},{"motion",sim_session},{"camera",sim_session},{"chat",false},{"gestures",gestures}});
+        response(res,200,request_id,{{"actions",list},{"emotions",json::array()},{"motion",sim_session},{"camera",sim_session},{"chat",ai!=nullptr},{"gestures",gestures}});
       } else if(req.method=="GET" && path=="/api/v1/logs") {
         unsigned long long after=0;
         if(req.has_param("after_id")) {
@@ -316,7 +436,7 @@ int main(int argc, char** argv) {
         }
       } else if(!sim_enabled && path.rfind("/api/v1/sim",0)==0)
         fail(422,"SIM_NOT_CONFIGURED","未启用仿真：启动后端时加 --sim-url");
-      else if(path.rfind("/api/v1/motion",0)==0 || path.rfind("/api/v1/control",0)==0 || path.rfind("/api/v1/cameras",0)==0 || path.rfind("/api/v1/chat",0)==0 || path=="/api/v1/emotions")
+      else if(path.rfind("/api/v1/motion",0)==0 || path.rfind("/api/v1/control",0)==0 || path.rfind("/api/v1/cameras",0)==0 || path=="/api/v1/emotions")
         fail(422,"NOT_IMPLEMENTED","此能力尚未实现，不会向机器人下发指令");
       else if((path=="/api/v1/tts" && req.method=="POST") || (path=="/api/v1/actions" && req.method=="POST") || (path=="/api/v1/audio" && (req.method=="GET" || req.method=="PUT"))) {
         if(!connected) fail(503,"NOT_CONNECTED","请先建立模拟连接");

@@ -12,7 +12,7 @@ bash scripts/run_web.sh
 ctest --test-dir backend-build --output-on-failure
 ```
 
-打开 http://localhost:8080/ui/experience.html 。默认数据库为 `~/intellibot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path` 指定配置。
+打开 http://localhost:8080/ui/experience.html 。默认数据库为 `~/intellibot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path` 指定配置。开发模式还支持 `--sim-url` 和 `--ai-url`，分别连接本机 MuJoCo 桥与 DeepSeek 服务。
 
 ## 接口
 
@@ -44,6 +44,8 @@ ctest --test-dir backend-build --output-on-failure
 
 `--legacy-dev` 保留原共享 mock / MuJoCo 接口，关闭认证，业务写请求仍需 Idempotency-Key。仿真启动脚本已使用该参数，仅供本机开发；普通网页模式禁止调用共享控制接口。
 
-当前无找回密码、邮箱验证、私人动作库或大模型接入。公网部署需HTTPS及部署配置；Windows构建未验证。
+开发模式提供 `POST /api/v1/chat`：请求包含 `message` 和最多 10 条 `history`，返回 `reply`、兼容单动作的 `action_id`、最多四项的 `actions`、`stop` 与模型名。API Key 只由本机 AI 服务从 `.env` 读取，不进入浏览器或 C++ 后端。
+
+当前无找回密码、邮箱验证或私人动作库。公网部署需HTTPS及部署配置。
 
 自动测试覆盖API、仿真适配、认证持久化与会话隔离。可选浏览器验收：安装Playwright及Chromium后，运行 `python backend/tests/browser_test.py <后端程序绝对路径>`。

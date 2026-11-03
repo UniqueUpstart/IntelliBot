@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# 一条命令起整条仿真链：MuJoCo 桥（默认 :8090）+ C++ 后端（默认 :8080）。
-# 退出时（Ctrl+C / 关终端）自动收掉桥进程，不会留下占端口的孤儿。
+# 一条命令启动 MuJoCo 桥（默认 :8090）、可选 AI 服务（默认 :8091）和后端（默认 :8080）。
+# 退出时（Ctrl+C / 关终端）自动收掉子进程，不会留下占端口的孤儿。
 #
 #   bash scripts/run_sim_stack.sh                 离屏渲染，网页里能看画面
 #   SIM_MODE=viewer bash scripts/run_sim_stack.sh 弹 MuJoCo 原生窗口，网页只给数值
-#   PORT=8081 SIM_PORT=8091 bash scripts/run_sim_stack.sh
+#   PORT=8081 SIM_PORT=8092 AI_PORT=8093 bash scripts/run_sim_stack.sh
 #   PYTHON=python3 bash scripts/run_sim_stack.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-8080}"
 SIM_PORT="${SIM_PORT:-8090}"
+AI_PORT="${AI_PORT:-8091}"
 SIM_MODE="${SIM_MODE:-headless}"
 PYTHON="${PYTHON:-}"
 if [ -z "$PYTHON" ] && [ -x "$ROOT/.venv/Scripts/python.exe" ]; then
@@ -39,7 +40,11 @@ fi
 echo "== 启动仿真桥 :$SIM_PORT（$SIM_MODE）"
 "$PYTHON" "$ROOT/sim/mujoco_bridge.py" --port "$SIM_PORT" "${BRIDGE_FLAGS[@]}" &
 BRIDGE_PID=$!
-cleanup() { kill "$BRIDGE_PID" 2>/dev/null || true; }
+AI_PID=""
+cleanup() {
+  kill "$BRIDGE_PID" 2>/dev/null || true
+  if [ -n "$AI_PID" ]; then kill "$AI_PID" 2>/dev/null || true; fi
+}
 trap cleanup EXIT INT TERM
 
 # 等桥真正可用再拉后端，避免后端一起来就报 SIM_UNAVAILABLE
@@ -57,7 +62,35 @@ if [ "${READY:-0}" != "1" ]; then
   echo "仿真桥 30 秒内没起来，放弃" >&2
   exit 1
 fi
+AI_ARGS=()
+if "$PYTHON" "$ROOT/ai/deepseek_bridge.py" --check-config >/dev/null 2>&1; then
+  if [ "$AI_PORT" = "$SIM_PORT" ] || [ "$AI_PORT" = "$PORT" ]; then
+    echo "AI_PORT 不能与 PORT 或 SIM_PORT 相同" >&2
+    exit 2
+  fi
+  echo "== 启动 DeepSeek 本地服务 :$AI_PORT"
+  "$PYTHON" "$ROOT/ai/deepseek_bridge.py" --port "$AI_PORT" &
+  AI_PID=$!
+  for _ in $(seq 1 20); do
+    if curl -fsS --max-time 1 "http://127.0.0.1:$AI_PORT/health" >/dev/null 2>&1; then
+      AI_READY=1; break
+    fi
+    if ! kill -0 "$AI_PID" 2>/dev/null; then break; fi
+    sleep 0.25
+  done
+  if [ "${AI_READY:-0}" = "1" ]; then
+    AI_ARGS=(--ai-url "http://127.0.0.1:$AI_PORT")
+  else
+    echo "== AI 服务启动失败，本次仅启动仿真与网页" >&2
+    kill "$AI_PID" 2>/dev/null || true
+    AI_PID=""
+  fi
+else
+  echo "== 未配置 .env，DeepSeek 对话保持关闭"
+fi
+
 echo "== 仿真桥就绪，启动后端 :$PORT"
 echo "== 打开 http://127.0.0.1:$PORT/ui/IntelliBot.html ，点顶栏 Advance 里的「连接仿真」"
 
-"$BIN" --legacy-dev --port "$PORT" --web-root "$ROOT/frontend" --sim-url "http://127.0.0.1:$SIM_PORT"
+"$BIN" --legacy-dev --port "$PORT" --web-root "$ROOT/frontend" \
+  --sim-url "http://127.0.0.1:$SIM_PORT" "${AI_ARGS[@]}"

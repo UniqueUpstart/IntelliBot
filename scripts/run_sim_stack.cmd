@@ -12,6 +12,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 for %%I in ("%~dp0..") do set "ROOT=%%~fI"
 if not defined PORT set "PORT=8080"
 if not defined SIM_PORT set "SIM_PORT=8090"
+if not defined AI_PORT set "AI_PORT=8091"
 if not defined SIM_MODE set "SIM_MODE=headless"
 
 rem Launched by double-click? cmd /c ""...\run_sim_stack.cmd" " -> keep the window open.
@@ -70,12 +71,37 @@ set "READY="
 for /l %%i in (1,1,30) do if not defined READY call :probe
 if not defined READY goto :bridge_timeout
 
+set "AI_ARG="
+%PYQ% "%ROOT%\ai\deepseek_bridge.py" --check-config >nul 2>&1
+if errorlevel 1 goto :ai_skipped
+if "%AI_PORT%"=="%PORT%" goto :ai_port_conflict
+if "%AI_PORT%"=="%SIM_PORT%" goto :ai_port_conflict
+echo [ai] starting DeepSeek local service :%AI_PORT%
+start "IntelliBot AI bridge" /min %PYQ% "%ROOT%\ai\deepseek_bridge.py" --port %AI_PORT%
+set "AI_READY="
+for /l %%i in (1,1,20) do if not defined AI_READY call :probe_ai
+if not defined AI_READY (
+  echo [ai] service did not start, continuing without DeepSeek.
+  "%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot AI bridge*" /T /F >nul 2>&1
+) else set "AI_ARG=--ai-url http://127.0.0.1:%AI_PORT%"
+goto :ai_done
+
+:ai_skipped
+echo [ai] .env is not configured, DeepSeek chat stays disabled.
+goto :ai_done
+
+:ai_port_conflict
+echo [ai] AI_PORT must differ from PORT and SIM_PORT.
+goto :fail
+
+:ai_done
 echo [sim] backend :%PORT%
 echo [sim] open http://127.0.0.1:%PORT%/ui/IntelliBot.html and press "连接仿真" in the Advance dialog
 echo.
-"%BIN%" --legacy-dev --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%"
+"%BIN%" --legacy-dev --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%" %AI_ARG%
 rem backend stopped: take the bridge window down with it
 "%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot sim bridge*" /T /F >nul 2>&1
+"%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot AI bridge*" /T /F >nul 2>&1
 echo [sim] backend stopped, bridge closed.
 goto :done
 
@@ -96,6 +122,12 @@ exit /b 0
 %PYQ% -c "import urllib.request as u;u.urlopen('http://127.0.0.1:%SIM_PORT%/health',timeout=1)" >nul 2>&1
 if not errorlevel 1 set "READY=1"
 if not defined READY "%SystemRoot%\System32\ping.exe" -n 2 127.0.0.1 >nul
+exit /b 0
+
+:probe_ai
+%PYQ% -c "import urllib.request as u;u.urlopen('http://127.0.0.1:%AI_PORT%/health',timeout=1)" >nul 2>&1
+if not errorlevel 1 set "AI_READY=1"
+if not defined AI_READY "%SystemRoot%\System32\ping.exe" -n 2 127.0.0.1 >nul
 exit /b 0
 
 rem ---------- errors ----------

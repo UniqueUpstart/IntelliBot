@@ -471,6 +471,7 @@ function init() {
     /* 外部（比如接上聊天状态）直接调这个换表情，底栏那排缩略图会跟着点亮 */
     setMood,
     playGesture(id) { return motionController ? motionController.play(id) : false; },
+    getGestureInfo(id) { return motionController ? motionController.getInfo(id) : null; },
     stopGesture() { if (motionController) motionController.stop(); },
     /* Settings 那组按钮调这里：切档 → 重算相机目标 → 交给 tick 推过去 */
     setFraming(key) {

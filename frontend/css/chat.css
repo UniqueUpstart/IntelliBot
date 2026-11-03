@@ -285,6 +285,104 @@
    一个管标准属性、一个管老实现，两条都写才在各家浏览器里都不出槽 */
 .composer__input::-webkit-scrollbar{width:0; height:0}
 .composer__input::placeholder{color:var(--text-muted)}
+.composer__input{padding-right:72px}
+.assistant-chat{
+  position:absolute;
+  left:calc(100% + 14px);
+  bottom:0;
+  width:clamp(280px,25vw,360px);
+  max-height:min(46vh,360px);
+  padding:10px;
+  overflow:hidden;
+  border-radius:18px;
+  background:var(--card-solid);
+  box-shadow:0 8px 30px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.5));
+}
+.assistant-chat[hidden]{display:none}
+.assistant-chat__toolbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:28px;
+  padding:0 2px 8px;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+}
+.assistant-chat__status{
+  margin-right:auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--text-secondary);
+}
+.assistant-chat__tool{
+  appearance:none;
+  border:0;
+  padding:4px 7px;
+  border-radius:999px;
+  background:var(--bg);
+  color:var(--text-secondary);
+  font:inherit;
+  cursor:pointer;
+}
+.assistant-chat__tool:hover,.assistant-chat__tool:focus-visible{
+  background:var(--theme);
+  color:#fff;
+  outline:none;
+}
+.assistant-chat__log{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:calc(min(46vh,360px) - 20px);
+  overflow:auto;
+  scrollbar-width:none;
+}
+.assistant-chat__log::-webkit-scrollbar{width:0;height:0}
+.assistant-chat__message{
+  align-self:flex-start;
+  max-width:88%;
+  padding:9px 12px;
+  border-radius:14px 14px 14px 4px;
+  background:var(--bg);
+  color:var(--text-secondary);
+  font-size:var(--fs-14);
+  line-height:1.45;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.assistant-chat__message--user{
+  align-self:flex-end;
+  border-radius:14px 14px 4px 14px;
+  background:var(--theme);
+  color:#fff;
+}
+.assistant-chat__message--pending{color:var(--text-muted)}
+.assistant-chat__message--error{color:#b84343}
+.assistant-chat__note{
+  align-self:center;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  text-align:center;
+}
+.composer[aria-busy="true"] .composer__input{opacity:.68;cursor:wait}
+.composer__send{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  height:36px;
+  padding:0 14px;
+  border:0;
+  border-radius:999px;
+  background:var(--theme);
+  color:#fff;
+  font-family:inherit;
+  font-weight:var(--fw);
+  cursor:pointer;
+}
+.composer__send:hover,.composer__send:focus-visible{filter:brightness(.94);outline:none}
+.composer__send:disabled{opacity:.45;cursor:wait}
 /* 悬停：左栏输入框是表单字段、光标落在上面就是要打字，所以没做悬停；
    这枚是页面上唯一常驻的对话入口，悬停得给出「可以点」的反馈，
    于是把柔光提亮一档、同时浮出一道很淡的主题色描边，
@@ -307,4 +405,15 @@
 @media (max-width:640px){
   .composer{bottom:calc(12px + 64px + 12px)}
   .composer__input{width:calc(100vw - 24px)}
+}
+
+/* 横向空间不足时退回输入框上方，但限制高度，避免盖住大半个机器人。 */
+@media (max-width:1000px){
+  .assistant-chat{
+    left:0;
+    bottom:calc(100% + 10px);
+    width:100%;
+    max-height:min(26vh,180px);
+  }
+  .assistant-chat__log{max-height:calc(min(26vh,180px) - 20px)}
 }

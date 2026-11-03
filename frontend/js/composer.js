@@ -14,7 +14,8 @@
   var field = wrap.querySelector('.composer__input');
   if (!field) return;
 
-  var PAD_X = 16;
+  var PAD_LEFT = 16;
+  var PAD_RIGHT = 72;
   var PAD_Y = 14;
   var LINE = 20;
   var MIN_H = PAD_Y * 2 + LINE;
@@ -41,7 +42,7 @@
 
     /* 空值时镜子没有内容，宽度自然落在 base，不会因为 placeholder 长而提前撑开 */
     mirror.textContent = field.value;
-    var need = mirror.getBoundingClientRect().width + PAD_X * 2 + 1;
+    var need = mirror.getBoundingClientRect().width + PAD_LEFT + PAD_RIGHT + 1;
     field.style.width = Math.min(Math.max(need, lim.base), lim.max) + 'px';
 
     /* 高度先放回 auto 量内容高度，再夹在 1–4 行之间；

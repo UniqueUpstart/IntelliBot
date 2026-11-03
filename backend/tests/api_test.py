@@ -23,6 +23,9 @@ try:
     health=call('GET','/health')[1]['data']
     assert health['service']=='intellibot_backend' and health['mode']=='mock'
     assert 'ros2_implemented' not in health
+    assert call('GET','/capabilities')[1]['data']['chat'] is False
+    chat=call('POST','/chat',{'message':'你好'})
+    assert chat[0]==503 and chat[1]['error']['code']=='AI_NOT_CONFIGURED'
     assert call('POST','/tts',{'text':'test'})[0]==503
     assert call('POST','/connections',{'mode':'ros2'})[0]==422 # 硬件连接已移除
     assert call('GET','/robots')[0]==404 # 设备档案接口随真机连接一并移除
@@ -56,7 +59,7 @@ try:
     assert call('DELETE','/connection')[0]==200
     assert call('GET','/status')[1]['data']['battery'] is None
     assert call('POST','/actions',{'action_id':'q1.wave'})[0]==503
-    print('PASS: API lifecycle, mock labeling, validation, idempotency, logs, simulation-only guards')
+    print('PASS: API lifecycle, optional AI, mock labeling, validation, idempotency, logs, simulation-only guards')
 finally:
     process.terminate()
     try:process.wait(timeout=5)

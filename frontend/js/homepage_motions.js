@@ -124,6 +124,10 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
       return true;
     },
     stop,
+    getInfo(id) {
+      const motion = MOTION_BY_ID[id];
+      return motion ? {id: motion.id, label: motion.label, duration: motion.duration} : null;
+    },
     get activeId() { return active?.id ?? null; },
   };
 }
