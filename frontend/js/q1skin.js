@@ -122,6 +122,81 @@ function init() {
   let current = 'builtin:q1';
   let shown = false;
   let active = null;
+  let naiwaWanted = false;
+  let waitingForOriginal = false;
+  const originalMaterialColors = new Map();
+
+  const NAIWA_MATERIALS = new Map([
+    ['head', 0xf5b400],
+    ['upperarm', 0xf5b400],
+    ['lowerarm', 0xf5b400],
+    ['upperleg', 0xf5b400],
+    ['lowerleg', 0xf5b400],
+    ['hip', 0xf5b400],
+    ['white', 0x5b3a20],
+    ['white.001', 0xf5b400],
+    ['fabric', 0xffd66b],
+    ['chest', 0xf8e8c8],
+    ['black', 0x5b3a20],
+    ['black.001', 0x5b3a20],
+    ['rubber', 0x76502d],
+    ['face', 0x1d1711],
+  ]);
+
+  function setOriginalMaterialTheme(enabled) {
+    naiwaWanted = enabled;
+    const robot = window.robot3d;
+    const model = robot && robot.model;
+    if (!robot || !robot.ready || !model) {
+      if (enabled && !waitingForOriginal) {
+        waitingForOriginal = true;
+        window.addEventListener('robot-ready', () => {
+          waitingForOriginal = false;
+          setOriginalMaterialTheme(naiwaWanted);
+        }, { once: true });
+      }
+      return;
+    }
+
+    if (!enabled) {
+      originalMaterialColors.forEach((state, material) => {
+        if (state.color && material.color) material.color.copy(state.color);
+        if (state.emissive && material.emissive) material.emissive.copy(state.emissive);
+        if (Number.isFinite(state.emissiveIntensity)) {
+          material.emissiveIntensity = state.emissiveIntensity;
+        }
+        material.needsUpdate = true;
+      });
+      originalMaterialColors.clear();
+      return;
+    }
+
+    const seen = new Set();
+    model.traverse((node) => {
+      if (!node.isMesh) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material) => {
+        if (!material || seen.has(material.uuid)) return;
+        seen.add(material.uuid);
+        if (!originalMaterialColors.has(material)) {
+          originalMaterialColors.set(material, {
+            color: material.color ? material.color.clone() : null,
+            emissive: material.emissive ? material.emissive.clone() : null,
+            emissiveIntensity: material.emissiveIntensity,
+          });
+        }
+        const color = NAIWA_MATERIALS.get(material.name);
+        if (color !== undefined && material.color) material.color.setHex(color);
+        if (material.name === 'face' && material.emissive) {
+          material.emissive.setHex(0xb8ff8f);
+          material.emissiveIntensity = 1.05;
+        } else if (material.name === 'emissive' && material.emissive) {
+          material.emissive.setHex(0x78dc5a);
+        }
+        material.needsUpdate = true;
+      });
+    });
+  }
 
   function setNote(text) {
     note.hidden = !text;
@@ -777,11 +852,20 @@ function init() {
     active = null;
     removeBtn.hidden = !id.startsWith('file:');
     if (id === 'builtin:q1') {
+      setOriginalMaterialTheme(false);
       setFigureVisible(false);
       showStage(false);
       setNote('');
       return;
     }
+    if (id === 'builtin:naiwa') {
+      setFigureVisible(false);
+      showStage(false);
+      setOriginalMaterialTheme(true);
+      setNote('已应用奶蛙皮肤：黄色外壳、奶白腹部和棕黑手脚。');
+      return;
+    }
+    setOriginalMaterialTheme(false);
     showStage(true);
     if (id === 'builtin:xbot') {
       setFigureVisible(false);
