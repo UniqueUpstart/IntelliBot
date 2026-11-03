@@ -250,6 +250,21 @@ function init() {
     pick.appendChild(option);
   }
 
+  async function useBundled(id, url, name) {
+    if (!loaded.has(id)) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('找不到 ' + name);
+      const model = await loadCharacter(await response.arrayBuffer(), name);
+      const mounted = mountImported(model);
+      const bound = bindRetarget(mounted, proc);
+      bound.name = name;
+      loaded.set(id, bound);
+      scene.add(bound.object);
+      bound.object.visible = false;
+    }
+    return loaded.get(id);
+  }
+
   async function useImport(id) {
     if (!loaded.has(id)) {
       const row = await dbGet(id);
@@ -278,6 +293,20 @@ function init() {
       return;
     }
     showStage(true);
+    if (id === 'builtin:xbot') {
+      setFigureVisible(false);
+      setNote('正在处理…');
+      try {
+        active = await useBundled(id, 'model/xbot.fbx', 'X Bot.fbx');
+        active.object.visible = true;
+        const n = active.links.length;
+        setNote(n >= 8 ? '' : '没认出完整人体骨架，模型保持导入姿势');
+      } catch (err) {
+        setFigureVisible(true);
+        setNote(err.message);
+      }
+      return;
+    }
     if (id === 'builtin:figure') {
       setFigureVisible(true);
       setNote('');
@@ -530,6 +559,7 @@ function buildBar() {
   bar.innerHTML = [
     '<select data-skin-pick aria-label="机器人皮肤">',
     '<option value="builtin:q1">原模型</option>',
+    '<option value="builtin:xbot">X Bot</option>',
     '<option value="builtin:figure">示意人形</option>',
     '</select>',
     '<label class="skinbar__file">导入<input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden></label>',
