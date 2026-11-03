@@ -341,3 +341,88 @@
   color:var(--text-secondary);
 }
 
+
+/* ── Preference：模型一块 ──────────────────────────────────────────
+   这一页原来只有标题区。原来浮在页面左侧的 .skinbar（下拉 + 导入 + 删除）
+   搬进来之后就是一个普通分组：4 的内边距、16 的圆角，里面一行一个 40 高的条目，
+   底下一条 14 号的说明给导入状态用。
+   分组宽定 300：弹窗宽近 900，下拉铺满一条会显得孤零零；
+   这个量级是菜单该有的宽度，右边留白，以后要并排放第二块也有地方。
+   分组底用 --shadow 那一档颜色压 4.5%：浅色下是一层很淡的灰（比面板沉一档），
+   深色下自然变成更深的底，不用为两种主题各写一份。
+   行条目的 hover 只淡淡抬一层底，不用顶栏胶囊那套「涨满主题色 + 字反白」——
+   这里一行是一个设置项，不是提交动作，压过旁边 Settings 的选项就重了 */
+.pref{
+  display:flex; flex-direction:column;
+  flex:1 1 auto; min-height:0;
+  gap:16px;
+  overflow-y:auto; overflow-x:clip;
+  scrollbar-width:none;              /* 与 .doc / .set__main 一致：不显示滚动条 */
+}
+.pref[hidden]{display:none}          /* 类选择器会盖掉 [hidden] 的 UA display:none */
+.pref::-webkit-scrollbar{width:0; height:0}
+.pref__item{display:flex; flex-direction:column; gap:8px}
+.pref__name{
+  font-size:var(--fs-16); line-height:1.2; letter-spacing:.2px;
+  color:var(--text-secondary);
+}
+.pref__group{
+  display:flex; flex-direction:column; gap:2px;
+  width:min(300px, 100%);
+  padding:4px;
+  border-radius:16px;
+  background:rgba(var(--shadow), .045);
+}
+
+/* 下拉那一行：原生 select 去掉外观，箭头自己画一个。
+   右内边距留 40 给箭头，字够长时不会顶到它；箭头不接指针，点哪儿都是开下拉 */
+.pref__pick{position:relative}
+.pref__pick select{
+  appearance:none; -webkit-appearance:none;
+  width:100%; height:40px;
+  padding:0 40px 0 12px;
+  border:0; border-radius:12px;
+  background:transparent; color:var(--text-primary);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-16);
+  line-height:1; letter-spacing:.2px;
+  cursor:pointer;
+  transition:background .12s linear;
+}
+.pref__pick select:hover{background:rgba(var(--shadow), .06)}
+.pref__pick select:focus-visible{outline:1px solid var(--theme); outline-offset:-1px}
+.pref__pick::after{
+  content:''; position:absolute; top:50%; right:15px;
+  width:7px; height:7px;
+  border-right:1.5px solid var(--text-reduced);
+  border-bottom:1.5px solid var(--text-reduced);
+  transform:translateY(-70%) rotate(45deg);
+  pointer-events:none;
+}
+
+/* 导入 / 删除两行。删除平时 hidden，选中导入进来的模型才由脚本放出来 */
+.pref__row{
+  display:flex; align-items:center;
+  height:40px; padding:0 12px; margin:0;
+  border:0; border-radius:12px; background:transparent;
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-16);
+  line-height:1; letter-spacing:.2px; text-align:left;
+  color:var(--text-primary);
+  cursor:pointer;
+  transition:background .12s linear;
+}
+.pref__row:hover{background:rgba(var(--shadow), .06)}
+.pref__row[hidden]{display:none}
+
+/* 导入过程与骨架识别结果的提示：一行 14 号，长句自动折行 */
+.pref__note{
+  padding:6px 12px 4px;
+  font-size:var(--fs-14); line-height:normal; letter-spacing:.2px;
+  color:var(--text-reduced);
+  white-space:normal;
+}
+.pref__note[hidden]{display:none}
+
+@media (max-width:700px){
+  /* 窄屏上弹窗本身已经收窄，分组跟着占满，不再留那截右边白 */
+  .pref__group{width:100%}
+}

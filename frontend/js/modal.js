@@ -209,6 +209,11 @@
     Array.prototype.forEach.call(panel.querySelectorAll('[data-privacy-only]'), function (el) {
       el.hidden = name !== 'Privacy';
     });
+    /* Preference 目前只有标题区：这块照弹窗名整块切，
+       以后往 .pref 里添内容时（样式已备好），切走再回来也不丢状态 */
+    Array.prototype.forEach.call(panel.querySelectorAll('[data-preference-only]'), function (el) {
+      el.hidden = name !== 'Preference';
+    });
   }
 
   /* cubic-bezier(x1,y1,x2,y2) → x 到 y 的查表函数；y 允许越出 0~1（过冲就靠它） */
@@ -252,6 +257,18 @@
   var PEAK_X      = 1.02;   /* 横向拉伸极值，与栏体同值：1 → 1.02 → 1 */
   var PEAK_Y      = 1.02;   /* 纵向同值，等比鼓一下 */
   var SQUASH_EASE = 'elastic.out(1.1, 0.8)';
+
+  /* 这一套节拍递给登录 / 注册面板用（js/auth.js 的 popIn / popOut）：
+     那里没有胶囊作为起点，但卡片弹出来的挤压形变、缓动与时长要跟弹窗一致，
+     数值整包递出去，不另抄一份 —— 以后调这里，登录面板跟着变 */
+  window.intellibotPopTiming = {
+    open: OPEN_DUR, close: CLOSE_DUR, up: UP_DUR, back: BACK_DUR,
+    out: PANEL_OUT, in: PANEL_IN,
+    squashX: SQUASH_X, squashY: SQUASH_Y,
+    closeX: CLOSE_X, closeY: CLOSE_Y,
+    peakX: PEAK_X, peakY: PEAK_Y,
+    squashEase: SQUASH_EASE
+  };
 
   /* 阴影通道：值仍与栏体 pop() 一致（柔光 16 → 32、透明度 .10 → .20），
      只是改成「展开态那层 0 → 1」，时长共用 UP_DUR / BACK_DUR */

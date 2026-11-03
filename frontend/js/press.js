@@ -8,7 +8,7 @@
 
   /* 仿真面板里的胶囊（手臂/腰/腿/联动、姿态/动作/步态、右侧工具按钮）、
      弹窗右上角的连接按钮、左栏编辑页的类型三选与提交钮、
-     右下视角条里那两枚圆钮，以及同一簇的眼睛与复位，
+     右下视角条里那三枚圆钮，以及同一簇的眼睛与复位，
      同样是「底片 + --press」结构，一并接管 */
   var SEL = '.pill, .vt-round, .view-adjust-trigger, .pose-reset-trigger, .item, .seg__opt,' +
             '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn,' +

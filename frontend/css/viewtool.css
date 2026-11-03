@@ -1,42 +1,5 @@
 /* 机器人视角与关节的指针反馈。
    拖动关节转动那一节，拖动空白处环绕视角。 */
-.pose-reset-trigger{
-  position:fixed;
-  z-index:21;
-  top:calc(var(--top-h) + var(--edge) + 26px);
-  /* 回到右侧栏正上方的中线；换皮浮条收进左栏后，这里不再需要为它让位 */
-  right:calc(var(--edge) + (var(--rail-w) - 48px) / 2);
-  width:48px;
-  height:48px;
-  display:grid;
-  place-items:center;
-  padding:0;
-  border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
-  border-radius:50%;
-  background:var(--panel);
-  color:var(--text-secondary);
-  box-shadow:0 8px 24px rgba(var(--shadow),.12);
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-  cursor:pointer;
-  font-family:var(--font);
-  font-size:var(--fs-14);
-  font-weight:var(--fw);
-  letter-spacing:.02em;
-  line-height:1;
-  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease;
-}
-.pose-reset-trigger:hover,
-.pose-reset-trigger:active{
-  background:var(--theme);
-  border-color:var(--theme);
-  color:var(--text-invert);
-}
-.pose-reset-trigger:active{transform:scale(.95)}
-.pose-reset-trigger:focus-visible{
-  outline:2px solid var(--theme-dark);
-  outline-offset:3px;
-}
 
 /* ============================================================
    顶栏：视角调整
@@ -45,7 +8,7 @@
    （js/magnet.js 的配置按 .group 抓，这里不用另写一行）。
    托盘里两枚按钮都是 40（--pill-h），与导航胶囊同高，也正好是 48 减两侧 4。
    左端是视角条，右端是复位 —— 复位在眼睛右边，两者的缝就是组内那 8。
-   视角条收起时就是一枚 40 的圆；点开后右端钉住，只有宽度从 40 长到 136，
+   视角条收起时就是一枚 40 的圆；点开后右端钉住，只有宽度从 40 长到 184，
    高度一直是 40，圆角 20 正好是半高，于是那个圆横着长成一条胶囊。
    展开后里面是三个同直径的圆：两枚视角钮（.vt-round）加右端那枚眼睛，
    圆心同高、彼此间隔 8，两边不留边距 —— 圆钮的四条弧正好与胶囊两端的
@@ -56,6 +19,7 @@
    形变与账号胶囊共用同一套：--sx/--sy 由 js/panels.js 补间，宽度过渡
    和栏体 80 → 601、账号 48 → 246 同一条 0.3s 曲线。
    ============================================================ */
+.group--view{justify-content:flex-end}
 .viewdock{
   position:relative;
   flex:0 0 auto;
@@ -111,11 +75,11 @@
 /* 只留键盘可达性的描边；鼠标的反馈全交给下面那层填色 */
 .view-adjust-trigger:focus-visible{outline:2px solid var(--theme-dark); outline-offset:3px}
 
-/* 面板内容：两枚圆钮并排，间隔 8，圆心与右端那枚眼睛落在同一条水平线上，
-   三枚同直径（40），圆心等距。
+/* 面板内容：三枚圆钮并排，间隔 8，圆心与右端那枚眼睛落在同一条水平线上，
+   四枚同直径（40），圆心等距。
    这一层只干两件事：裁剪与淡入淡出。圆头用 overflow:hidden + 999 圆角，
    与胶囊同一曲率 —— 收起时盒子只有 40 见方，露出的就是一个圆。
-   两枚钮自己不在这层排队，而是贴在 .vt-row 上、按 right 48 挂住
+   三枚钮自己不在这层排队，而是贴在 .vt-row 上、按 right 48 挂住
    （48 = 眼睛 40 + 间隔 8）：它们的绝对位置从第一帧起就是展开后的位置，
    盒子向左长多少、就从圆头里露出多少，像被抽出来；若跟着盒子左沿排，
    它们会被一起往左推，成了「被推着走」 */
@@ -139,8 +103,8 @@
   display:flex; align-items:center; gap:8px;
 }
 
-/* 三枚圆钮：水平四向、俯仰三向、复位，直径取 --pill-h（40），正好填满托盘里
-   这一格的高度（48 减上下各 4）。
+/* 三枚圆钮：水平四向、俯仰三向、复位视角，直径取 --pill-h（40），
+   正好填满托盘里这一格的高度（48 减上下各 4）。
    底色的涨开与按下压弹沿用顶栏 .pill 那一套：静止时无底色、
    无描边，线条取 --text-reduced；hover 时 ::before 从圆心涨满整圆、图标反白；
    按下由 js/press.js 逐帧写 --press，底片按 1 - --press × --press-k
@@ -201,12 +165,44 @@
   stroke-linejoin:round;
 }
 
-/* 填色统一走两枚圆钮共用的一层：底色不是淡入，是从圆心涨满整个圆，
+/* 复位：托盘右端的圆钮，在眼睛右边，与视角条、导航胶囊同高（40）。
+   底片交给托盘，自己不铺底、不描边、不投影，静止时只有一枚回转箭头 ——
+   图标 24 见方、1.8 描边，与眼睛那枚同一档，语义同「恢复默认」。
+   它在 DOM 里排在视角条之后，于是胶囊往左长的时候它不动，
+   只有胶囊自己变宽，右端那一格始终是它 */
+.pose-reset-trigger{
+  position:relative;
+  flex:0 0 auto;
+  width:var(--pill-h); height:var(--pill-h);
+  appearance:none; -webkit-appearance:none;
+  display:grid; place-items:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text-reduced);
+  line-height:1;
+  cursor:pointer;
+  isolation:isolate;          /* 同视角眼睛：填色层停在按钮内部 */
+  transition:color .1s cubic-bezier(.7,0,.84,.16);
+}
+.pose-reset-trigger svg{
+  width:24px; height:24px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.pose-reset-trigger:focus-visible{outline:2px solid var(--theme-dark); outline-offset:3px}
+
+/* 填色统一走圆钮共用的一层：底色不是淡入，是从圆心涨满整个圆，
    抬手再缩回去；按下时 --press 由 js/press.js 逐帧写，底片按
-   1 - --press × --press-k 再压一格，与视角条里那两枚完全同一套。
+   1 - --press × --press-k 再压一格，与视角条里那三枚完全同一套。
    层 z-index:-1 藏在按钮内部（按钮上有 isolation:isolate），
    所以只盖住自己的底、不越到面板上，图标始终在它上面 */
-.view-adjust-trigger::before{
+.view-adjust-trigger::before,
+.pose-reset-trigger::before{
   content:''; position:absolute; inset:0;
   z-index:-1;
   border-radius:inherit;
@@ -218,18 +214,21 @@
   transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
 }
 /* hover 的换色曲线单独给：进场 (.16,.84,.3,1)、出场 (.7,0,.84,.16)。
-   三枚（眼睛、复位、视角条里那两枚）走同一条，进出一致 */
-.view-adjust-trigger:hover{
+   眼睛、复位和视角条里那三枚走同一条，进出一致 */
+.view-adjust-trigger:hover,
+.pose-reset-trigger:hover{
   color:var(--text-invert);
   transition:color .1s cubic-bezier(.16,.84,.3,1);
 }
-.view-adjust-trigger:hover::before{
+.view-adjust-trigger:hover::before,
+.pose-reset-trigger:hover::before{
   scale:1;
   transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
 }
 /* 按下期间关掉 transform 过渡，否则逐帧写入的 --press 会被再平滑一次，
    压弹变拖沓；scale 那条留着，边按边涨的填色不会中途冻住 */
-.view-adjust-trigger.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
+.view-adjust-trigger.is-press::before,
+.pose-reset-trigger.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
 
 /* 视角控制开着时这层是整屏接收指针的（舞台铺满视口，见 robot.css 的 .robofx），
    空白处一律给普通箭头：大片背景上挂着抓取手型，会让人以为随便一处都能拖，
@@ -249,7 +248,6 @@
 
 @media (max-width:640px){
   .group--view{display:none}
-  .pose-reset-trigger{right:var(--edge)}
 }
 
 @media (prefers-reduced-motion:reduce){

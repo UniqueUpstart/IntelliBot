@@ -807,8 +807,10 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     /* 减弱动态效果下循环本来就是「按需点火」的，每帧都是有事要画 */
     if (REDUCED) return true;
     /* 弹窗开着时面板压在正中，机器人只剩两侧一点，30fps 足够；
-       省下来的这一半帧预算留给弹窗那边的缩放与重栅格 */
-    if (document.body.classList.contains('is-modal')) return false;
+       省下来的这一半帧预算留给弹窗那边的缩放与重栅格。
+       登录页盖住整片舞台，背后还要每帧重新模糊一次，同样降到低帧率 */
+    if (document.body.classList.contains('is-modal') ||
+        document.body.classList.contains('is-auth')) return false;
     if (ritual || cardDrag) return true;
     if (motionController && motionController.activeId) return true;
     if (now - activeAt < IDLE_AFTER) return true;

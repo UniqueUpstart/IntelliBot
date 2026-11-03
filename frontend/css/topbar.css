@@ -176,6 +176,12 @@
 .user.is-open .user__surface{
   height:calc(246px + var(--pill-fs) + var(--tray));
 }
+/* 登录后菜单多一行「退出登录」：再加 40 与组内那一条 4 的缝。
+   .is-signed-in 由 js/auth.js 写，未登录时那枚胶囊也藏着，
+   两种状态下高度各算各的，收起时不会露出半行 */
+.user.is-signed-in.is-open .user__surface{
+  height:calc(290px + var(--pill-fs) + var(--tray));
+}
 
 /* 头像是固定 80 的盒子，收起态只靠 transform 缩到 40 再挪到左上角：
    一个属性一条曲线，位置和大小不会各走各的；也不用碰 left/top/width/height，
@@ -204,6 +210,16 @@
 /* 展开：等比长到 80，水平居中，上边距 8；此时头像自己接点击 */
 .user.is-open .avatar{transform:none; pointer-events:auto; cursor:pointer}
 .avatar:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+
+/* 未登录：头像留空 —— 只剩底色那颗圆，没有脸，点了也不开选择条
+   （js/avatar.js 把这一手改成开登录页）。名字那一格换成入口「注册/登录」，
+   压过 trigger（z 4 > 2）自己接点击。
+   位置与行高不动，收起 / 展开两种状态的高度算式都不受影响 */
+.user.is-guest .avatar{background-image:none; cursor:default}
+.user.is-guest.is-open .avatar{cursor:default}
+/* 未登录：名字那格是入口，接指针、压过 trigger；字色与登录后的用户名一致，
+   都取顶栏胶囊那档 --text-reduced，指针上来也不换色 */
+.user.is-guest .user__name{pointer-events:auto; cursor:pointer; z-index:4}
 
 /* 头像选择区：贴着头像下沿 8（头像 8–88，这里 96 起、高 40）。
    收起态不只淡到 0，还用 visibility 从 Tab 序列里摘掉 ——
@@ -263,12 +279,18 @@
   top:calc((var(--top-h) - var(--pill-fs)) / 2);
   left:calc(100% - 24px); transform:translateX(-100%);   /* 右端 = 内边距 4 + 半个头像 20 */
   max-width:calc(100% - 88px);
-  font-size:var(--pill-fs); line-height:var(--pill-fs); color:var(--text-primary);
+  font-size:var(--pill-fs); line-height:var(--pill-fs); color:var(--text-reduced);
+  /* 行高按字号给，行盒正好 18；可 g / p / y 的降部本来就画在行盒底下，
+     而这里为了出省略号挂了 overflow:hidden，那一截会被压在盒外削平。
+     上下各留 4 的 padding 当裁切余量，再用等量负 margin 把盒子拽回原位：
+     文字本身一个像素都不动，只是裁切边界放宽到字形之外 */
+  padding:4px 0; margin:-4px 0;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   text-align:right;
   transition:top var(--dur) var(--ease), left var(--dur) var(--ease),
              transform var(--dur) var(--ease), max-width var(--dur) var(--ease),
-             font-size var(--dur) var(--ease), line-height var(--dur) var(--ease);
+             font-size var(--dur) var(--ease), line-height var(--dur) var(--ease),
+             color .16s var(--ease);
 }
 /* 展开：名字滑到头像正下方，间距 4；字号上调一档。
    打开头像选择区时再往下让 --tray，给那张 40 高的选择条腾位置 */
@@ -294,6 +316,9 @@
 /* 菜单项沿用顶栏胶囊的全部样式，只把尺寸改成撑满、高 48；
    未选中时文字左对齐（顶栏胶囊为居中），hover 右移箭头宽度 + 16 */
 .user__menu .pill{width:100%; height:40px; flex:0 0 40px}
+/* 退出登录那一项在未登录时带 hidden；.pill 自己写了 display:block，
+   会把 UA 的 [hidden] 盖掉，这里补一条显式的 */
+.user__menu .pill[hidden]{display:none}
 .user__menu .pill .pill__label{left:12px; transform:translateY(-50%)}
 .user__menu .pill:hover .pill__label{transform:translate(calc(1em + 16px), -50%)}
 .user__menu .pill.is-active:hover .pill__label{left:12px; transform:translateY(-50%)}
@@ -328,15 +353,22 @@
 .pill.is-swap-out .pill__label{animation:pill-swap-out .11s var(--ease) both}
 .pill.is-swap-in .pill__label{animation:pill-swap-in .16s var(--ease) both}
 
-/* 整块触发区：覆盖收起态的 240×48，键盘可达 */
+/* 整块触发区：覆盖收起态的 240×48，键盘可达。
+   它是一个没有自己形状的透明矩形（圆角在 .user__surface 上），
+   所以浏览器默认那圈焦点环会沿方角画出来，胶囊上凭空多一个黑框 ——
+   这里把 UA 环去掉：键盘落到这一站时，反馈就是胶囊展开成账号面板，
+   和点它一样明确；头像与菜单里的胶囊仍各有自己的主题色焦点环 */
 .user__trigger{
   appearance:none; -webkit-appearance:none;
   position:absolute; top:0; left:0;
   width:100%; height:var(--top-h);
   padding:0; border:0; background:none;
+  border-radius:calc(var(--top-h) / 2);
   cursor:pointer;
   z-index:2;
 }
+.user__trigger:focus,
+.user__trigger:focus-visible{outline:none}
 
 /* ============================================================
    Stage（主内容区，留空）

@@ -107,10 +107,14 @@ int main(int argc, char** argv) {
     } catch (...) { std::cerr << "--sim-url 端口非法\n"; return 2; }
     if (sim_port < 1 || sim_port > 65535) { std::cerr << "--sim-url 端口越界\n"; return 2; }
   }
+  /* 账号系统两种模式都挂：公开体验模式由它接管全部 /api/v1/*；
+     --legacy-dev 下只借它做 /api/v1/auth/*，仿真与动作接口仍旧走下面那一套 */
   std::unique_ptr<intellibot::WebSystem> web;
-  if (!legacy_dev) {
-    try { web=std::make_unique<intellibot::WebSystem>(db_path); }
-    catch(const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
+  try { web=std::make_unique<intellibot::WebSystem>(db_path, legacy_dev); }
+  catch(const std::exception& e) {
+    if (!legacy_dev) { std::cerr << e.what() << std::endl; return 2; }
+    /* 开发模式下账号库打不开不该拦住仿真，页面顶多少一个登录入口 */
+    std::cerr << "账号系统未启用：" << e.what() << std::endl;
   }
   std::unique_ptr<intellibot::AiProxy> ai;
   if (!ai_url.empty()) {

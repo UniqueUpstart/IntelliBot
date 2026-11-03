@@ -19,6 +19,9 @@ const TIMELINE_REST_POSES = new Map([
 ]);
 
 const skinStyle = document.createElement('style');
+/* 模型那条工具条（下拉 + 导入 + 删除）已经搬进 Preference 弹窗，
+   样式跟着落到 css/modal.css 的 .pref 一组里；
+   这里只剩导入模型的画布叠层，它挂在主页机器人上，与弹窗无关 */
 skinStyle.textContent = [
   '.robofx.is-skinned{visibility:hidden}',
   '.skinfx{position:absolute;inset:0;z-index:2;pointer-events:none}',
@@ -668,8 +671,9 @@ function init() {
   }
 
   function onPointerDown(event) {
-    if (!shown || (event.button !== 0 && event.button !== 1)) return;
-    const joint = event.button === 0 ? jointAt(event.clientX, event.clientY) : null;
+    /* 左键才拖：中键留给浏览器的滚动轮盘，不参与环绕角度 */
+    if (!shown || event.button !== 0) return;
+    const joint = jointAt(event.clientX, event.clientY);
     if (joint) {
       pointerDrag = {
         kind: 'joint-pending',

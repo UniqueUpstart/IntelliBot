@@ -83,7 +83,8 @@ struct WebSystem::Impl {
   };
   std::unordered_map<std::string, Bucket> limits;
   std::string dummy_hash;
-  Impl(const std::string& path) {
+  bool share_dev_api = false;
+  Impl(const std::string& path, bool share) : share_dev_api(share) {
     if (sodium_init() < 0) throw std::runtime_error("libsodium initialization failed");
     char h[crypto_pwhash_STRBYTES];
     if (crypto_pwhash_str_alg(h, "dummy-password", 14, crypto_pwhash_OPSLIMIT_INTERACTIVE,
@@ -252,6 +253,9 @@ struct WebSystem::Impl {
                {"user", {{"id", uid}, {"username", username}, {"display_name", name}}}});
         return true;
       }
+      /* 开发模式下这里只管账号：其余 /api/v1/* 是共享仿真那一套，
+         交回 main.cpp 继续分发，否则页面上的动作与仿真接口会被这里拦成 403 */
+      if (share_dev_api && p.rfind("/api/v1/auth/", 0) != 0) return false;
       const auto auth = req.get_header_value("Authorization");
       std::string token = auth.rfind("Bearer ", 0) == 0 ? auth.substr(7) : "";
       if (!std::regex_match(token, std::regex("[a-f0-9]{64}"))) {
@@ -376,7 +380,8 @@ struct WebSystem::Impl {
     }
   }
 };
-WebSystem::WebSystem(const std::string& path) : impl_(new Impl(path)) {}
+WebSystem::WebSystem(const std::string& path, bool share_dev_api)
+    : impl_(new Impl(path, share_dev_api)) {}
 WebSystem::~WebSystem() = default;
 bool WebSystem::handle(const httplib::Request& req, httplib::Response& res) {
   return impl_->handle(req, res);

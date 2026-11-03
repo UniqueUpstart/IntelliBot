@@ -83,11 +83,12 @@
   }
 
   function aim(t) {
-    /* 弹窗开着时整片停手：光标刚刚就停在顶栏胶囊上，而 .group / .user__surface
+    /* 弹窗与登录页开着时整片停手：光标刚刚就停在顶栏胶囊上，而 .group / .user__surface
        背后挂着 backdrop-filter，那一层每倾斜一点，浏览器都要把它背后的画布
        重新模糊一次 —— 弹窗弹出那几帧的卡顿基本来自这里。
-       弹窗盖在最上面，托盘也没必要继续跟着指针翻 */
-    if (document.body.classList.contains('is-modal')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
+       两者盖在最上面，托盘也没必要继续跟着指针翻 */
+    if (document.body.classList.contains('is-modal') ||
+        document.body.classList.contains('is-auth')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
 
     var b = boxOf(t.el);
     if (!b.width || !b.height) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }

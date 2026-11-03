@@ -19,18 +19,19 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=18"></script>
+<script src="js/i18n.js?v=19"></script>
   <link rel="stylesheet" href="css/base.css?v=8">
-  <link rel="stylesheet" href="css/topbar.css?v=9">
+  <link rel="stylesheet" href="css/topbar.css?v=15">
   <link rel="stylesheet" href="css/rail.css?v=28">
   <link rel="stylesheet" href="css/workspace.css?v=3">
   <link rel="stylesheet" href="css/cards.css?v=23">
-  <link rel="stylesheet" href="css/modal.css?v=27">
+  <link rel="stylesheet" href="css/modal.css?v=29">
   <link rel="stylesheet" href="css/chat.css?v=41">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=31">
+<link rel="stylesheet" href="css/viewtool.css?v=33">
+<link rel="stylesheet" href="css/auth.css?v=11">
 </head>
 <body>
 
@@ -48,8 +49,8 @@
 
   <nav class="nav" aria-label="主导航">
     <!-- 视角：与 Preference 那条同族的托盘，排在它左边。
-         里面只有视角条一条，托盘的内边距 4、组内间距 8、高 48
-         全部沿用 .group，条里的按钮 40 与导航胶囊同高。
+         左端是视角条、右端是复位，托盘的内边距 4、组内间距 8、
+         高 48 全部沿用 .group，里面的按钮 40 与导航胶囊同高。
          立体磁吸也一并复用：js/magnet.js 的配置按 .group 抓，
          这条托盘不用另写一行就会跟着光标翻 -->
     <div class="group group--view" role="group" aria-label="视角">
@@ -68,6 +69,12 @@
         </button>
         <div class="viewdock__body" id="robot-view-panel" role="toolbar" aria-label="视角调整"></div>
       </div>
+      <button class="pose-reset-trigger" type="button" aria-label="复位机器人姿态">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M1.92 12a10.08 10.08 0 1 0 10.08-10.08 10.92 10.92 0 0 0-7.55 3.07L1.92 7.52"/>
+          <path d="M1.92 1.92v5.6h5.6"/>
+        </svg>
+      </button>
     </div>
 
     <div class="group" role="group" aria-label="Control">
@@ -75,7 +82,7 @@
       <button class="pill" type="button" aria-pressed="false" data-modal="Advance"><span class="pill__label" data-i18n="nav.advance">Advance</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
     </div>
 
-    <div class="user" id="account">
+    <div class="user is-guest" id="account">
       <div class="user__surface">
         <button class="avatar" type="button" aria-label="更改头像" aria-expanded="false" tabindex="-1"></button>
         <!-- 头像选择区：点头像就地展开，贴在头像下方（96 起，高 40）。
@@ -90,24 +97,22 @@
           </button>
           <input class="avatar__file" type="file" accept="image/*" hidden>
         </div>
-        <span class="user__name">TestUser_11</span>
+        <span class="user__name"></span>
         <div class="user__menu" role="group" aria-label="Account menu">
         <button class="pill" type="button" aria-pressed="false" data-modal="Settings"><span class="pill__label" data-i18n="nav.settings">Settings</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
         <button class="pill" type="button" aria-pressed="false" data-modal="Privacy"><span class="pill__label" data-i18n="nav.privacy">Privacy</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
         <!-- Contact 不开弹窗：第一下只换字（变成仓库地址），第二下才跳转，
              移开指针满 3 秒退回 Contact。两段式逻辑在 js/contact.js -->
         <button class="pill" type="button" data-contact><span class="pill__label" data-i18n="nav.contact">Contact</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+        <!-- 退出登录：只有登录后才有这一项，未登录时藏起来，
+             面板高度也随它切换（见 topbar.css 的两条高度） -->
+        <button class="pill" type="button" data-auth-logout hidden><span class="pill__label" data-i18n="auth.logout">Log out</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
         </div>
         <button class="user__trigger" type="button" aria-expanded="false" aria-label="Account"></button>
       </div>
     </div>
   </nav>
 </header>
-
-<button class="pose-reset-trigger" type="button"
-        data-i18n="rail.right.reset" data-i18n-aria="rail.right.reset"
-        data-i18n-title="rail.right.reset"
-        aria-label="Reset" title="Reset">Reset</button>
 
 <!-- ===================== Stage ===================== -->
 <main class="stage" aria-hidden="true"><canvas class="bgfx" id="bgfx"></canvas></main>
@@ -572,19 +577,94 @@
 <script src="js/rails.js?v=17"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
-<script src="js/avatar.js?v=4"></script>
+<script src="js/avatar.js?v=5"></script>
 
 <!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
 <script src="lib/gsap.min.js"></script>
 <!-- 滚动驱动：ScrollTrigger 与 GSAP 同版本，组标题的交接淡出挂在这上面 -->
 <script src="lib/ScrollTrigger.min.js"></script>
-<script src="js/press.js?v=10"></script>
+<script src="js/press.js?v=13"></script>
 
 <script src="js/panels.js?v=3"></script>
 
-<script src="js/magnet.js?v=10"></script>
+<script src="js/magnet.js?v=12"></script>
 
 <script src="js/sticky.js?v=2"></script>
+
+<!-- ===================== 登录 / 注册 =====================
+     首次进入网站自动浮出；未登录时点账号胶囊照常展开菜单，
+     点头像才回到这里。
+     页签是一对平分列宽的纯文字标签，只换字色；
+     提交钮是顶栏那枚 .pill 本体，字色、悬停涨底色、按下压弹、
+     文字右移、箭头浮现全部沿用；
+     先逛逛是一枚纯文字按钮，压在提交钮上方居中，样式在 css/auth.css。
+     后端点：POST /api/v1/auth/login 与 /register，登录后拿 Bearer token，
+     见 js/auth.js -->
+<div class="auth" id="auth" aria-hidden="true">
+  <div class="auth__scrim" data-auth-skip></div>
+  <form class="auth__panel" id="auth-panel" role="dialog" aria-modal="true"
+        data-i18n-aria="auth.dialog" aria-label="Sign in or register" novalidate>
+
+    <!-- 左侧 2/3 留白：卡片按 3:2（宽:高）定形，右列占 1/3 放表单。
+         这块现在空着，占位是为了让右列落在三分之一上，以后要放插画或品牌图也在这里 -->
+    <div class="auth__aside" aria-hidden="true"></div>
+
+    <div class="auth__body">
+      <!-- 页签：纯文字，登录 / 注册，两者平分列宽、字居中。选中与 hover
+           都只转主题色，不缩放；不参与胶囊那套涨底与位移。
+           这一列没有标题，卡片顶上第一眼就是这两个页签 -->
+      <div class="auth__mode" role="tablist" aria-label="Log in or sign up">
+        <button class="auth__tab is-active" type="button" role="tab" data-auth-mode="login"
+                aria-pressed="true" aria-selected="true"
+                data-i18n="auth.login">Sign in</button>
+        <button class="auth__tab" type="button" role="tab" data-auth-mode="register"
+                aria-pressed="false" aria-selected="false"
+                data-i18n="auth.register">Register</button>
+      </div>
+
+      <!-- 字段组（连同每格的标题）：外面套一层 .auth__mid，让它整组在
+           页签与提交钮之间垂直居中 —— 卡片高矮变了，字块仍落在中间 -->
+      <div class="auth__mid">
+        <!-- 三格字段合成一组，格与格只隔 8。
+             昵称那格只在注册态出现，由 data-auth-register-only 控制 -->
+        <div class="auth__fields">
+          <label class="auth__field">
+            <span class="auth__label" data-i18n="auth.username">Username</span>
+            <input class="auth__input" id="auth-username" name="username" type="text"
+                   autocomplete="username" spellcheck="false"
+                   data-i18n-placeholder="auth.username.ph" placeholder="3–24 letters, digits or underscore">
+          </label>
+          <!-- 昵称只注册时出现；留空则后端用用户名顶上 -->
+          <label class="auth__field" data-auth-register-only hidden>
+            <span class="auth__label" data-i18n="auth.display">Display name</span>
+            <input class="auth__input" id="auth-display" name="display_name" type="text"
+                   autocomplete="nickname" maxlength="32"
+                   data-i18n-placeholder="auth.display.ph" placeholder="Optional, defaults to username">
+          </label>
+          <label class="auth__field">
+            <span class="auth__label" data-i18n="auth.password">Password</span>
+            <input class="auth__input" id="auth-password" name="password" type="password"
+                   autocomplete="current-password"
+                   data-i18n-placeholder="auth.password.ph" placeholder="8–64 characters">
+          </label>
+        </div>
+      </div>
+
+      <p class="auth__msg" id="auth-msg" role="status" aria-live="polite"></p>
+
+      <!-- 先逛逛：纯文字，压在提交钮上方、水平居中；收起面板并记下这次选择 -->
+      <button class="auth__skip" type="button" data-auth-skip
+              data-i18n="auth.skip">Look around</button>
+
+      <div class="auth__actions">
+        <button class="pill auth__submit" type="submit" id="auth-submit"><span class="pill__label" data-i18n="auth.login">Sign in</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77,.35-.77,.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
+<script src="js/auth.js?v=8"></script>
 
 <!-- 居中弹窗：Preference / Advance / Settings / Privacy 四枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
@@ -691,6 +771,7 @@
       <button class="adv__btn" type="button" data-sim-stop><span class="adv__label" data-i18n="sim.stop">停止</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
       <button class="adv__btn" type="button" data-sim-shot><span class="adv__label" data-i18n="sim.save_frame">保存当前帧</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
     </div>
+
 
     <!-- Privacy：条款体例的隐私政策。每条 = 序号 + 小标题 + 正文，序号取主题色。
          顺序按「定义 → 范围 → 信息类型 → 目的依据 → 单项说明 → 存储期限 →
@@ -865,7 +946,7 @@
   </button>
 </div>
 
-<script src="js/modal.js?v=28"></script>
+<script src="js/modal.js?v=31"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=8"></script>
@@ -876,7 +957,7 @@
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
 <!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
-<script src="js/sim.js?v=23"></script>
+<script src="js/sim.js?v=25"></script>
 
 <!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
      three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；
@@ -889,9 +970,9 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=64"></script>
-<script type="module" src="js/view-control.js?v=42"></script>
-<script type="module" src="js/q1skin.js?v=30"></script>
+<script type="module" src="js/robot3d.js?v=65"></script>
+<script type="module" src="js/view-control.js?v=46"></script>
+<script type="module" src="js/q1skin.js?v=31"></script>
 
 </body>
 </html>

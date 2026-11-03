@@ -321,6 +321,8 @@
   var dragStart = null;
   viewport.addEventListener('pointerdown', function (event) {
     if (!connected || !cam) return;
+    /* 只认左键，中键不参与环绕，免得按住中键拖时页面跟着动手 */
+    if (event.button !== 0) return;
     dragStart = { x: event.clientX, y: event.clientY, az: cam.azimuth, el: cam.elevation };
     viewport.setPointerCapture(event.pointerId);
   });

@@ -1,0 +1,225 @@
+/* ============================================================
+   登录 / 注册
+   首次进入网站时浮出，未登录时点账号胶囊也走这里。
+   整块是一层遮罩加一张居中卡片：遮罩吃点击并模糊背后的舞台，
+   卡片沿用弹窗那套底（--panel 去 alpha、同一种圆角与柔光），
+   开合直接复用弹窗的弹出 / 收回动画 —— 起手挤窄、撑过 1 再弹性落定，
+   收回时两轴压得更扁、0.15 抽走；几何由 js/auth.js 写，节拍取自 js/modal.js。
+
+   版式：没有标题，右列顶部直接是一对纯文字页签（18 号，
+   两者平分整列宽度、字居中，选中与 hover 只转主题色，不放大）；
+   字段组（每格的标题加输入框）在页签与底部那一行之间垂直居中，格与格只隔 8；
+   再往下是「先逛逛」（16 号、水平居中）与提交钮（贴卡片底）。
+   提交钮仍是顶栏那枚 .pill 本体（实心主题色，照左栏编辑页的 Add），
+   底片涨开、按下压弹、文字右滑与箭头浮现全部沿用；
+   hover 位移按 --pill-w 反推右缘，宽度由 js/auth.js 量出来写回。
+   输入框照左栏编辑页的 .edit__input，字号抬到 16。
+   ============================================================ */
+.auth{
+  position:fixed; inset:0; z-index:70;   /* 压过弹窗（50）与账号胶囊（31） */
+  display:grid; place-items:center;
+  padding:var(--edge);
+  /* 显隐与动画都交给脚本：GSAP 写卡片的 scaleX/scaleY/opacity，
+     这里只负责「不在的时候不可见、也不吃点击」。
+     原来那条 opacity 过渡已经去掉 —— 再叠一层淡入会让挤压形变显得发虚 */
+  visibility:hidden; pointer-events:none;
+}
+.auth.is-open{
+  visibility:visible; pointer-events:auto;
+}
+/* 遮罩自己吃点击：点空白等于先逛逛，收面板与记下这次选择都由 auth.js 做 */
+.auth__scrim{
+  position:absolute; inset:0;
+  background:rgba(28,28,28,.26);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+}
+:root[data-theme="dark"] .auth__scrim{background:rgba(0,0,0,.5)}
+
+/* 卡片：宽:高 = 3:2。
+   高度不是自己算的，由宽度推出来（--auth-w * 2 / 3），所以「宽」要先把
+   三面都夹住：右列得放得下表单项、不超过视口宽、也不超过视口高
+   （视口高换算成宽度就是 1.5 倍）。
+   底色取 --panel 的色值、alpha 写死 / 1 —— 与 .modal__panel 同一个理由：
+   卡片后面的舞台已经被遮罩糊过，底再半透明只会让表单字浮在动态画面上 */
+.auth__panel{
+  position:relative;
+  /* 内边距 16；页面本身不滚动（body overflow:hidden），100vw 就是可视宽度 */
+  --auth-pad:16px;
+  /* 右列（放表单的那 1/3）先定一个舒服的宽度，整卡宽度就是它的三倍 */
+  --auth-col:clamp(240px, 20vw, 320px);
+  --auth-w:min(calc(var(--auth-col) * 3), 100vw - 2 * var(--edge), 1.5 * (100vh - 2 * var(--edge)));
+  width:var(--auth-w);
+  height:calc(var(--auth-w) * 2 / 3);
+  /* 左 2/3 留白 + 右 1/3 表单：用 grid 的 2fr 1fr 分，不用 flex ——
+     flex-basis:0 遇上右列那 40 的内边距会被抬到 40，两列就不是严格的 2:1 了 */
+  display:grid; grid-template-columns:2fr 1fr;
+  padding:0;                  /* 内边距交给右列，留白那半要顶到卡片边 */
+  border-radius:var(--rail-r);
+  background:rgb(from var(--panel) r g b / 1);
+  box-shadow:0 0 32px rgba(var(--shadow), calc(.12 * var(--sh-k)));
+  overflow:hidden;            /* 两列的直角别越出圆角 */
+}
+/* 开合的几何（起手挤窄 → 撑过 1 → 弹性落定）由 js/auth.js 的 popIn / popOut 写，
+   节拍与弹窗同一份；这里不再挂 transform，免得 CSS 的初始值被 GSAP 读成起手姿态 */
+
+/* 左 2/3：现在空着，只占位。2fr 把另外两格都划给它 */
+.auth__aside{min-width:0}
+
+/* 右 1/3：表单整列，从顶部往下排。
+   页签贴着左上角起排，下面依次是居中的字段组、提示行、
+   「先逛逛」与提交钮（最后两行贴卡片底）；
+   内容比卡片高时（注册页多一格昵称）从顶部滚，不会把页签切掉 */
+.auth__body{
+  min-width:0;
+  display:flex; flex-direction:column;
+  justify-content:flex-start;
+  padding:var(--auth-pad);
+  overflow:auto;
+}
+
+/* 页签：纯文字两枚，登录 / 注册。整列平分 —— 每枚各占一半、字居中，
+   所以不管两边的词谁长谁短，切换时位置都不会跳。
+   选中与 hover 都只转主题色：不做缩放，底片、位移、箭头那套胶囊语汇
+   到这里也不用，它只是一对切换标签，不是提交动作 */
+.auth__mode{
+  display:flex; align-items:baseline; gap:8px;
+}
+.auth__tab{
+  appearance:none; -webkit-appearance:none;
+  flex:1 1 0; min-width:0;
+  padding:0; margin:0; border:0; background:none;
+  font-family:inherit; font-weight:var(--fw);
+  font-size:var(--fs-18); line-height:1.2; letter-spacing:.2px;
+  text-align:center;
+  color:var(--text-reduced);
+  cursor:pointer;
+  transition:color .16s var(--ease);
+}
+.auth__tab:hover,
+.auth__tab.is-active{color:var(--theme)}
+.auth__tab:focus-visible{outline:2px solid var(--theme); outline-offset:4px}
+
+/* 字段组的外框：把「标题 + 输入框」这一整组扛到中间。
+   flex:1 吃掉页签与「先逛逛」之间的全部余量，组本身在框内垂直居中 ——
+   卡片按 3:2 缩放时余量跟着变，字块始终落在中间。
+   safe 关键字是给极端窄高比的兜底：内容一旦高过余量，就退回顶部起排，
+   不会两头均分溢出、把第一格的标题顶到滚动区外面去。
+   上内边距比下内边距多 --mid-nudge：这一列上方只有一行页签，
+   下方还有提示行、先逛逛与提交钮，两截差 93，光按余量居中会让字块整体偏上 46.6，
+   把差额补在上侧，字块的中线才落在卡片中线上。
+   窄屏单列时卡片高度由内容撑开、没有余量可分，这组数就只剩上下留白的作用 */
+.auth__mid{
+  --mid-nudge:93px;
+  flex:1 1 auto; min-height:0;
+  display:flex; flex-direction:column;
+  justify-content:safe center;
+  padding:calc(12px + var(--mid-nudge)) 0 12px;
+}
+
+/* 字段组：格与格只隔 8 */
+.auth__fields{
+  display:flex; flex-direction:column; gap:8px;
+}
+
+/* 字段：上面一行 16 号的标签（text-reduced）、下面一枚胶囊形输入框。
+   输入框本身照搬左栏编辑表单那枚 .edit__input 的形（40 高、999 圆角、
+   --card 底、caret 取主题色、聚焦时主题色 1px 内描边淡入），
+   只有字号按这一页的需要抬到 16、字色取 text-primary */
+.auth__field{display:flex; flex-direction:column; gap:6px}
+.auth__field[hidden]{display:none}
+.auth__label{
+  padding-left:2px;
+  font-size:var(--fs-16); line-height:1.2;
+  letter-spacing:.02em;
+  color:var(--text-reduced);
+}
+.auth__input{
+  appearance:none; -webkit-appearance:none;
+  box-sizing:border-box;
+  width:100%; height:40px;
+  padding:0 16px;
+  border:0; border-radius:999px;
+  background:var(--card);
+  color:var(--text-primary);
+  caret-color:var(--theme);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-16);
+  letter-spacing:.2px;
+  outline:none;
+  /* 两条阴影叠在一层里：外面那圈是常驻柔光，里面那道主题色描边平时 alpha 为 0，
+     聚焦时只把它推到 1 —— 过渡只跑这一条通道，不会每帧重算外圈那层模糊 */
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
+  transition:box-shadow .1s ease;
+}
+.auth__input::placeholder{color:var(--text-muted)}
+.auth__input:focus{
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px var(--theme);
+}
+
+/* 一行反馈：默认占住高度不跳版，出错转 warning、注册成功转 hint。
+   下边距归零：它下面是「先逛逛」，两者之间只留那一行自己的 16 */
+.auth__msg{
+  min-height:1.3em;
+  margin:8px 0 0;
+  font-size:var(--fs-12); line-height:1.3;
+  color:var(--text-muted);
+}
+.auth__msg.is-error{color:var(--warning)}
+.auth__msg.is-ok{color:var(--hint)}
+
+/* 动作行：贴着卡片底（margin-top:auto 把剩余空间都吃在上方），
+   提交钮吃满整列宽度。
+   提交钮的 --pill-w 由 js/auth.js 量出真实宽度写回：
+   顶栏胶囊 hover 时按它反推文字右缘 */
+.auth__actions{
+  display:flex;
+  margin-top:auto; padding-top:16px;
+}
+.auth__actions .pill{
+  flex:1 1 auto; width:auto; height:40px;
+}
+
+/* 主按钮参考左栏编辑页那枚 Add：底色常驻，静止即实心主题色胶囊、字反白。
+   .pill 的底片本来就是「颜色常驻、靠 scale 开合」，所以把 scale 钉在 1 就够了，
+   不用另写一层底；hover 时 .pill 自己会把 scale 再推到 1（无变化），
+   真正表态的是文字右滑与箭头淡入 —— 实心那枚 hover 不换底色，
+   避免整块色面闪一下。压弹仍由 press.js 逐帧写 --press 交给 transform，
+   两条通道各走各的，边按边保持铺满 */
+.auth .auth__submit,
+.auth .auth__submit:hover{color:var(--text-invert)}
+.auth__submit::before{scale:1}
+
+/* 先逛逛：纯文字，压在提交钮上方一行、水平居中，与页签同一个字号。
+   不走胶囊那套（不涨底、不位移、不出箭头），只把字色从 reduced 提到 theme */
+.auth__skip{
+  align-self:center;
+  margin-top:16px;
+  padding:0 2px;
+  border:0; background:transparent;
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-16);
+  line-height:1.2; letter-spacing:.02em;
+  color:var(--text-reduced);
+  cursor:pointer;
+  transition:color .16s var(--ease);
+}
+.auth__skip:hover{color:var(--theme)}
+.auth__skip:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+
+/* 提交中：按钮压到半透明并停止命中，避免连点重复提交 */
+.auth__submit[disabled]{opacity:.45; cursor:progress}
+
+/* 窄屏：3:2 在 760 以下会让右列只剩两百出头，页签与输入框都放不开，
+   所以留白那一半收起来，卡片回到单列、高度交给内容 */
+@media (max-width:760px){
+  .auth__panel{
+    --auth-w:min(100vw - 2 * var(--edge), 1.5 * (100vh - 2 * var(--edge)));
+    grid-template-columns:1fr;   /* 只剩一列：留白那格撤掉，表单占满 */
+    height:auto;
+    max-height:calc(100vh - 2 * var(--edge));
+  }
+  .auth__aside{display:none}
+}

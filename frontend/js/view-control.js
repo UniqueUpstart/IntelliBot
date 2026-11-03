@@ -622,11 +622,12 @@ function buildPanel() {
   panel = dock.querySelector('.viewdock__body');
   if (!panel) return;
 
-  /* 一排三枚圆钮：水平四向、俯仰三向、复位。
+  /* 一排三枚圆钮：水平四向、俯仰三向、复位视角。
      没有标题行 —— 右端那枚眼睛本身就是开合入口，再点一次、点面板外或
      按 Esc 都能收起；方位不写东南西北，直接报「正 / 左 / 右 / 后」。
-     复位放在最右、紧贴眼睛：前两枚是「往哪走」，它是「回到原点」，
-     挨着入口不参与逐档切换，误触的代价也最小 */
+     复位视角放在最右、紧贴眼睛：前两枚是「往哪走」，它是「回到原点」，
+     挨着入口不参与逐档切换，误触的代价也最小。
+     复位姿态不属于这里 —— 它是托盘右端一枚独立的圆钮，一直显示 */
   const row = document.createElement('div');
   row.className = 'vt-row';
 
@@ -654,11 +655,24 @@ function buildPanel() {
   const poseResetButton = document.querySelector('.pose-reset-trigger');
   if (poseResetButton) poseResetButton.addEventListener('click', resetPose);
 
-  /* 面板从按钮那块长出来，点到它自己或内部都不算「点外面」 */
-  document.addEventListener('pointerdown', (event) => {
+  /* 面板从按钮那块长出来，点到它自己或内部都不算「点外面」。
+     监听挂在 window 的捕获阶段 —— 比 document 上任何一层都早，
+     别的脚本先注册、半路停掉传播都挡不住这一手；命中判定走
+     composedPath 而不是 event.target，指针被别的元素捕获、
+     或者事件从 SVG 子节点起冒时也能认出「这确实在条形里面」。
+     pointerdown 收鼠标与触摸，click 再兜一层键盘与合成事件，
+     同一个手势只落一次（关掉后 is-open 就没了，第二次直接返回）。 */
+  const outside = (event) => {
     if (!dock.classList.contains('is-open')) return;
-    if (dock.contains(event.target)) return;
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : null;
+    if (path ? path.includes(dock) : dock.contains(event.target)) return;
     closePanel();
+  };
+  window.addEventListener('pointerdown', outside, true);
+  window.addEventListener('click', (event) => {
+    /* 代码里自己点的（关皮肤、复位等）不算用户想关面板 */
+    if (!event.isTrusted) return;
+    outside(event);
   }, true);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && dock.classList.contains('is-open')) closePanel();
@@ -686,8 +700,8 @@ const TILT_GLYPH = {
   down:  '<path d="M12 2.2v19.6"/><path d="M4.3 14.1 12 21.8l7.7-7.7"/>',
 };
 
-/* 复位：画面四角各留一段开口的框，中心一个点 —— 取景框归中。
-   刻意不用回转箭头：栏体右边那枚 .pose-reset-trigger 已经是那个图形，
+/* 复位视角：画面四角各留一段开口的框，中心一个点 —— 取景框归中。
+   刻意不用回转箭头：托盘右边那枚 .pose-reset-trigger 已经是那个图形，
    两枚并排时同形不同义最难分。框的四角与中心点铺到 3…21，和其他几枚
    同样落在 24 的格子里 */
 const RESET_GLYPH =
@@ -816,9 +830,6 @@ function cycleTilt() {
 }
 
 function bindResetAndDefaultControls() {
-  const poseResetButton = document.querySelector('.pose-reset-trigger');
-  if (poseResetButton) poseResetButton.addEventListener('click', resetAll);
-
   document.querySelectorAll('[data-view-default]').forEach((button) => {
     button.addEventListener('click', () => {
       if (button.dataset.viewDefault === 'current') {
@@ -867,7 +878,7 @@ function resetView() {
 }
 
 /* 姿态复位与视角复位合成一次「回到原样」：心情、动作、姿势、镜头全归位。
-   页面右侧那枚 Reset 走这里 */
+   托盘右端那枚回转箭头（.pose-reset-trigger）走这里 */
 const resetPose = resetAll;
 
 function resetAll() {
@@ -954,14 +965,14 @@ function bindInteractions() {
 function onPointerDown(event) {
   if (!ready) return;
 
-  if (event.button !== 0 && event.button !== 1) return;
+  /* 只认左键：中键在部分系统上是滚动轮盘/自动滚动的起手，
+     按住拖动会把页面当成可拖的画布，和环绕视角抢同一手势 */
+  if (event.button !== 0) return;
   event.preventDefault();
   pointer.x = event.clientX;
   pointer.y = event.clientY;
 
-  const joint = event.button === 0
-    ? findJointAt(event.clientX, event.clientY)
-    : null;
+  const joint = findJointAt(event.clientX, event.clientY);
   if (joint) {
     drag = {
       kind: 'joint-pending',

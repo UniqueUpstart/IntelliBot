@@ -26,10 +26,22 @@
   var saved = 'a1';
   try { saved = localStorage.getItem(KEY) || 'a1'; } catch (e) {}
 
+  /* 当前选中的那张；未登录时照样记着，登录回来直接画上 */
+  var current = saved;
+  /* 未登录：头像留空、不接选择。状态由 js/auth.js 的 authchange 广播带来，
+     这里不自己读 token，两边各管一件事 */
+  var guest = false;
+
   function isData(v) { return v.indexOf('data:') === 0; }
   function srcOf(v) { return isData(v) ? v : (PRESET[v] || PRESET.a1); }
 
   function paint(v) {
+    current = v;
+    /* 未登录不画脸：那颗圆只留底色，等 authchange 说登录了再补上 */
+    if (guest) {
+      avatar.style.backgroundImage = 'none';
+      return;
+    }
     var custom = isData(v);
     avatar.style.backgroundImage = 'url("' + srcOf(v) + '")';
     opts.forEach(function (o) {
@@ -69,14 +81,35 @@
   }
 
   /* 开合：只有胶囊已经展开时才有意义 —— 收起态那张头像是被 trigger 盖住的，
-     那时候点什么都是在展开面板 */
+     那时候点什么都是在展开面板。未登录时这张选择条压根不开 */
   function setTray(on) {
+    if (on && guest) return;
     if (on && !user.classList.contains('is-open')) return;
     user.classList.toggle('is-picking', on);
     avatar.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
 
+  /* 登录态切换：未登录把头像是空的、把选择条收掉，并改成「点了去登录」 */
+  function setGuestState(on) {
+    guest = on;
+    user.classList.toggle('is-guest', on);
+    if (on) {
+      setTray(false);
+      avatar.style.backgroundImage = 'none';
+      avatar.setAttribute('aria-disabled', 'true');
+      avatar.removeAttribute('aria-expanded');
+    } else {
+      avatar.removeAttribute('aria-disabled');
+      paint(current);
+    }
+  }
+
   avatar.addEventListener('click', function () {
+    /* 未登录时这一下不是挑头像，是回到登录页 —— 跳过登录之后唯一的重开入口 */
+    if (guest) {
+      if (window.intellibotAuth) window.intellibotAuth.open();
+      return;
+    }
     setTray(!user.classList.contains('is-picking'));
   });
 
@@ -134,6 +167,13 @@
     if (e.key === 'Escape') setTray(false);
   });
 
+  document.addEventListener('authchange', function (e) {
+    setGuestState(!(e.detail && e.detail.user));
+  });
+
+  /* 初始态跟着标记走：#account 默认带 is-guest，登录后由 auth.js 摘掉 */
+  guest = user.classList.contains('is-guest');
+  if (guest) avatar.setAttribute('aria-disabled', 'true');
   paint(saved);
   requestAnimationFrame(fitName);
   if (document.fonts && document.fonts.ready) {

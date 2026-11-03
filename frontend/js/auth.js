@@ -1,0 +1,461 @@
+/* 登录 / 注册：首次进入网站浮出；未登录时点账号胶囊照常展开菜单
+   （Settings / Privacy / Contact 都能用），点头像才回到这里。
+   面板结构与样式分别是 IntelliBot.html 里的 #auth 与 css/auth.css，
+   按钮就是顶栏那枚 .pill，动画一条都没有另写。
+
+   后端口（见 backend/src/web_system.cpp）：
+     POST /api/v1/auth/register  {username, password, display_name?}
+     POST /api/v1/auth/login     {username, password} → access_token
+     GET  /api/v1/auth/me        Authorization: Bearer <token>
+     POST /api/v1/auth/logout    Authorization: Bearer <token>
+   回包统一是 {request_id, data, error:{code, message}}。出错时直接把后端那句
+   摆到面板下方 —— 它本来就是给人看的（用户名已注册 / 用户名或密码错误 /
+   请求过于频繁），前端再编一套只会两边说法不一致。
+
+   token 存 localStorage：换标签页、关掉浏览器再进来都还算登录。
+   「先逛逛」也记一笔 seen，之后不再自动浮出；点账号胶囊照样能打开。 */
+(function () {
+  const API = '/api/v1';
+  const TOKEN_KEY = 'intellibot.auth.token';
+  const SEEN_KEY = 'intellibot.auth.seen';
+
+  const root = document.getElementById('auth');
+  if (!root) return;
+
+  const form = document.getElementById('auth-panel');
+  const panel = root.querySelector('.auth__panel');
+  const scrim = root.querySelector('.auth__scrim');
+  const msgEl = document.getElementById('auth-msg');
+  const usernameEl = document.getElementById('auth-username');
+  const displayEl = document.getElementById('auth-display');
+  const passwordEl = document.getElementById('auth-password');
+  const submitBtn = document.getElementById('auth-submit');
+  const submitLabel = submitBtn ? submitBtn.querySelector('.pill__label') : null;
+  const tabs = Array.prototype.slice.call(root.querySelectorAll('[data-auth-mode]'));
+  const registerOnly = Array.prototype.slice.call(root.querySelectorAll('[data-auth-register-only]'));
+  const skipEls = Array.prototype.slice.call(document.querySelectorAll('[data-auth-skip]'));
+
+  const account = document.getElementById('account');
+  const nameEl = account ? account.querySelector('.user__name') : null;
+  const trigger = account ? account.querySelector('.user__trigger') : null;
+  const logoutBtn = account ? account.querySelector('[data-auth-logout]') : null;
+
+  let user = null;
+  let mode = 'login';
+  let busy = false;
+
+  /* ---------- 存取 ---------- */
+
+  function readToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (err) { return ''; }
+  }
+  function writeToken(token) {
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {}
+  }
+  function clearToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (err) {}
+  }
+  function seen() {
+    try { return localStorage.getItem(SEEN_KEY) === '1'; } catch (err) { return false; }
+  }
+  function markSeen() {
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch (err) {}
+  }
+
+  /* 所有非 GET 都要带 Idempotency-Key（后端在业务锁里按它去重），
+     且同一个键提交不同内容会被判 409，所以每次提交现生成一个 ——
+     复用同一个键的话，第二次输错密码也会拿回第一次那份成功的缓存 */
+  function idempotencyKey() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  async function api(path, options) {
+    const opts = options || {};
+    const method = opts.method || 'GET';
+    const headers = { 'Content-Type': 'application/json' };
+    if (method !== 'GET') headers['Idempotency-Key'] = idempotencyKey();
+    const token = readToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    let res;
+    try {
+      res = await fetch(API + path, {
+        method: method,
+        headers: headers,
+        body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+      });
+    } catch (err) {
+      throw new Error(t('auth.error.network'));
+    }
+    let payload = null;
+    try { payload = await res.json(); } catch (err) {}
+    if (!res.ok) {
+      const error = new Error(
+        (payload && payload.error && payload.error.message) || t('auth.error.network')
+      );
+      error.status = res.status;
+      error.code = payload && payload.error ? payload.error.code : '';
+      throw error;
+    }
+    return (payload && payload.data) || null;
+  }
+
+  /* ---------- 面板 ---------- */
+
+  function setMessage(text, kind) {
+    if (!msgEl) return;
+    msgEl.textContent = text || '';
+    msgEl.classList.toggle('is-error', kind === 'error');
+    msgEl.classList.toggle('is-ok', kind === 'ok');
+  }
+
+  /* 提交钮的字跟着页签走；语种一变也由这里重写，
+     data-i18n 只管得住静态那几处（标签、占位、页签本身）。
+     未登录时用户名那一格是一枚入口（注册/登录），不是占位词 */
+  function refreshCopy() {
+    const key = mode === 'register' ? 'register' : 'login';
+    if (submitLabel) submitLabel.textContent = t('auth.' + key);
+    if (!user && nameEl) nameEl.textContent = t('auth.entry');
+  }
+
+  /* 提交钮的宽度由 flex 吃满整列，CSS 能算出来，但卡片的宽度会随视口伸缩；
+     而顶栏胶囊 hover 时靠 --pill-w 反推右缘，所以这里量一次真实宽度写回去 */
+  function syncPillWidth() {
+    if (!submitBtn) return;
+    const width = submitBtn.getBoundingClientRect().width;
+    if (width) submitBtn.style.setProperty('--pill-w', width + 'px');
+  }
+
+  function setMode(next) {
+    mode = next === 'register' ? 'register' : 'login';
+    tabs.forEach(function (btn) {
+      const on = btn.dataset.authMode === mode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    registerOnly.forEach(function (el) { el.hidden = mode !== 'register'; });
+    if (passwordEl) {
+      passwordEl.setAttribute('autocomplete', mode === 'register' ? 'new-password' : 'current-password');
+    }
+    refreshCopy();
+    setMessage('');
+  }
+
+  /* ---------- 弹出 / 收回 ---------- */
+
+  /* 与弹窗那套弹出动画同一个来源：时长、两段式挤压形变、缓动全部取自
+     js/modal.js 递出的 window.intellibotPopTiming（见那里的注释）。
+     这里不写字面量，改弹窗那边的节拍，这张卡片自动跟上。
+     modal.js 在页面靠后加载，但它的守卫（无 GSAP 时整段退出）会让这个对象缺席，
+     所以取的时候留一份同值的兜底，保证卡片不会因为拿不到节拍而弹不出来 */
+  const POP_FALLBACK = {
+    open: 0.4, close: 0.15, up: 0.25, back: 0.75,
+    out: 'power2.out', in: 'power2.in',
+    squashX: 0.75, squashY: 0.9, closeX: 0.25, closeY: 0.8,
+    peakX: 1.02, peakY: 1.02, squashEase: 'elastic.out(1.1, 0.8)'
+  };
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let timeline = null;
+  let closing = false;
+
+  function pop() {
+    return window.intellibotPopTiming || POP_FALLBACK;
+  }
+
+  /* 起手先落在挤窄态再撑开：卡片是「被挤出来」的，
+     不是从下往上浮出来的 —— 与弹窗弹开的说法一致 */
+  function popIn() {
+    if (!window.gsap || !panel) return;
+    const t = pop();
+    if (timeline) timeline.kill();
+    gsap.killTweensOf(panel);
+    if (scrim) gsap.killTweensOf(scrim);
+    if (reduceMotion.matches) {
+      gsap.set(panel, { opacity: 1, scaleX: 1, scaleY: 1 });
+      if (scrim) gsap.set(scrim, { opacity: 1 });
+      return;
+    }
+    gsap.set(panel, { opacity: 0, scaleX: t.squashX, scaleY: t.squashY });
+    if (scrim) gsap.set(scrim, { opacity: 0 });
+    timeline = gsap.timeline({
+      onComplete: function () {
+        /* 遮罩的透明度只是这次开合的事，交还给 CSS，
+           免得留一个行内 opacity:1 把主题切换时的层级变化挡住 */
+        if (scrim) gsap.set(scrim, { clearProps: 'opacity' });
+      }
+    });
+    timeline.to(panel, { opacity: 1, duration: t.open, ease: t.out }, 0)
+            .to(panel, { scaleX: t.peakX, scaleY: t.peakY, duration: t.up, ease: 'power2.out' }, 0)
+            .to(panel, { scaleX: 1, scaleY: 1, duration: t.back, ease: t.squashEase }, t.up);
+    /* 遮罩跟着内容一起亮，但先到：它是背景，晚到会让人觉得卡片浮在半透明膜上 */
+    if (scrim) timeline.to(scrim, { opacity: 1, duration: t.open * 0.7, ease: 'power1.out' }, 0);
+  }
+
+  /* 收回比弹出短得多：两轴压得比起手更扁，像被抽走。
+     done 在动画走完时才执行 —— 面板要在收的过程里继续可见，
+     提前摘掉 is-open 会让它当场消失，动画等于没做 */
+  function popOut(done) {
+    if (!window.gsap || !panel) { done(); return; }
+    const t = pop();
+    if (timeline) timeline.kill();
+    gsap.killTweensOf(panel);
+    if (scrim) gsap.killTweensOf(scrim);
+    if (reduceMotion.matches) {
+      gsap.set(panel, { opacity: 0 });
+      if (scrim) gsap.set(scrim, { opacity: 0 });
+      done();
+      return;
+    }
+    timeline = gsap.timeline({ onComplete: done });
+    timeline.to(panel, {
+      opacity: 0, scaleX: t.closeX, scaleY: t.closeY,
+      duration: t.close, ease: t.in
+    }, 0);
+    if (scrim) timeline.to(scrim, { opacity: 0, duration: 0.2, ease: 'power2.out' }, 0);
+  }
+
+  function openPanel() {
+    /* 正在收回时又被叫开：从当前姿态直接弹回去，不再从头 set 一次 */
+    if (root.classList.contains('is-open') && !closing) return;
+    closing = false;
+    root.classList.add('is-open');
+    root.setAttribute('aria-hidden', 'false');
+    /* 登录页盖住整片舞台，磁吸与机器人的满帧都先停手：
+       遮罩背后每帧都要重新模糊一次，留着动画只会白烧帧预算 */
+    document.body.classList.add('is-auth');
+    /* 面板是从账号胶囊里点出来的，那一层菜单先收起：
+       否则登录 / 注册完收起卡片，背后还摊着一块菜单 */
+    if (account) {
+      account.classList.remove('is-open', 'is-picking');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+    if (window.robot3d && window.robot3d.suspend) window.robot3d.suspend(1200);
+    popIn();
+    window.setTimeout(function () {
+      if (!root.classList.contains('is-open') || closing) return;
+      const target = usernameEl && usernameEl.value ? passwordEl : usernameEl;
+      if (target) target.focus({ preventScroll: true });
+    }, 90);
+  }
+
+  function closePanel() {
+    if (!root.classList.contains('is-open') || closing) return;
+    closing = true;
+    root.setAttribute('aria-hidden', 'true');
+    setMessage('');
+    if (passwordEl) passwordEl.value = '';
+    popOut(function () {
+      /* 走到这里说明没有再被叫开：中途重开的话上面那条 timeline 会被 kill，
+         onComplete 不会触发 */
+      closing = false;
+      root.classList.remove('is-open');
+      document.body.classList.remove('is-auth');
+      if (trigger) trigger.focus({ preventScroll: true });
+    });
+  }
+
+  /* 「先逛逛」、点遮罩、Esc 都是同一个动作：收起，并记下这次选择 */
+  function skip() {
+    markSeen();
+    closePanel();
+  }
+
+  /* ---------- 账号状态 ---------- */
+
+  /* 状态一变就广播一次：头像那边据此决定画不画脸、要不要接点击。
+     两边都不互相引用，谁先加载都能对上 */
+  function broadcast() {
+    document.dispatchEvent(new CustomEvent('authchange', { detail: { user: user } }));
+  }
+
+  function applyGuest() {
+    user = null;
+    if (nameEl) {
+      /* 未登录时这一格是入口：字是「注册/登录」，点它开面板（见 wire） */
+      nameEl.textContent = t('auth.entry');
+      nameEl.removeAttribute('title');
+    }
+    if (account) {
+      account.classList.remove('is-signed-in');
+      account.classList.add('is-guest');
+    }
+    if (logoutBtn) {
+      logoutBtn.hidden = true;
+      logoutBtn.classList.remove('is-active');
+      logoutBtn.setAttribute('aria-pressed', 'false');
+    }
+    broadcast();
+  }
+
+  function applyUser(next) {
+    if (!next) { applyGuest(); return; }
+    user = next;
+    if (nameEl) {
+      nameEl.textContent = next.display_name || next.username;
+      nameEl.title = next.username;
+    }
+    if (account) {
+      account.classList.add('is-signed-in');
+      account.classList.remove('is-guest');
+    }
+    if (logoutBtn) logoutBtn.hidden = false;
+    if (usernameEl) usernameEl.value = next.username;
+    broadcast();
+  }
+
+  async function logout() {
+    if (logoutBtn) logoutBtn.disabled = true;
+    try {
+      await api('/auth/logout', { method: 'POST', body: {} });
+    } catch (err) {
+      /* 会话可能已经在别处失效：本地照清，别把用户困在登录态里 */
+    }
+    if (logoutBtn) logoutBtn.disabled = false;
+    clearToken();
+    applyGuest();
+    if (account) {
+      account.classList.remove('is-open', 'is-picking');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /* ---------- 提交 ---------- */
+
+  async function submit() {
+    if (busy) return;
+    const username = (usernameEl.value || '').trim();
+    const password = passwordEl.value || '';
+    const display = (displayEl.value || '').trim();
+
+    /* 先按后端那几条规则挡一遍：本地能立刻指出是哪一格不对，
+       不必等一次往返；后端校验照旧是最后一道 */
+    if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) {
+      setMessage(t('auth.error.username'), 'error');
+      usernameEl.focus();
+      return;
+    }
+    if (password.length < 8 || password.length > 64) {
+      setMessage(t('auth.error.password'), 'error');
+      passwordEl.focus();
+      return;
+    }
+    if (mode === 'register' && display.length > 32) {
+      setMessage(t('auth.error.display'), 'error');
+      displayEl.focus();
+      return;
+    }
+
+    busy = true;
+    submitBtn.disabled = true;
+    setMessage('');
+    try {
+      if (mode === 'register') {
+        const body = { username: username, password: password };
+        if (display) body.display_name = display;
+        await api('/auth/register', { method: 'POST', body: body });
+        /* 注册不发 token：切回登录页，用户名留着，只需要再输一次密码 */
+        setMode('login');
+        usernameEl.value = username;
+        passwordEl.value = '';
+        setMessage(t('auth.register.ok'), 'ok');
+        passwordEl.focus();
+      } else {
+        const data = await api('/auth/login', {
+          method: 'POST',
+          body: { username: username, password: password }
+        });
+        writeToken(data.access_token);
+        markSeen();
+        applyUser(data.user);
+        closePanel();
+      }
+    } catch (err) {
+      setMessage(err.message, 'error');
+    } finally {
+      busy = false;
+      submitBtn.disabled = false;
+    }
+  }
+
+  /* ---------- 装配 ---------- */
+
+  function wire() {
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      submit();
+    });
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () { setMode(btn.dataset.authMode); });
+    });
+    skipEls.forEach(function (el) {
+      el.addEventListener('click', skip);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && root.classList.contains('is-open')) skip();
+    });
+
+    /* 账号胶囊未登录时照常展开菜单：Settings / Privacy / Contact 都不需要账号。
+       登录入口是用户名那一格（点它开面板）；头像那边在未登录时也指向这里 */
+    if (nameEl) {
+      nameEl.addEventListener('click', function (event) {
+        if (user) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openPanel();
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        /* 账号菜单那套组内单选会给这一项也挂上 is-active，先摘掉再退，
+           否则收起前会闪一下「选中」的样子 */
+        logoutBtn.classList.remove('is-active');
+        logoutBtn.setAttribute('aria-pressed', 'false');
+        logout();
+      });
+    }
+
+    document.addEventListener('langchange', refreshCopy);
+
+    /* 按钮宽度随卡片宽度变（视口缩放、窄屏单列），量出来写回 --pill-w */
+    if (window.ResizeObserver && submitBtn) {
+      new ResizeObserver(syncPillWidth).observe(submitBtn);
+    }
+    window.addEventListener('resize', syncPillWidth);
+  }
+
+  function boot() {
+    wire();
+    setMode('login');
+    applyGuest();
+    syncPillWidth();
+
+    if (readToken()) {
+      api('/auth/me').then(function (data) {
+        applyUser(data.user);
+      }).catch(function (err) {
+        if (err.status === 401) clearToken();
+        applyGuest();
+        if (!seen()) openPanel();
+      });
+      return;
+    }
+    /* 第一次进来：等页面落定再浮出，免得和顶栏 / 机器人的入场叠在一起 */
+    if (!seen()) window.setTimeout(openPanel, 700);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  /* 给别的脚本留个读口：当前登录用户与手动开合 */
+  window.intellibotAuth = {
+    get user() { return user; },
+    open: openPanel,
+    close: closePanel,
+    logout: logout
+  };
+})();
