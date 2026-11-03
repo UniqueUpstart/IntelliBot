@@ -11,8 +11,7 @@
 | 路径 | 内容 |
 | --- | --- |
 | `frontend/` | 页面、样式、3D 机器人、对话和交互逻辑 |
-| `backend/` | C++17 HTTP 后端、认证与会话 |
-| `ai/` | DeepSeek 本地对话服务 |
+| `backend/` | C++17 HTTP 后端、认证与会话；`backend/ai/` 为本地对话服务 |
 | `sim/` | MuJoCo 仿真桥和动作库 |
 | `scripts/` | 下载、构建、启动和验收脚本 |
 | `backend/tests/` | 后端接口与认证测试 |
@@ -140,7 +139,7 @@ conda install -n base -c conda-forge sqlite libsodium -y
 终端 2，本地模型服务：
 
 ```powershell
-.\.venv\Scripts\python.exe ai\deepseek_bridge.py --port 8091
+.\.venv\Scripts\python.exe backend\ai\deepseek_bridge.py --port 8091
 ```
 
 终端 3，C++ 后端：

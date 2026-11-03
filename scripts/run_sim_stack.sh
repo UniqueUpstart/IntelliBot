@@ -68,7 +68,7 @@ if [ "$AI_PORT" = "$SIM_PORT" ] || [ "$AI_PORT" = "$PORT" ]; then
   exit 2
 fi
 echo "== 启动本地模型服务 :$AI_PORT"
-"$PYTHON" "$ROOT/ai/deepseek_bridge.py" --port "$AI_PORT" &
+"$PYTHON" "$ROOT/backend/ai/deepseek_bridge.py" --port "$AI_PORT" &
 AI_PID=$!
 for _ in $(seq 1 20); do
   if curl -fsS --max-time 1 "http://127.0.0.1:$AI_PORT/health" >/dev/null 2>&1; then

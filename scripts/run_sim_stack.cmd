@@ -75,7 +75,7 @@ set "AI_ARG="
 if "%AI_PORT%"=="%PORT%" goto :ai_port_conflict
 if "%AI_PORT%"=="%SIM_PORT%" goto :ai_port_conflict
 echo [ai] starting local model service :%AI_PORT%
-start "IntelliBot AI bridge" /min %PYQ% "%ROOT%\ai\deepseek_bridge.py" --port %AI_PORT%
+start "IntelliBot AI bridge" /min %PYQ% "%ROOT%\backend\ai\deepseek_bridge.py" --port %AI_PORT%
 set "AI_READY="
 for /l %%i in (1,1,20) do if not defined AI_READY call :probe_ai
 if not defined AI_READY (

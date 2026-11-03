@@ -10,8 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "sim"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
-from ai.home_actions import HOME_ACTIONS
+from home_actions import HOME_ACTIONS
 from motion_library import gesture_metadata
 
 
