@@ -157,13 +157,30 @@
       item.setAttribute('aria-checked', String(model === current.model));
       if (model === current.model) item.classList.add('is-on');
 
+      var icon = document.createElement('span');
+      icon.className = 'model-menu__icon';
+      icon.setAttribute('aria-hidden', 'true');
+      if (model === 'deepseek-flash') icon.textContent = 'F';
+      else if (model === 'deepseek-v4-pro') icon.textContent = 'P';
+      else icon.textContent = 'AI';
+
+      var copy = document.createElement('span');
+      copy.className = 'model-menu__copy';
       var name = document.createElement('span');
       name.className = 'model-menu__name';
       name.textContent = modelLabel(model);
       var provider = document.createElement('span');
       provider.className = 'model-menu__provider';
       provider.textContent = modelDescription(current.provider, model);
-      item.append(name, provider);
+      copy.append(name, provider);
+
+      var check = document.createElement('span');
+      check.className = 'model-menu__check';
+      check.setAttribute('aria-hidden', 'true');
+      check.textContent = '✓';
+
+      item.setAttribute('aria-label', modelLabel(model) + ': ' + modelDescription(current.provider, model));
+      item.append(icon, copy, check);
       menuList.appendChild(item);
     });
   }
@@ -186,11 +203,11 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = current.configured
-      ? current.model
+      ? modelLabel(current.model)
       : t('model.choose', '选择模型');
     trigger.classList.toggle('is-ready', current.configured);
     trigger.setAttribute('aria-label', current.configured
-      ? providerName(current.provider) + ' · ' + current.model
+      ? providerName(current.provider) + ' · ' + modelLabel(current.model)
       : t('model.choose', '选择模型'));
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
