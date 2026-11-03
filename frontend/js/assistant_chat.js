@@ -131,16 +131,20 @@
       var data = await requestReply(text, previous);
       thinking.remove();
       message('ai', data.reply);
+      var actions = Array.isArray(data.actions)
+        ? data.actions.slice(0, 4)
+        : (data.action_id ? [data.action_id] : []);
+      var actionRecord = data.stop
+        ? ' [动作记录：已停止]'
+        : (actions.length ? ' [动作记录：' + actions.join(', ') + ']' : '');
+      var historyReply = data.reply.slice(0, 500 - actionRecord.length) + actionRecord;
       history = history.concat([
         {role: 'user', content: text},
-        {role: 'assistant', content: data.reply},
+        {role: 'assistant', content: historyReply},
       ]).slice(-10);
       if (data.stop) {
         stopActions('已按指令停止');
       } else {
-        var actions = Array.isArray(data.actions)
-          ? data.actions.slice(0, 4)
-          : (data.action_id ? [data.action_id] : []);
         if (actions.length) playActions(actions);
         else status.textContent = '待命';
       }
