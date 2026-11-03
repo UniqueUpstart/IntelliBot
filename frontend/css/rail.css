@@ -30,7 +30,7 @@
 }
 .rail--left{left:var(--edge)}
 .rail--right{right:var(--edge); transform-origin:100% 50%; --side:-1}
-.rail.is-open{width:min(var(--rail-expanded), 78vw)}
+.rail.is-open{width:min(var(--rail-expanded), calc(100vw - var(--edge) * 2))}
 
 /* 栏体表面：承载底色与圆角，层级高于箭头，箭头被压在下面 */
 .rail__surface{
@@ -269,6 +269,41 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .model-field input:focus,
 .model-field select:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .model-field input::placeholder{color:var(--text-muted)}
+.model-field__control{position:relative;display:block}
+.model-field__control input{padding-right:92px}
+.model-field__fetch{
+  appearance:none;-webkit-appearance:none;
+  position:absolute;
+  top:50%;
+  right:6px;
+  height:30px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:0 9px;
+  border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
+  border-radius:10px;
+  background:var(--card-solid);
+  color:var(--text-secondary);
+  font:inherit;
+  font-size:11px;
+  cursor:pointer;
+  transform:translateY(-50%);
+  transition:color .14s ease,border-color .14s ease,background-color .14s ease;
+}
+.model-field__fetch svg{
+  width:13px;height:13px;
+  fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.model-field__fetch:hover,
+.model-field__fetch:focus-visible{
+  border-color:var(--theme);
+  background:color-mix(in srgb,var(--theme) 13%,var(--card-solid));
+  color:var(--text-primary);
+  outline:none;
+}
+.model-field__fetch:disabled{opacity:.55;cursor:wait}
 .model-view__note{
   margin:-2px 0 0;
   color:var(--text-muted);
@@ -281,13 +316,13 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .model-save{
   appearance:none; -webkit-appearance:none;
   justify-self:start;
-  min-width:144px;
-  height:42px;
-  padding:0 20px;
+  min-width:0;
+  height:40px;
+  padding:0 18px;
   border:0; border-radius:999px;
   background:var(--theme);
   color:var(--text-invert);
-  font:inherit; font-size:var(--fs-16);
+  font:inherit; font-size:var(--fs-14);
   cursor:pointer;
 }
 .model-save:hover{filter:brightness(.96)}
@@ -489,7 +524,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   border-right:1px solid var(--border);
 }
 .rail.is-open .rail__panel{
-  width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+  width:calc(min(var(--rail-expanded), calc(100vw - var(--edge) * 2)) - var(--rail-w));
   opacity:1;
   /* 透明度交给脚本（panelOut / panelIn 两条曲线），这里只管宽度 */
   transition:width .3s var(--ease);
@@ -520,6 +555,23 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   scrollbar-width:none;          /* 不显示滚动条，靠上下滑动 */
 }
 .panel__body::-webkit-scrollbar{width:0; height:0}
+
+/* 桌面端开合时只让外层面板裁切内容，不让内容区跟着逐帧变窄。
+   左栏内容固定在图标列右侧，右栏内容固定在图标列左侧；因此收回过程中
+   标题、卡片和文字都停在原位，仅可见范围逐渐缩小，不会反复重新换行。 */
+@media (min-width:641px){
+  .rail__panel > .panel__body{
+    position:absolute;
+    top:0; bottom:0;
+    width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+    min-width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+  }
+  .rail--left .rail__panel > .panel__body{left:0}
+  .rail--right .rail__panel > .panel__body{right:0}
+}
+
+/* 角色页头部是静态内容，不需要用滚动卡片的雾化遮罩盖住。 */
+.rail__panel:has(> [data-panel-body][data-view="persona"]) > .frost--top{display:none}
 
 /* 滚动区首尾的雾化遮罩。
    染色与模糊必须拆成两层：染色在下（绷在模糊层的 backdrop 里），模糊在上、由 mask 收口。

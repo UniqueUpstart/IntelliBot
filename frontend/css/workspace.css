@@ -20,9 +20,19 @@
 .view-title{
   margin:0;
   font-size:24px;
-  line-height:1;
-  letter-spacing:.3px;
-  color:var(--text-secondary);
+  line-height:1.15;
+  letter-spacing:0;
+  color:var(--text-primary);
+}
+html[lang="zh-CN"] .view-title,
+html[lang="zh-CN"] .model-view__title,
+html[lang="zh-CN"] .rail__title,
+html[lang="zh-CN"] .skin-view__title{
+  font-family:"Noto Sans SC","Microsoft YaHei",sans-serif;
+  font-size:22px;
+  font-weight:500;
+  line-height:1.15;
+  letter-spacing:.01em;
 }
 .view-sub{
   max-width:420px;
@@ -220,9 +230,9 @@
   margin-left:auto;
   border-radius:50%;
 }
-.persona-form__row{
+.persona-form__grid{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:12px;
 }
 .persona-field{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
@@ -245,21 +255,11 @@
 .persona-field textarea{min-height:118px;padding:12px 13px;line-height:1.5;resize:vertical}
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
-.persona-style{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 96px;
-  gap:12px;
-}
-.persona-color{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
-.persona-color input{
-  width:100%;height:42px;
-  padding:4px;
-  border:0;border-radius:14px;
-  background:var(--card);
-  cursor:pointer;
-}
-.persona-color input::-webkit-color-swatch-wrapper{padding:0}
-.persona-color input::-webkit-color-swatch{border:0;border-radius:10px}
+.persona-view .view-badge,
+.persona-preview__dot{display:none}
+.persona-field--color input{padding:6px}
+.persona-field--color input::-webkit-color-swatch-wrapper{padding:0}
+.persona-field--color input::-webkit-color-swatch{border:0;border-radius:9px}
 .persona-note{
   margin:-2px 0 0;
   color:var(--text-muted);
@@ -285,6 +285,10 @@
 .persona-save:hover{filter:brightness(.96)}
 .persona-delete:focus-visible,
 .persona-save:focus-visible{outline:2px solid var(--theme-dark);outline-offset:2px}
+
+@media(max-width:640px){
+  .persona-form__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 
 /* 左栏对话流 */
 .chat-flow-view{min-height:calc(var(--rail-h) - 64px)}

@@ -15,8 +15,10 @@ from ai.deepseek_bridge import (
     BridgeError,
     BridgeState,
     Config,
+    _anthropic_payload,
     _request_payload,
     chat,
+    fetch_models,
     validate_ai_config,
     validate_chat_request,
     validate_persona,
@@ -80,6 +82,55 @@ class DeepSeekBridgeTest(unittest.TestCase):
             self.config,
         )
         self.assertEqual(updated.model, "deepseek-v4-pro")
+
+    def test_model_list_is_fetched_from_configured_endpoint(self):
+        requests = []
+
+        def opener(request, **_kwargs):
+            requests.append(request)
+            return FakeResponse({
+                "data": [
+                    {"id": "deepseek-v4-pro"},
+                    {"id": "deepseek-flash"},
+                    {"id": "deepseek-flash"},
+                ]
+            })
+
+        models = fetch_models(self.config, opener)
+        self.assertEqual(models, ["deepseek-flash", "deepseek-v4-pro"])
+        self.assertEqual(requests[0].full_url, "https://api.deepseek.com/models")
+        self.assertEqual(requests[0].get_header("Authorization"), "Bearer test-key")
+
+    def test_anthropic_uses_native_messages_protocol(self):
+        config = Config(
+            api_key="anthropic-key",
+            provider="custom",
+            base_url="https://api.anthropic.com/v1",
+            model="claude-sonnet-4-5",
+            api_format="anthropic",
+        )
+        payload = _anthropic_payload(config, "你好", [])
+        self.assertIn("system", payload)
+        self.assertEqual(payload["messages"][-1], {"role": "user", "content": "你好"})
+        self.assertNotIn("response_format", payload)
+
+        requests = []
+
+        def opener(request, **_kwargs):
+            requests.append(request)
+            return FakeResponse({
+                "model": "claude-sonnet-4-5",
+                "content": [{
+                    "type": "text",
+                    "text": '{"reply":"你好。","commands":[],"stop":false}',
+                }],
+            })
+
+        result = chat(config, "你好", [], opener)
+        self.assertEqual(result["reply"], "你好。")
+        self.assertTrue(requests[0].full_url.endswith("/messages"))
+        self.assertEqual(requests[0].get_header("X-api-key"), "anthropic-key")
+        self.assertEqual(requests[0].get_header("Anthropic-version"), "2023-06-01")
 
     def test_supported_actions_are_kept(self):
         for action_id in ("salute", "wave", "surprised", "hug", "refuse"):
@@ -323,19 +374,23 @@ class DeepSeekBridgeTest(unittest.TestCase):
     def test_runtime_model_config_is_validated_and_keeps_hidden_key(self):
         updated = validate_ai_config(
             {
-                "provider": "openai",
-                "base_url": "https://api.openai.com/v1/",
-                "model": "gpt-4.1-mini",
+                "provider": "custom",
+                "base_url": "https://llm.example.com/v1/",
+                "model": "local-model",
+                "api_format": "anthropic",
             },
             self.config,
         )
-        self.assertEqual(updated.provider, "openai")
-        self.assertEqual(updated.base_url, "https://api.openai.com/v1")
-        self.assertEqual(updated.model, "gpt-4.1-mini")
+        self.assertEqual(updated.provider, "custom")
+        self.assertEqual(updated.base_url, "https://llm.example.com/v1")
+        self.assertEqual(updated.model, "local-model")
+        self.assertEqual(updated.api_format, "anthropic")
         self.assertEqual(updated.api_key, "test-key")
 
         with self.assertRaises(BridgeError):
             validate_ai_config({"base_url": "file:///etc/passwd"}, self.config)
+        with self.assertRaises(BridgeError):
+            validate_ai_config({"api_format": "deepseek"}, self.config)
 
     def test_unconfigured_chat_returns_actionable_error(self):
         state = BridgeState(Config(api_key=""))

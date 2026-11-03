@@ -287,6 +287,56 @@ int main(int argc, char** argv) {
     }
     /* DeepSeek 可能等待数十秒，必须放在全局业务锁外；否则等待回复时，
        仿真控制、状态轮询和页面其他请求都会被同一把锁卡住。 */
+    if (req.method == "POST" && req.path == "/api/v1/ai/models") {
+      const auto request_id = "req-ai-models-" + std::to_string(ai_serial.fetch_add(1) + 1);
+      auto fail = [&](int status, const std::string& code, const std::string& message) {
+        response(res, status, request_id, nullptr, code, message);
+      };
+      if (!ai) {
+        fail(503, "AI_NOT_CONFIGURED", "本地 AI 服务尚未启动");
+        return;
+      }
+      if (req.body.empty() || req.body.size() > 8192) {
+        fail(413, "BODY_TOO_LARGE", "模型列表请求需为 1 至 8192 字节");
+        return;
+      }
+      try {
+        if (!json::parse(req.body).is_object()) throw std::runtime_error("object required");
+      } catch (...) {
+        fail(400, "INVALID_JSON", "模型列表请求必须为 JSON 对象");
+        return;
+      }
+      const auto upstream = ai->list_models(req.body);
+      if (!upstream.connected) {
+        fail(502, "AI_UNAVAILABLE", "本地 AI 服务未响应");
+        return;
+      }
+      if (upstream.status != 200) {
+        try {
+          const auto error = json::parse(upstream.body).at("error");
+          fail(upstream.status, error.value("code", "AI_UPSTREAM_ERROR"),
+               error.value("message", "获取模型列表失败"));
+        } catch (...) {
+          fail(502, "AI_UPSTREAM_ERROR", "模型列表服务返回异常");
+        }
+        return;
+      }
+      try {
+        const auto data = json::parse(upstream.body);
+        if (!data.is_object() || !data.contains("models") || !data["models"].is_array()) {
+          throw std::runtime_error("invalid model list");
+        }
+        for (const auto& item : data["models"]) {
+          if (!item.is_string() || item.get<std::string>().empty()) {
+            throw std::runtime_error("invalid model id");
+          }
+        }
+        response(res, 200, request_id, data);
+      } catch (...) {
+        fail(502, "AI_INVALID_RESPONSE", "模型列表服务返回了非法响应");
+      }
+      return;
+    }
     if (req.method == "POST" && req.path == "/api/v1/chat") {
       const auto request_id = "req-ai-" + std::to_string(ai_serial.fetch_add(1) + 1);
       auto fail = [&](int status, const std::string& code, const std::string& message) {

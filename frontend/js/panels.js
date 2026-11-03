@@ -1,6 +1,6 @@
 /* 面板开合：复刻 STRCAT 轮播面板呼出 / 收回的那两条通道 ——
    ① 形变（squash & stretch）：整块面板的 scaleX / scaleY 交给一条弹性曲线；
-   ② 内容：透明度与横移走一条带柔过冲的贝塞尔。
+   ② 内容：只做透明度变化，位置始终由布局固定。
    形变这一路照 歌单菜单（lockMenuBox）的做法拆成两轴：
    那边是一条补间同时驱动 { scaleX: MENU_SQUEEZE(0.3), scaleY: MENU_SQUASH_Y(0.75) } → { 1, 1 }，
    横向从窄撑满、纵向从扁撑开，两轴共用一条 elastic 曲线，所以拉伸的形变是「斜着」发生的。
@@ -9,10 +9,7 @@
    改成从 1 撑出去再弹回来 —— 两轴各留一个峰值参数，同值就是等比过冲，
    拉开差值则偏向某一侧胀（当前 PEAK_X = PEAK_Y = 1.02，等比）。
    曲线沿用 STRCAT 的原值：形变 elastic.out(1.1, 0.8)（OPEN_SQUASH_EASE 同周期），
-   内容 panelOut = cubic-bezier(.22, 1.18, .36, 1)（圆润的过冲，替代 back 的尖点）、
-   panelIn = cubic-bezier(.64, 0, .78, -.18)（末段先轻微反向再收拢）。
-   那两条在 STRCAT 里是 CustomEase 建的，本工程没引 CustomEase，
-   这里按同一组控制点做 x→y 查表，曲线等价。
+   内容淡入使用 panelOut = cubic-bezier(.22, 1, .36, 1)。
    尺寸（栏宽 80 → 601、账号高 48 → 270）仍由 CSS 的 0.3s 过渡负责，
    脚本只写 scale 与内容通道，不和宽度、磁吸、按压反馈抢 transform。 */
 (function () {
@@ -20,7 +17,7 @@
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   /* CSS 里的 cubic-bezier(x1,y1,x2,y2)：先按参数采一张 x→y 的表，再线性插值查值。
-     y 超出 0~1 是允许的（panelOut 会过冲、panelIn 末尾会微负），查表不做裁剪 */
+     查表不对结果做额外裁剪。 */
   function cubicEase(x1, y1, x2, y2) {
     var N = 160, xs = [], ys = [], i, t;
     var bez = function (a, b, u) {
@@ -49,7 +46,6 @@
      那一瞬看起来就是「内部错位一下又弹回」。y1 收到 1.0 后只逼近不过越，
      前段那股冲劲还在，收尾不再相对面板滑一下 */
   var PANEL_OUT = cubicEase(0.22, 1, 0.36, 1);
-  var PANEL_IN  = cubicEase(0.64, 0, 0.78, -0.18);
 
   /* 形变拆两轴：两轴同值即等比过冲（STRCAT 歌单菜单是 x 0.3 / y 0.75 从挤压态撑开，
      这里起点为 1，方向反过来 —— 先胀开再收）。想让胀开偏横向就把两值拉开 */
@@ -57,9 +53,7 @@
   var PEAK_Y   = 1.02;    // 纵向拉伸极值：与 x 同值，等比胀开
   var UP_DUR   = 0.25;    // 撑到两轴极值
   var BACK_DUR = 0.75;    // 弹性收回 1，STRCAT 的 OPEN_SQUASH_DUR 是同量级（0.9）
-  var SLIDE    = 16;      // 内容进入时的横移量(px)：从栏根方向滑到位
   var OPEN_DUR = 0.4;     // 内容进入（STRCAT 的 OPEN_DUR）
-  var CLOSE_DUR = 0.4;    // 内容退出（CLOSE_DUR）
   var SH_BASE  = '16px';  // 投影柔光半径常态（与 CSS 的 --sh 初值一致）
   var SH_MAX   = '32px';  // 撑开时的柔光半径：翻一倍，浮起感靠这一下
   var SH_A_BASE = 0.1;    // 投影透明度常态（与 CSS 的 --sh-a 初值一致）
@@ -74,11 +68,6 @@
      再叠一层会打架 */
   function contentOf(node) {
     return node.classList.contains('rail') ? node.querySelector('.rail__panel') : null;
-  }
-  /* 内容从栏根一侧滑进来：左栏从左、右栏从右。用轴名而不是写死 x，
-     两栏共用同一段补间 */
-  function slideOf(node) {
-    return { k: 'x', v: node.classList.contains('rail--right') ? SLIDE : -SLIDE };
   }
   /* 投影挂在表面层上（栏体的 .rail__surface / 账号的 .user__surface），
      不是被 scale 的那层，所以阴影跟着形变走、但模糊半径的补间不会和 scale 抢属性。
@@ -98,7 +87,7 @@
     if (el) gsap.killTweensOf(el);
     var surf = surfaceOf(node);
     if (surf) gsap.killTweensOf(surf);
-    var slide = slideOf(node), axis = slide.k, tl = gsap.timeline();
+    var tl = gsap.timeline();
     node.__popTl = tl;
 
     /* 开合期间挂个标记：卡片的 3D 磁吸在父级还在 scale 回弹时叠加透视，
@@ -111,8 +100,7 @@
     }, on ? (UP_DUR + BACK_DUR) * 1000 + 80 : 320);
 
     if (on) {
-      /* 形变与内容同时起步，各走各的曲线：这就是 STRCAT 里「位移 panelOut + 缩放 elastic」的并行结构。
-         两轴同一条补间推进，两轴同值即等比胀开 */
+      /* 形变与内容同时起步，各走各的曲线；内容只淡入，不改变排版位置。 */
       tl.to(node, { '--sx': peakX(), '--sy': peakY(), duration: UP_DUR, ease: 'power2.out' }, 0)
         .to(node, { '--sx': 1, '--sy': 1, duration: BACK_DUR, ease: 'elastic.out(1.1, 0.8)' }, UP_DUR);
       /* 阴影同步：柔光 16 → 32、透明度 .10 → .20 与形变同拍撑开，回弹用同一条弹性曲线收回，
@@ -122,29 +110,15 @@
           .to(surf, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: BACK_DUR, ease: 'elastic.out(1.1, 0.8)' }, UP_DUR);
       }
       if (el) {
-        var from = { opacity: 0 }, to = {
+        tl.fromTo(el, { opacity: 0 }, {
           opacity: 1, duration: OPEN_DUR, ease: PANEL_OUT, immediateRender: true,
-          /* 收到 0 后把 transform 清掉：留一个 translate(0px,0px) 会让内容一直呆在
-             自己那层合成层上，落层/升层的那一帧看着像错位 */
-          onComplete: function () { el.style.transform = ''; }
-        };
-        from[axis] = slide.v;
-        to[axis] = 0;
-        tl.fromTo(el, from, to, 0);
+        }, 0);
       }
     } else {
-      /* 收回：形变先归 1（打断展开时不硬切）；内容按 panelIn 退场 ——
-         起步先反向一点再收，与 STRCAT 收回同一条曲线。
-         透明度单独走 power2.in 0.25s：宽度只有 0.3s 就收到 80，
-         若也套 panelIn（前 40% 几乎不动），内容会是被「裁」掉而不是「淡」掉的 */
+      /* 收回：形变先归 1（打断展开时不硬切），内容保持原位淡出。 */
       tl.to(node, { '--sx': 1, '--sy': 1, duration: 0.2, ease: 'power2.out' }, 0);
       if (surf) tl.to(surf, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: 0.2, ease: 'power2.out' }, 0);
-      if (el) {
-        var back = { duration: CLOSE_DUR, ease: PANEL_IN };
-        back[axis] = slide.v;
-        tl.to(el, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0)
-          .to(el, back, 0);
-      }
+      if (el) tl.to(el, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0);
     }
   }
 

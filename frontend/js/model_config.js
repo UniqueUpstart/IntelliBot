@@ -5,23 +5,31 @@
   var form = document.querySelector('[data-model-form]');
   var trigger = document.querySelector('[data-model-trigger]');
   var label = document.querySelector('[data-model-label]');
+  var effort = document.querySelector('[data-model-effort]');
   var menu = document.querySelector('[data-model-menu]');
   var menuList = document.querySelector('[data-model-menu-list]');
-  if (!panel || !form || !trigger || !label || !menu || !menuList) return;
+  if (!panel || !form || !trigger || !label || !effort || !menu || !menuList) return;
 
-  var providerInput = form.querySelector('[data-model-provider]');
+  var formatInput = form.querySelector('[data-model-format]');
   var baseInput = form.querySelector('[data-model-base-url]');
   var modelInput = form.querySelector('[data-model-name]');
   var keyInput = form.querySelector('[data-model-key]');
   var statusNode = panel.querySelector('[data-model-status]');
   var note = panel.querySelector('[data-model-note]');
   var saveButton = form.querySelector('[data-model-save]');
+  var fetchButton = form.querySelector('[data-model-fetch]');
   var options = document.querySelector('#model-name-options');
+  if (!formatInput || !baseInput || !modelInput || !keyInput || !statusNode ||
+      !note || !saveButton || !fetchButton || !options) return;
   var presetButtons = Array.prototype.slice.call(form.querySelectorAll('[data-model-preset]'));
   var queryApi = new URLSearchParams(location.search).get('api');
   var API = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var HISTORY_KEY = 'intellibot.modelHistory';
+  var inventories = Object.create(null);
   var busy = false;
+  var loaded = false;
+  var loadError = '';
+  statusNode.removeAttribute('data-i18n');
   var LEGACY_MODELS = {
     'deepseek-chat': 'deepseek-flash',
     'deepseek-reasoner': 'deepseek-v4-pro',
@@ -33,12 +41,8 @@
       baseUrl: 'https://api.deepseek.com',
       models: ['deepseek-flash', 'deepseek-v4-pro'],
     },
-    openai: {
-      label: 'OpenAI',
-      baseUrl: 'https://api.openai.com/v1',
-      models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini'],
-    },
-    /* 智谱的 Flash 档长期免费，且国内可直连，适合当默认的零成本选项 */
+    /* 智谱的 Flash 档长期免费，且国内可直连：老配置里的 provider=zhipu
+       靠这条留在 PRESETS 里，才不会被 normalizeProvider 降级成自定义 */
     zhipu: {
       label: '智谱 GLM',
       baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
@@ -55,6 +59,7 @@
     provider: 'deepseek',
     base_url: PRESETS.deepseek.baseUrl,
     model: 'deepseek-flash',
+    api_format: 'openai',
     configured: false,
     key_hint: '',
   };
@@ -63,8 +68,16 @@
     return typeof window.t === 'function' ? window.t(key) : fallback;
   }
 
-  function providerName(provider) {
-    return (PRESETS[provider] && PRESETS[provider].label) || provider || 'AI';
+  function formatLabel(format) {
+    return format === 'anthropic' ? 'Anthropic' : 'OpenAI';
+  }
+
+  function normalizeProvider(provider) {
+    return provider === 'openai' ? 'custom' : (PRESETS[provider] ? provider : 'custom');
+  }
+
+  function normalizeFormat(format) {
+    return format === 'anthropic' ? 'anthropic' : 'openai';
   }
 
   function normalizeModel(provider, model) {
@@ -77,19 +90,6 @@
     if (model === 'glm-4-flash') return 'GLM-4-Flash';
     if (model === 'glm-4.7-flash') return 'GLM-4.7 Flash';
     return model;
-  }
-
-  function modelDescription(provider, model) {
-    if (provider === 'deepseek' && model === 'deepseek-flash') {
-      return t('model.desc.deepseekFlash', '响应快、成本较低，适合日常对话和机器人动作理解');
-    }
-    if (provider === 'deepseek' && model === 'deepseek-v4-pro') {
-      return t('model.desc.deepseekV4Pro', '综合能力更强，适合复杂指令和较长对话');
-    }
-    if (provider === 'zhipu' && model === 'glm-4-flash') {
-      return t('model.desc.glmFlash', '永久免费、国内直连，适合日常对话');
-    }
-    return t('model.desc.custom', '自定义模型');
   }
 
   function readHistory() {
@@ -114,6 +114,10 @@
     var preset = PRESETS[provider] || PRESETS.custom;
     var history = readHistory()[provider];
     var values = preset.models.slice();
+    var inventory = Array.isArray(inventories[provider]) ? inventories[provider] : [];
+    inventory.forEach(function (model) {
+      if (typeof model === 'string' && model && !values.includes(model)) values.push(model);
+    });
     if (Array.isArray(history)) {
       history.forEach(function (model) {
         model = normalizeModel(provider, model);
@@ -171,43 +175,34 @@
       item.setAttribute('aria-checked', String(model === current.model));
       if (model === current.model) item.classList.add('is-on');
 
-      var icon = document.createElement('span');
-      icon.className = 'model-menu__icon';
-      icon.setAttribute('aria-hidden', 'true');
-      if (model === 'deepseek-flash') icon.textContent = 'F';
-      else if (model === 'deepseek-v4-pro') icon.textContent = 'P';
-      else icon.textContent = 'AI';
-
-      var copy = document.createElement('span');
-      copy.className = 'model-menu__copy';
       var name = document.createElement('span');
       name.className = 'model-menu__name';
       name.textContent = modelLabel(model);
-      var provider = document.createElement('span');
-      provider.className = 'model-menu__provider';
-      provider.textContent = modelDescription(current.provider, model);
-      copy.append(name, provider);
 
       var check = document.createElement('span');
       check.className = 'model-menu__check';
       check.setAttribute('aria-hidden', 'true');
       check.textContent = '✓';
 
-      item.setAttribute('aria-label', modelLabel(model) + ': ' + modelDescription(current.provider, model));
-      item.append(icon, copy, check);
+      item.setAttribute('aria-label', model);
+      item.append(name, check);
       menuList.appendChild(item);
     });
   }
 
   function paint(config) {
+    loaded = true;
+    loadError = '';
+    var provider = normalizeProvider(config.provider || 'custom');
     current = {
-      provider: config.provider || 'custom',
+      provider: provider,
       base_url: config.base_url || '',
-      model: normalizeModel(config.provider || 'custom', config.model || ''),
+      model: normalizeModel(provider, config.model || ''),
+      api_format: normalizeFormat(config.api_format),
       configured: !!config.configured,
       key_hint: config.key_hint || '',
     };
-    providerInput.value = PRESETS[current.provider] ? current.provider : 'custom';
+    formatInput.value = current.api_format;
     baseInput.value = current.base_url;
     modelInput.value = current.model;
     keyInput.value = '';
@@ -216,13 +211,14 @@
       : 'sk-…';
     renderDatalist(current.provider);
     renderMenu();
-    label.textContent = current.configured
-      ? modelLabel(current.model)
-      : t('model.choose', '选择模型');
+    label.textContent = modelLabel(current.model) || t('model.choose', '选择模型');
+    effort.hidden = current.configured;
+    effort.removeAttribute('data-i18n');
+    effort.textContent = t('model.status.unconfigured', '未配置');
+    trigger.title = formatLabel(current.api_format) + ' · ' + current.model +
+      (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置'));
     trigger.classList.toggle('is-ready', current.configured);
-    trigger.setAttribute('aria-label', current.configured
-      ? providerName(current.provider) + ' · ' + modelLabel(current.model)
-      : t('model.choose', '选择模型'));
+    trigger.setAttribute('aria-label', trigger.title);
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
       current.configured ? 'ready' : 'idle',
@@ -231,8 +227,8 @@
     document.dispatchEvent(new CustomEvent('ai-model-change', { detail: current }));
   }
 
-  async function request(method, body) {
-    var response = await fetch(API + '/ai/config', {
+  async function request(method, body, path) {
+    var response = await fetch(API + (path || '/ai/config'), {
       method: method,
       headers: body ? {
         'Content-Type': 'application/json',
@@ -256,6 +252,9 @@
       paint(await request('GET'));
       setNote('');
     } catch (error) {
+      loadError = error.message;
+      label.textContent = t('model.status.offline', '服务未启动');
+      trigger.title = error.message;
       setStatus('error', t('model.status.offline', '服务未启动'));
       setNote(error.message, true);
     }
@@ -264,6 +263,9 @@
   async function save(patch, successText) {
     if (busy) return false;
     busy = true;
+    trigger.disabled = true;
+    trigger.setAttribute('aria-busy', 'true');
+    label.textContent = t('model.status.saving', '正在应用');
     saveButton.disabled = true;
     setStatus('loading', t('model.status.saving', '正在应用'));
     try {
@@ -273,12 +275,55 @@
       setNote(successText || t('model.saved', '模型配置已同步到对话'));
       return true;
     } catch (error) {
+      paint(current);
+      effort.hidden = false;
+      effort.textContent = t('model.status.error', '保存失败');
+      trigger.title = error.message;
       setStatus('error', t('model.status.error', '保存失败'));
       setNote(error.message, true);
+      // Keep the menu open so a failed switch is visible next to the composer.
+      openMenu();
       return false;
     } finally {
       busy = false;
+      trigger.disabled = false;
+      trigger.removeAttribute('aria-busy');
       saveButton.disabled = false;
+    }
+  }
+
+  async function fetchModels() {
+    if (busy) return;
+    busy = true;
+    fetchButton.disabled = true;
+    setStatus('loading', t('model.fetch.loading', '正在获取模型'));
+    try {
+      var draft = {
+        provider: current.provider,
+        api_format: formatInput.value,
+        base_url: baseInput.value.trim(),
+      };
+      if (keyInput.value.trim()) draft.api_key = keyInput.value.trim();
+      var data = await request('POST', draft, '/ai/models');
+      var models = Array.isArray(data.models) ? data.models.filter(function (item) {
+        return typeof item === 'string' && item.trim();
+      }) : [];
+      inventories[current.provider] = models;
+      renderDatalist(current.provider);
+      renderMenu();
+      if (models.length && !models.includes(modelInput.value.trim())) {
+        modelInput.value = models[0];
+      }
+      setStatus('idle', t('model.fetch.available', '可选模型'));
+      setNote(models.length
+        ? t('model.fetch.ok', '模型列表已更新') + ' · ' + models.length
+        : t('model.fetch.empty', '接口没有返回可用模型'));
+    } catch (error) {
+      setStatus('error', t('model.status.error', '获取失败'));
+      setNote(error.message || t('model.fetch.failed', '获取模型列表失败'), true);
+    } finally {
+      busy = false;
+      fetchButton.disabled = false;
     }
   }
 
@@ -293,21 +338,16 @@
     trigger.setAttribute('aria-expanded', 'true');
   }
 
-  providerInput.addEventListener('change', function () {
-    var provider = providerInput.value;
-    var preset = PRESETS[provider] || PRESETS.custom;
-    if (preset.baseUrl) baseInput.value = preset.baseUrl;
-    if (preset.models.length) modelInput.value = preset.models[0];
-    renderDatalist(provider);
-  });
-
   presetButtons.forEach(function (button) {
     button.addEventListener('click', function () {
-      providerInput.value = button.dataset.provider || 'custom';
+      var provider = button.dataset.provider || 'custom';
+      current.provider = provider;
+      current.api_format = normalizeFormat(button.dataset.apiFormat);
+      formatInput.value = current.api_format;
       baseInput.value = button.dataset.baseUrl || '';
       modelInput.value = button.dataset.prefillModel || '';
-      renderDatalist(providerInput.value);
-      paintPreset(providerInput.value, baseInput.value, modelInput.value);
+      renderDatalist(provider);
+      paintPreset(provider, baseInput.value, modelInput.value);
       /* 顶部那枚状态胶囊只说服务端真实状态（已连接 / 未配置 / 服务未启动），
          点预设不再把它改成「待保存」—— 需要提醒的话由下面这行说明承担 */
       setNote(t('model.preset.filled', '已填入预设，补全 API Key 后保存即可。'));
@@ -319,7 +359,8 @@
 
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
-    var provider = providerInput.value;
+    var provider = current.provider;
+    var apiFormat = formatInput.value;
     var baseUrl = baseInput.value.trim();
     var model = modelInput.value.trim();
     if (!baseUrl || !model) {
@@ -327,10 +368,17 @@
       setNote(t('model.required', 'API 地址和模型名称不能为空。'), true);
       return;
     }
-    var patch = { provider: provider, base_url: baseUrl, model: model };
+    var patch = {
+      provider: provider,
+      api_format: apiFormat,
+      base_url: baseUrl,
+      model: model,
+    };
     if (keyInput.value.trim()) patch.api_key = keyInput.value.trim();
     if (await save(patch)) keyInput.value = '';
   });
+
+  fetchButton.addEventListener('click', fetchModels);
 
   trigger.addEventListener('click', function () {
     if (menu.hidden) openMenu();
@@ -345,6 +393,7 @@
       if (model === current.model && current.configured) return;
       await save({
         provider: current.provider,
+        api_format: current.api_format,
         base_url: current.base_url,
         model: model,
       }, t('model.switched', '已切换模型'));
@@ -373,7 +422,13 @@
     }
   });
   document.addEventListener('langchange', function () {
-    paint(current);
+    if (loaded) paint(current);
+    else if (loadError) {
+      label.textContent = t('model.status.offline', '服务未启动');
+      setStatus('error', t('model.status.offline', '服务未启动'));
+      setNote(loadError, true);
+      return;
+    }
     setNote('');
   });
 
@@ -381,7 +436,12 @@
     refresh: load,
     get current() { return Object.assign({}, current); },
     setModel: function (model) {
-      return save({ provider: current.provider, base_url: current.base_url, model: model });
+      return save({
+        provider: current.provider,
+        api_format: current.api_format,
+        base_url: current.base_url,
+        model: model,
+      });
     },
   };
 

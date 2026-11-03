@@ -16,16 +16,23 @@
   var log = findInPanel('[data-assistant-log]');
   var input = composer.querySelector('[data-assistant-input]');
   var sendButton = composer.querySelector('[data-assistant-send]');
-  var clearButton = findInPanel('[data-assistant-clear]');
+  var settingsButton = document.querySelector('[data-chat-settings]');
+  var historyMenu = document.querySelector('[data-chat-history-menu]');
+  var exportButton = document.querySelector('[data-chat-export]');
+  var clearButton = document.querySelector('[data-chat-clear]');
   var stopButton = findInPanel('[data-assistant-stop]');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
-  if (!log || !input || !sendButton || !clearButton || !stopButton) return;
+  if (!log || !input || !sendButton || !settingsButton || !historyMenu ||
+      !clearButton || !stopButton) return;
 
   /* 发送钮里那两枚箭头叠在同一个格子上（见 chat.css 尾部的 composer-send-*），
-     is-flying 一挂就是一次「发出去」的动画，收尾在 animationend */
-  var sendIcon = sendButton.querySelector('.composer__send-icon');
+     is-flying 一挂就是一次「发出去」的动画，收尾在 animationend。
+     测试里的假按钮没有 querySelector，所以先问一句有没有 */
+  var sendIcon = typeof sendButton.querySelector === 'function'
+    ? sendButton.querySelector('.composer__send-icon')
+    : null;
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -112,6 +119,17 @@
     });
   }
 
+  /* 待机时的自言自语：往舞台上追一条就够，不做定时清理——
+     记录留在两侧的滚动流里，由用户自己翻看 */
+  function showIdleReaction(kind) {
+    if (pending) return;
+    var key = kind === 'look' ? 'idle.look.prompt' : 'idle.settle.prompt';
+    var fallback = kind === 'look'
+      ? '我在看看周围。你想让我做点什么？'
+      : '站久了，活动一下。要不要看个动作？';
+    showStage('assistant', tr(key, fallback));
+  }
+
   function addRecord(role, text, modifier) {
     var record = {id: records.length + 1, role: role, content: text};
     records.push(record);
@@ -124,6 +142,7 @@
     log.appendChild(node);
     scrollBottom();
     showStage(role === 'ai' ? 'assistant' : role, text, record.id);
+    syncHistoryActions();
     return {node: node, record: record};
   }
 
@@ -402,6 +421,37 @@
     else openChat();
   }
 
+  function setHistoryMenu(open) {
+    historyMenu.hidden = !open;
+    settingsButton.setAttribute('aria-expanded', String(open));
+  }
+
+  function syncHistoryActions() {
+    var empty = records.length === 0;
+    if (exportButton) exportButton.disabled = empty;
+    clearButton.disabled = empty;
+  }
+
+  function toggleHistoryMenu() {
+    setHistoryMenu(historyMenu.hidden);
+  }
+
+  function exportHistory() {
+    if (!records.length) return;
+    var text = records.map(function (record) {
+      var author = record.role === 'user' ? tr('chat.you', '你') : 'IntelliBot';
+      return author + ': ' + record.content;
+    }).join('\n\n');
+    var blob = new Blob([text], {type: 'text/markdown;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'intellibot-chat-' + new Date().toISOString().slice(0, 10) + '.md';
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    setHistoryMenu(false);
+  }
+
   function clear() {
     history = [];
     records = [];
@@ -409,6 +459,8 @@
     hideStage();
     try { sessionStorage.removeItem(STARTED_KEY); } catch (_error) {}
     if (suggestions) suggestions.hidden = false;
+    setHistoryMenu(false);
+    syncHistoryActions();
     input.focus();
   }
 
@@ -431,7 +483,9 @@
   });
   sendButton.addEventListener('click', function () { send(input.value); });
   stopButton.addEventListener('click', function () { stopActions(); });
+  settingsButton.addEventListener('click', toggleHistoryMenu);
   clearButton.addEventListener('click', clear);
+  if (exportButton) exportButton.addEventListener('click', exportHistory);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
     if (button) send(button.dataset.chatPrompt || button.textContent.trim());
@@ -461,11 +515,25 @@
       if (!stage) return;
       stage.querySelectorAll('[data-stage-stream]').forEach(stageSync);
     });
+    window.addEventListener('intellibot-idle-reaction', function (event) {
+      showIdleReaction(event.detail && event.detail.kind);
+    });
     window.addEventListener('robot-ready', function () { welcome(true); }, {once: true});
     setTimeout(function () { welcome(false); }, 5000);
   }
+  document.addEventListener('pointerdown', function (event) {
+    if (historyMenu.hidden || event.target.closest('.chat-view__actions')) return;
+    setHistoryMenu(false);
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !historyMenu.hidden) {
+      setHistoryMenu(false);
+      settingsButton.focus();
+    }
+  });
   paintSuggestions();
   paintSend();
+  syncHistoryActions();
 
   window.intellibotChat = {
     send: send,

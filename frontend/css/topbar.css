@@ -63,6 +63,12 @@
      进出成对镜像，和底片同长同时序 */
   transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
+.nav .group > .pill{color:var(--text-primary)}
+html[lang="zh-CN"] .pill{
+  font-size:calc(var(--pill-fs) - .5px);
+  font-weight:500;
+  letter-spacing:.01em;
+}
 /* 底色挂在伪元素上，本体不参与绘制；hover 只填这一层，文字与图标不跟
    按下走 scale：本体没有边框占位了，底片与胶囊盒自然重合。
    压入用等比缩放而不是 inset，四周按同一比例收，长边短边看起来一样深。

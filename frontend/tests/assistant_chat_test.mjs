@@ -44,7 +44,9 @@ class Node {
 
   addEventListener(name, callback) { this.listeners[name] = callback; }
   dispatchEvent(event) { if (this.listeners[event.type]) return this.listeners[event.type](event); }
+  click() { this.dispatchEvent(new Event('click')); }
   setAttribute(name, value) { this[name] = value; }
+  getAttribute(name) { return this[name] ?? null; }
   focus() {}
 }
 
@@ -54,14 +56,16 @@ const panel = new Node();
 const log = new Node();
 const input = new Node();
 const sendButton = new Node();
+const settingsButton = new Node();
+const historyMenu = new Node();
+const exportButton = new Node();
 const clearButton = new Node();
 const stopButton = new Node();
-const status = new Node();
+historyMenu.hidden = true;
 panel.querySelector = selector => ({
   '[data-assistant-log]': log,
-  '[data-assistant-clear]': clearButton,
+  '[data-chat-settings]': settingsButton,
   '[data-assistant-stop]': stopButton,
-  '[data-assistant-status]': status,
   '[data-chat-suggestions]': null,
 })[selector];
 composer.querySelector = selector => ({
@@ -69,14 +73,22 @@ composer.querySelector = selector => ({
   '[data-assistant-log]': log,
   '[data-assistant-input]': input,
   '[data-assistant-send]': sendButton,
-  '[data-assistant-clear]': clearButton,
+  '[data-chat-settings]': settingsButton,
   '[data-assistant-stop]': stopButton,
-  '[data-assistant-status]': status,
 })[selector];
 
 globalThis.document = {
+  listeners: {},
   querySelector: selector => selector === '.composer' ? composer :
-    (selector === '[data-assistant-chat]' ? panel : null),
+    (selector === '[data-assistant-chat]' ? panel :
+      ({
+        '[data-chat-settings]': settingsButton,
+        '[data-chat-history-menu]': historyMenu,
+        '[data-chat-export]': exportButton,
+        '[data-chat-clear]': clearButton,
+        '[data-assistant-stop]': stopButton,
+      }[selector] || null)),
+  addEventListener(name, callback) { this.listeners[name] = callback; },
   createElement: () => new Node(),
 };
 globalThis.location = {search: ''};
@@ -218,7 +230,7 @@ globalThis.fetch = async () => ({
 });
 input.value = '停止动作';
 await window.intellibotChat.submit();
-assert.equal(status.textContent, '已按指令停止');
+assert.equal(stopButton.hidden, true, 'stop button should be hidden once the motion stops');
 assert.ok(window.robot3d.stopped >= 1);
 
 globalThis.fetch = async () => ({
@@ -231,8 +243,14 @@ for (let index = 0; index < 6; index += 1) {
 }
 assert.equal(window.intellibotChat.history.length, 10, 'history should retain at most ten messages');
 
+settingsButton.dispatchEvent(new Event('click'));
+assert.equal(historyMenu.hidden, false, 'settings should open the chat history menu');
+assert.equal(settingsButton.getAttribute('aria-expanded'), 'true');
+assert.equal(window.intellibotChat.history.length, 10, 'settings should not clear chat history');
+
 clearButton.dispatchEvent(new Event('click'));
 assert.equal(window.intellibotChat.history.length, 0);
 assert.equal(log.children.length, 0);
+assert.equal(historyMenu.hidden, true, 'clearing should close the history menu');
 
-console.log('PASS: chat controls, action sequence, stop command, validation, history limit');
+console.log('PASS: chat controls, action sequence, stop command, validation, history limit, history menu');
