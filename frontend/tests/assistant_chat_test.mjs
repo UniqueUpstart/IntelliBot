@@ -44,7 +44,9 @@ class Node {
 
   addEventListener(name, callback) { this.listeners[name] = callback; }
   dispatchEvent(event) { if (this.listeners[event.type]) return this.listeners[event.type](event); }
+  click() { this.dispatchEvent(new Event('click')); }
   setAttribute(name, value) { this[name] = value; }
+  getAttribute(name) { return this[name] ?? null; }
   focus() {}
 }
 
@@ -54,12 +56,19 @@ const panel = new Node();
 const log = new Node();
 const input = new Node();
 const sendButton = new Node();
-const clearButton = new Node();
+const settingsButton = new Node();
 const stopButton = new Node();
 const status = new Node();
+const modelTab = new Node();
+let settingsOpened = 0;
+modelTab.setAttribute('aria-expanded', 'false');
+modelTab.addEventListener('click', () => {
+  modelTab.setAttribute('aria-expanded', 'true');
+  settingsOpened += 1;
+});
 panel.querySelector = selector => ({
   '[data-assistant-log]': log,
-  '[data-assistant-clear]': clearButton,
+  '[data-chat-settings]': settingsButton,
   '[data-assistant-stop]': stopButton,
   '[data-assistant-status]': status,
   '[data-chat-suggestions]': null,
@@ -69,14 +78,15 @@ composer.querySelector = selector => ({
   '[data-assistant-log]': log,
   '[data-assistant-input]': input,
   '[data-assistant-send]': sendButton,
-  '[data-assistant-clear]': clearButton,
+  '[data-chat-settings]': settingsButton,
   '[data-assistant-stop]': stopButton,
   '[data-assistant-status]': status,
 })[selector];
 
 globalThis.document = {
   querySelector: selector => selector === '.composer' ? composer :
-    (selector === '[data-assistant-chat]' ? panel : null),
+    (selector === '[data-assistant-chat]' ? panel :
+      (selector === '.rail--left .item[data-panel="Model"]' ? modelTab : null)),
   createElement: () => new Node(),
 };
 globalThis.location = {search: ''};
@@ -231,8 +241,12 @@ for (let index = 0; index < 6; index += 1) {
 }
 assert.equal(window.intellibotChat.history.length, 10, 'history should retain at most ten messages');
 
-clearButton.dispatchEvent(new Event('click'));
+settingsButton.dispatchEvent(new Event('click'));
+assert.equal(settingsOpened, 1, 'settings should open the model configuration panel');
+assert.equal(window.intellibotChat.history.length, 10, 'settings should not clear chat history');
+
+window.intellibotChat.clear();
 assert.equal(window.intellibotChat.history.length, 0);
 assert.equal(log.children.length, 0);
 
-console.log('PASS: chat controls, action sequence, stop command, validation, history limit');
+console.log('PASS: chat controls, action sequence, stop command, validation, history limit, settings');

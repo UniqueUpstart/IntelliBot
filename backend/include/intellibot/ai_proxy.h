@@ -18,6 +18,7 @@ class AiProxy {
   AiResponse chat(const std::string& body, const std::string& idempotency_key) const;
   AiResponse get_config() const;
   AiResponse configure(const std::string& body) const;
+  AiResponse list_models(const std::string& body) const;
 
  private:
   AiResponse request(const std::string& method, const std::string& path,

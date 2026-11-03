@@ -16,13 +16,13 @@
   var log = findInPanel('[data-assistant-log]');
   var input = composer.querySelector('[data-assistant-input]');
   var sendButton = composer.querySelector('[data-assistant-send]');
-  var clearButton = findInPanel('[data-assistant-clear]');
+  var settingsButton = findInPanel('[data-chat-settings]');
   var stopButton = findInPanel('[data-assistant-stop]');
-  var status = findInPanel('[data-assistant-status]');
+  var status = findInPanel('[data-assistant-status]') || document.createElement('span');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
-  if (!log || !input || !sendButton || !clearButton || !stopButton || !status) return;
+  if (!log || !input || !sendButton || !settingsButton || !stopButton) return;
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -81,6 +81,16 @@
   function scheduleStageHide() {
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(hideStage, 8000);
+  }
+
+  function showIdleReaction(kind) {
+    if (pending) return;
+    var key = kind === 'look' ? 'idle.look.prompt' : 'idle.settle.prompt';
+    var fallback = kind === 'look'
+      ? '我在看看周围。你想让我做点什么？'
+      : '站久了，活动一下。要不要看个动作？';
+    showStage('assistant', tr(key, fallback));
+    scheduleStageHide();
   }
 
   function addRecord(role, text, modifier) {
@@ -347,6 +357,11 @@
     else openChat();
   }
 
+  function openSettings() {
+    var tab = document.querySelector('.rail--left .item[data-panel="Model"]');
+    if (tab && tab.getAttribute('aria-expanded') !== 'true') tab.click();
+  }
+
   function clear() {
     history = [];
     records = [];
@@ -378,7 +393,7 @@
   });
   sendButton.addEventListener('click', function () { send(input.value); });
   stopButton.addEventListener('click', function () { stopActions('已手动停止'); });
-  clearButton.addEventListener('click', clear);
+  settingsButton.addEventListener('click', openSettings);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
     if (button) send(button.dataset.chatPrompt || button.textContent.trim());
@@ -403,6 +418,9 @@
   if (window.addEventListener) {
     window.addEventListener('robot-manual-motion', function () {
       sequenceToken += 1; stopButton.hidden = true; status.textContent = '已切换为手动动作';
+    });
+    window.addEventListener('intellibot-idle-reaction', function (event) {
+      showIdleReaction(event.detail && event.detail.kind);
     });
     window.addEventListener('robot-ready', function () { welcome(true); }, {once: true});
     setTimeout(function () { welcome(false); }, 5000);

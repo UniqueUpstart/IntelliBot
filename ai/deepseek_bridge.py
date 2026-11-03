@@ -466,6 +466,42 @@ def _default_open(request: urllib.request.Request, timeout: float):
     return urllib.request.urlopen(request, timeout=timeout)
 
 
+def fetch_models(config: Config, opener: Callable = _default_open) -> list[str]:
+    if not config.api_key:
+        raise BridgeError(503, "AI_NOT_CONFIGURED", "请先填写 API Key")
+    endpoint = config.base_url.rstrip("/") + "/models"
+    request = urllib.request.Request(
+        endpoint,
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {config.api_key}",
+            "Accept": "application/json",
+            "User-Agent": "IntelliBot/0.1",
+        },
+    )
+    try:
+        with opener(request, timeout=config.timeout_s) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        if error.code in {401, 403}:
+            raise BridgeError(502, "AI_AUTH_FAILED", "API Key 无效或无权读取模型列表") from error
+        raise BridgeError(502, "AI_UPSTREAM_ERROR", f"获取模型列表失败，上游返回 HTTP {error.code}") from error
+    except (TimeoutError, urllib.error.URLError) as error:
+        raise BridgeError(502, "AI_UNAVAILABLE", "无法连接模型服务，请检查接口网址与网络") from error
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise BridgeError(502, "AI_INVALID_RESPONSE", "模型服务返回的列表无法解析") from error
+
+    items = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(items, list):
+        raise BridgeError(502, "AI_INVALID_RESPONSE", "模型服务返回的列表格式不正确")
+    models = {
+        item["id"].strip()
+        for item in items
+        if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip()
+    }
+    return sorted(models, key=str.casefold)
+
+
 def _call_once(
     config: Config,
     message: str,
@@ -627,6 +663,13 @@ class BridgeState:
             self.cache.clear()
             return public_config(updated)
 
+    def list_models(self, value: object) -> dict:
+        if not isinstance(value, dict):
+            raise BridgeError(400, "INVALID_AI_CONFIG", "配置必须是 JSON 对象")
+        with self.lock:
+            candidate = validate_ai_config(value, self.config)
+        return {"models": fetch_models(candidate, self.opener)}
+
 
 def make_handler(state: BridgeState):
     class Handler(BaseHTTPRequestHandler):
@@ -665,7 +708,7 @@ def make_handler(state: BridgeState):
             )
 
         def do_POST(self) -> None:
-            if self.path not in {"/chat", "/config"}:
+            if self.path not in {"/chat", "/config", "/models"}:
                 self._json(404, {"error": {"code": "NOT_FOUND", "message": "接口不存在"}})
                 return
             try:
@@ -673,6 +716,13 @@ def make_handler(state: BridgeState):
                 if length < 1 or length > MAX_BODY_BYTES:
                     raise BridgeError(413, "BODY_TOO_LARGE", "请求体需为 1 至 8192 字节")
                 body = self.rfile.read(length)
+                if self.path == "/models":
+                    try:
+                        value = json.loads(body.decode("utf-8"))
+                    except (UnicodeError, json.JSONDecodeError) as error:
+                        raise BridgeError(400, "INVALID_JSON", "模型列表请求必须是 JSON 对象") from error
+                    self._json(200, state.list_models(value))
+                    return
                 if self.path == "/config":
                     try:
                         value = json.loads(body.decode("utf-8"))

@@ -19,14 +19,14 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=19"></script>
-  <link rel="stylesheet" href="css/base.css?v=8">
-  <link rel="stylesheet" href="css/topbar.css?v=9">
-  <link rel="stylesheet" href="css/rail.css?v=28">
-  <link rel="stylesheet" href="css/workspace.css?v=3">
+<script src="js/i18n.js?v=21"></script>
+  <link rel="stylesheet" href="css/base.css?v=11">
+  <link rel="stylesheet" href="css/topbar.css?v=12">
+  <link rel="stylesheet" href="css/rail.css?v=29">
+  <link rel="stylesheet" href="css/workspace.css?v=5">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=42">
+  <link rel="stylesheet" href="css/chat.css?v=46">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -218,38 +218,42 @@
               <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
             </button>
             <button class="model-preset" type="button" data-model-preset
-                    data-provider="openai" data-base-url="https://api.openai.com/v1"
-                    data-prefill-model="gpt-4.1-mini">
-              <strong>GPT-4.1 mini</strong><span>快速均衡</span>
-            </button>
-            <button class="model-preset" type="button" data-model-preset
                     data-provider="custom" data-base-url="" data-prefill-model="">
-              <strong data-i18n="model.preset.custom">自定义</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
+              <strong data-i18n="model.preset.custom">自定义模型</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
             </button>
           </div>
           <label class="model-field">
-            <span data-i18n="model.provider">服务商</span>
+            <span data-i18n="model.provider">模型格式</span>
             <select data-model-provider>
               <option value="deepseek">DeepSeek</option>
-              <option value="openai">OpenAI</option>
-              <option value="custom" data-i18n="model.provider.custom">自定义 / OpenAI 兼容</option>
+              <option value="custom" data-i18n="model.provider.custom">OpenAI 兼容</option>
             </select>
-          </label>
-          <label class="model-field">
-            <span data-i18n="model.baseUrl">API 地址</span>
-            <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
-                   placeholder="https://api.example.com/v1">
-          </label>
-          <label class="model-field">
-            <span data-i18n="model.model">模型</span>
-            <input data-model-name type="text" spellcheck="false" autocomplete="off"
-                   list="model-name-options" placeholder="deepseek-flash">
-            <datalist id="model-name-options"></datalist>
           </label>
           <label class="model-field">
             <span data-i18n="model.apiKey">API Key</span>
             <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
                    placeholder="sk-…">
+          </label>
+          <label class="model-field">
+            <span data-i18n="model.baseUrl">接口网址</span>
+            <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
+                   placeholder="https://api.example.com/v1">
+          </label>
+          <label class="model-field">
+            <span data-i18n="model.model">模型名称</span>
+            <span class="model-field__control">
+              <input data-model-name type="text" spellcheck="false" autocomplete="off"
+                     list="model-name-options" placeholder="deepseek-flash">
+              <button class="model-field__fetch" type="button" data-model-fetch
+                      data-i18n-title="model.fetch.list" data-i18n-aria="model.fetch.list"
+                      title="获取模型列表" aria-label="获取模型列表">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>
+                </svg>
+                <span data-i18n="model.fetch.short">获取</span>
+              </button>
+            </span>
+            <datalist id="model-name-options"></datalist>
           </label>
           <p class="model-view__note" data-model-note data-i18n="model.key.local">
             API Key 只保存在本机，不会写入浏览器。
@@ -328,13 +332,18 @@
               <p class="view-sub" data-i18n="chatFlow.sub">慢慢说，我会把每一次对话都留在这里。</p>
             </div>
           </div>
-          <span class="view-badge" data-chat-persona>IntelliBot</span>
         </div>
         <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
           <header class="assistant-chat__toolbar">
-            <span class="assistant-chat__status" data-assistant-status data-i18n="chat.status.ready">待命</span>
             <button class="assistant-chat__tool" type="button" data-assistant-stop data-i18n="chat.stop" hidden>停止动作</button>
-            <button class="assistant-chat__tool" type="button" data-assistant-clear data-i18n="chat.clear">清空</button>
+            <button class="assistant-chat__tool assistant-chat__settings" type="button"
+                    data-chat-settings data-i18n="chat.settings" aria-label="设置">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>
+              </svg>
+              <span data-i18n="chat.settings">设置</span>
+            </button>
           </header>
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
         </section>
@@ -352,10 +361,12 @@
                       placeholder="提出后续变更要求" aria-label="Ask IntelliBot"></textarea>
             <div class="composer__footer">
               <button class="composer__history" type="button" data-chat-history
-                      data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录"
+                      data-i18n-aria="chat.openHistory" data-i18n-title="chat.openHistory"
+                      aria-label="打开完整聊天记录" title="打开完整聊天记录"
                       aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14"/>
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="3"/>
+                  <path d="M9 4.5v15M12.5 9.5h5M12.5 13h3.5"/>
                 </svg>
               </button>
               <div class="composer__trail">
@@ -863,9 +874,9 @@
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
-<script src="js/model_config.js?v=10"></script>
+<script src="js/model_config.js?v=12"></script>
 <script src="js/persona.js?v=1"></script>
-<script src="js/assistant_chat.js?v=12"></script>
+<script src="js/assistant_chat.js?v=13"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
@@ -884,9 +895,9 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=64"></script>
+<script type="module" src="js/robot3d.js?v=65"></script>
 <script type="module" src="js/view-control.js?v=42"></script>
-<script type="module" src="js/q1skin.js?v=30"></script>
+<script type="module" src="js/q1skin.js?v=31"></script>
 
 </body>
 </html>

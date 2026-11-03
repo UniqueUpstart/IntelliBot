@@ -17,6 +17,7 @@ from ai.deepseek_bridge import (
     Config,
     _request_payload,
     chat,
+    fetch_models,
     validate_ai_config,
     validate_chat_request,
     validate_persona,
@@ -80,6 +81,24 @@ class DeepSeekBridgeTest(unittest.TestCase):
             self.config,
         )
         self.assertEqual(updated.model, "deepseek-v4-pro")
+
+    def test_model_list_is_fetched_from_configured_endpoint(self):
+        requests = []
+
+        def opener(request, **_kwargs):
+            requests.append(request)
+            return FakeResponse({
+                "data": [
+                    {"id": "deepseek-v4-pro"},
+                    {"id": "deepseek-flash"},
+                    {"id": "deepseek-flash"},
+                ]
+            })
+
+        models = fetch_models(self.config, opener)
+        self.assertEqual(models, ["deepseek-flash", "deepseek-v4-pro"])
+        self.assertEqual(requests[0].full_url, "https://api.deepseek.com/models")
+        self.assertEqual(requests[0].get_header("Authorization"), "Bearer test-key")
 
     def test_supported_actions_are_kept(self):
         for action_id in ("salute", "wave", "surprised", "hug", "refuse"):
