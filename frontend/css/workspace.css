@@ -232,7 +232,7 @@ html[lang="zh-CN"] .skin-view__title{
 }
 .persona-form__grid{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px;
 }
 .persona-field{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
@@ -257,7 +257,11 @@ html[lang="zh-CN"] .skin-view__title{
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .persona-view .view-badge,
 .persona-preview__dot{display:none}
-.persona-field--color input{padding:6px}
+.persona-field--color input{
+  width:42px;
+  padding:4px;
+  justify-self:start;
+}
 .persona-field--color input::-webkit-color-swatch-wrapper{padding:0}
 .persona-field--color input::-webkit-color-swatch{border:0;border-radius:9px}
 .persona-note{

@@ -85,6 +85,19 @@
      磁吸只改倾斜与浮起（transform），不动模糊半径 */
 }
 
+.visually-hidden{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0 0 0 0)!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+
 /* 开合时的形变比例：--sx / --sy 由脚本补间（1 → 1.02 → 1），元素用独立的
    scale 属性接住，不写进 transform（那里还有 translateY(-50%) 与 is-hidden 的位移）。
    inherits:false —— 只在这一层用，不必传给上千个子节点，否则每帧改值都会让整棵子树重算样式 */
