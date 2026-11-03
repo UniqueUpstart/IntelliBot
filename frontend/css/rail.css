@@ -656,6 +656,23 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 .panel__body::-webkit-scrollbar{width:0; height:0}
 
+/* 桌面端开合时只让外层面板裁切内容，不让内容区跟着逐帧变窄。
+   左栏内容固定在图标列右侧，右栏内容固定在图标列左侧；因此收回过程中
+   标题、卡片和文字都停在原位，仅可见范围逐渐缩小，不会反复重新换行。 */
+@media (min-width:641px){
+  .rail__panel > .panel__body{
+    position:absolute;
+    top:0; bottom:0;
+    width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+    min-width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+  }
+  .rail--left .rail__panel > .panel__body{left:0}
+  .rail--right .rail__panel > .panel__body{right:0}
+}
+
+/* 角色页头部是静态内容，不需要用滚动卡片的雾化遮罩盖住。 */
+.rail__panel:has(> [data-panel-body][data-view="persona"]) > .frost--top{display:none}
+
 /* 滚动区首尾的雾化遮罩。
    染色与模糊必须拆成两层：染色在下（绷在模糊层的 backdrop 里），模糊在上、由 mask 收口。
    合在一层再用 mask 渐隐就会失效 —— mask 淡的是整层，连同染色一起淡掉，
