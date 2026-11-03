@@ -126,7 +126,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    与左栏的 12 同高。z-index 压在雾带（3）之上，卡片从它下面过时标题始终清楚 */
 .rail__title{
   position:sticky; top:calc(var(--title-top) - var(--pad-y)); z-index:4;
-  margin:0 0 8px;
+  margin:0 0 12px;
   font-size:24px; line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);
 }
@@ -134,7 +134,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    半个 24 号标题盒的 12）。正文自带 --pad-y 的上留白，这里用同样的差值抵掉，
    写法与快捷指令页第一组标题那条一致 */
 .rail__view > .rail__title:first-child{
-  margin-top:calc(var(--title-top) - var(--pad-y));
+  margin-top:0;
 }
 /* 卡片网格：一行四张，列宽用 1fr 摊满，卡片靠 aspect-ratio 保持方格 */
 .rail__grid{
