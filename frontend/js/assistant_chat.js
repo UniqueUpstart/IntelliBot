@@ -16,13 +16,13 @@
   var log = findInPanel('[data-assistant-log]');
   var input = composer.querySelector('[data-assistant-input]');
   var sendButton = composer.querySelector('[data-assistant-send]');
-  var clearButton = findInPanel('[data-assistant-clear]');
+  var settingsButton = findInPanel('[data-chat-settings]');
   var stopButton = findInPanel('[data-assistant-stop]');
-  var status = findInPanel('[data-assistant-status]');
+  var status = findInPanel('[data-assistant-status]') || document.createElement('span');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
-  if (!log || !input || !sendButton || !clearButton || !stopButton || !status) return;
+  if (!log || !input || !sendButton || !settingsButton || !stopButton) return;
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -357,6 +357,11 @@
     else openChat();
   }
 
+  function openSettings() {
+    var tab = document.querySelector('.rail--left .item[data-panel="Model"]');
+    if (tab && tab.getAttribute('aria-expanded') !== 'true') tab.click();
+  }
+
   function clear() {
     history = [];
     records = [];
@@ -388,7 +393,7 @@
   });
   sendButton.addEventListener('click', function () { send(input.value); });
   stopButton.addEventListener('click', function () { stopActions('已手动停止'); });
-  clearButton.addEventListener('click', clear);
+  settingsButton.addEventListener('click', openSettings);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
     if (button) send(button.dataset.chatPrompt || button.textContent.trim());

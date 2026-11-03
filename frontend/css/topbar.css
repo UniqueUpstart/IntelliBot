@@ -63,6 +63,7 @@
      进出成对镜像，和底片同长同时序 */
   transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
+.nav .group > .pill{color:var(--text-primary)}
 html[lang="zh-CN"] .pill{
   font-size:calc(var(--pill-fs) - .5px);
   font-weight:500;

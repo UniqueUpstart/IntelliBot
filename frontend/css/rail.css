@@ -261,6 +261,41 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .model-field input:focus,
 .model-field select:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .model-field input::placeholder{color:var(--text-muted)}
+.model-field__control{position:relative;display:block}
+.model-field__control input{padding-right:92px}
+.model-field__fetch{
+  appearance:none;-webkit-appearance:none;
+  position:absolute;
+  top:50%;
+  right:6px;
+  height:30px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:0 9px;
+  border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
+  border-radius:10px;
+  background:var(--card-solid);
+  color:var(--text-secondary);
+  font:inherit;
+  font-size:11px;
+  cursor:pointer;
+  transform:translateY(-50%);
+  transition:color .14s ease,border-color .14s ease,background-color .14s ease;
+}
+.model-field__fetch svg{
+  width:13px;height:13px;
+  fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.model-field__fetch:hover,
+.model-field__fetch:focus-visible{
+  border-color:var(--theme);
+  background:color-mix(in srgb,var(--theme) 13%,var(--card-solid));
+  color:var(--text-primary);
+  outline:none;
+}
+.model-field__fetch:disabled{opacity:.55;cursor:wait}
 .model-view__note{
   margin:-2px 0 0;
   color:var(--text-muted);

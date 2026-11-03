@@ -17,11 +17,15 @@
   var statusNode = panel.querySelector('[data-model-status]');
   var note = panel.querySelector('[data-model-note]');
   var saveButton = form.querySelector('[data-model-save]');
+  var fetchButton = form.querySelector('[data-model-fetch]');
   var options = document.querySelector('#model-name-options');
+  if (!providerInput || !baseInput || !modelInput || !keyInput || !statusNode ||
+      !note || !saveButton || !fetchButton || !options) return;
   var presetButtons = Array.prototype.slice.call(form.querySelectorAll('[data-model-preset]'));
   var queryApi = new URLSearchParams(location.search).get('api');
   var API = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var HISTORY_KEY = 'intellibot.modelHistory';
+  var inventories = Object.create(null);
   var busy = false;
   var LEGACY_MODELS = {
     'deepseek-chat': 'deepseek-flash',
@@ -93,6 +97,10 @@
     var preset = PRESETS[provider] || PRESETS.custom;
     var history = readHistory()[provider];
     var values = preset.models.slice();
+    var inventory = Array.isArray(inventories[provider]) ? inventories[provider] : [];
+    inventory.forEach(function (model) {
+      if (typeof model === 'string' && model && !values.includes(model)) values.push(model);
+    });
     if (Array.isArray(history)) {
       history.forEach(function (model) {
         model = normalizeModel(provider, model);
@@ -196,8 +204,8 @@
     document.dispatchEvent(new CustomEvent('ai-model-change', { detail: current }));
   }
 
-  async function request(method, body) {
-    var response = await fetch(API + '/ai/config', {
+  async function request(method, body, path) {
+    var response = await fetch(API + (path || '/ai/config'), {
       method: method,
       headers: body ? {
         'Content-Type': 'application/json',
@@ -244,6 +252,40 @@
     } finally {
       busy = false;
       saveButton.disabled = false;
+    }
+  }
+
+  async function fetchModels() {
+    if (busy) return;
+    busy = true;
+    fetchButton.disabled = true;
+    setStatus('loading', t('model.fetch.loading', '正在获取模型'));
+    try {
+      var draft = {
+        provider: providerInput.value,
+        base_url: baseInput.value.trim(),
+      };
+      if (keyInput.value.trim()) draft.api_key = keyInput.value.trim();
+      var data = await request('POST', draft, '/ai/models');
+      var models = Array.isArray(data.models) ? data.models.filter(function (item) {
+        return typeof item === 'string' && item.trim();
+      }) : [];
+      inventories[providerInput.value] = models;
+      renderDatalist(providerInput.value);
+      renderMenu();
+      if (models.length && !models.includes(modelInput.value.trim())) {
+        modelInput.value = models[0];
+      }
+      setStatus('idle', t('model.fetch.available', '可选模型'));
+      setNote(models.length
+        ? t('model.fetch.ok', '模型列表已更新') + ' · ' + models.length
+        : t('model.fetch.empty', '接口没有返回可用模型'));
+    } catch (error) {
+      setStatus('error', t('model.status.error', '获取失败'));
+      setNote(error.message || t('model.fetch.failed', '获取模型列表失败'), true);
+    } finally {
+      busy = false;
+      fetchButton.disabled = false;
     }
   }
 
@@ -295,6 +337,8 @@
     if (keyInput.value.trim()) patch.api_key = keyInput.value.trim();
     if (await save(patch)) keyInput.value = '';
   });
+
+  fetchButton.addEventListener('click', fetchModels);
 
   trigger.addEventListener('click', function () {
     if (menu.hidden) openMenu();
