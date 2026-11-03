@@ -200,7 +200,6 @@
 }
 
 @media (max-width:1100px){
-  :root{--rail-expanded: calc(var(--rail-w) + 1px + var(--panel-pad) * 2 + var(--sc-w))}
   /* 单列：仍然平分栏宽，稳态正好 240（273 面板 − 1 描边 − 32 内边距） */
   .sc-grid{grid-template-columns:1fr}
 }
@@ -1060,6 +1059,12 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
    ============================================================ */
 .composer{
   width:min(720px,calc(100vw - 220px));
+  transition:opacity .16s ease,visibility .16s ease;
+}
+body:has(.rail.is-open) .composer{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
 }
 .composer__surface{
   position:relative;

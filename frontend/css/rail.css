@@ -30,7 +30,7 @@
 }
 .rail--left{left:var(--edge)}
 .rail--right{right:var(--edge); transform-origin:100% 50%; --side:-1}
-.rail.is-open{width:min(var(--rail-expanded), 78vw)}
+.rail.is-open{width:min(var(--rail-expanded), calc(100vw - var(--edge) * 2))}
 
 /* 栏体表面：承载底色与圆角，层级高于箭头，箭头被压在下面 */
 .rail__surface{
@@ -306,13 +306,13 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .model-save{
   appearance:none; -webkit-appearance:none;
   justify-self:start;
-  min-width:144px;
-  height:42px;
-  padding:0 20px;
+  min-width:0;
+  height:40px;
+  padding:0 18px;
   border:0; border-radius:999px;
   background:var(--theme);
   color:var(--text-invert);
-  font:inherit; font-size:var(--fs-16);
+  font:inherit; font-size:var(--fs-14);
   cursor:pointer;
 }
 .model-save:hover{filter:brightness(.96)}
@@ -624,7 +624,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   border-right:1px solid var(--border);
 }
 .rail.is-open .rail__panel{
-  width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+  width:calc(min(var(--rail-expanded), calc(100vw - var(--edge) * 2)) - var(--rail-w));
   opacity:1;
   /* 透明度交给脚本（panelOut / panelIn 两条曲线），这里只管宽度 */
   transition:width .3s var(--ease);

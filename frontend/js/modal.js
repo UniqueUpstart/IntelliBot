@@ -175,7 +175,7 @@
   function paint(name) {
     var m = META[name] || {};
     titleL[0].textContent = TITLE_KEY[name] ? t(TITLE_KEY[name]) : name;
-    subL[0].textContent   = SUB_KEY[name] ? t(SUB_KEY[name]) : (m.sub || '');
+    if (subL[0]) subL[0].textContent = SUB_KEY[name] ? t(SUB_KEY[name]) : (m.sub || '');
     panel.setAttribute('aria-label', name);
     /* 从一个弹窗直接换到另一个时，先把上一个胶囊那组还原：
        不然从 Settings 切到别的弹窗、再关窗，Settings 那枚会一直亮着。
@@ -438,7 +438,7 @@
     /* 标题区那行说明跟着当前选项走 */
     if (panel.getAttribute('aria-label') === 'Settings') {
       var subMap = { appearance: 'settings.appearance', language: 'settings.language' };
-      subL[0].textContent = subMap[key] ? t(subMap[key]) : key;
+      if (subL[0]) subL[0].textContent = subMap[key] ? t(subMap[key]) : key;
     }
   }
   Array.prototype.forEach.call(tabs, function (t) {
@@ -531,7 +531,7 @@
     var name = panel.getAttribute('aria-label');
     if (name && TITLE_KEY[name]) {
       titleL[0].textContent = t(TITLE_KEY[name]);
-      subL[0].textContent = SUB_KEY[name] ? t(SUB_KEY[name]) : '';
+      if (subL[0]) subL[0].textContent = SUB_KEY[name] ? t(SUB_KEY[name]) : '';
     }
   });
 

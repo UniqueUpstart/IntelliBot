@@ -23,10 +23,10 @@
   <link rel="stylesheet" href="css/base.css?v=11">
   <link rel="stylesheet" href="css/topbar.css?v=12">
   <link rel="stylesheet" href="css/rail.css?v=30">
-  <link rel="stylesheet" href="css/workspace.css?v=6">
+  <link rel="stylesheet" href="css/workspace.css?v=7">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=48">
+  <link rel="stylesheet" href="css/chat.css?v=50">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -270,7 +270,6 @@
         <div class="view-head">
           <div>
             <h3 class="view-title" data-i18n="persona.title">AI Persona</h3>
-            <p class="view-sub" data-i18n="persona.sub">让回答的语气、视角和表达方式更像你期待的角色。</p>
           </div>
           <span class="view-badge" data-persona-status>默认角色</span>
         </div>
@@ -287,7 +286,7 @@
             </span>
             <span class="persona-preview__dot" data-persona-preview-dot aria-hidden="true"></span>
           </div>
-          <div class="persona-form__row">
+          <div class="persona-form__grid">
             <label class="persona-field">
               <span data-i18n="persona.fields.name">角色名称</span>
               <input data-persona-name type="text" maxlength="32" autocomplete="off">
@@ -296,9 +295,7 @@
               <span data-i18n="persona.fields.style">表达风格</span>
               <input data-persona-style type="text" maxlength="64" autocomplete="off">
             </label>
-          </div>
-          <div class="persona-style">
-            <label class="persona-color">
+            <label class="persona-field persona-field--color">
               <span data-i18n="persona.fields.color">标记色</span>
               <input data-persona-color type="color" value="#91d2c3">
             </label>
@@ -330,7 +327,6 @@
             </span>
             <div>
               <h3 class="view-title">IntelliBot</h3>
-              <p class="view-sub" data-i18n="chatFlow.sub">慢慢说，我会把每一次对话都留在这里。</p>
             </div>
           </div>
           <div class="chat-view__actions">
@@ -497,7 +493,6 @@
       <!-- 三页共用这一块滚动区，按 data-view 显隐 -->
       <div class="rail__view" data-rail-view="poses">
         <div class="rail__title" data-i18n="dock.poses">Poses</div>
-        <p class="rail__intro" data-i18n="dock.poses.intro">先定姿态，再选择一个动作，让机器人在当前姿态上继续表演。</p>
         <div class="pose-grid" role="group" data-i18n-aria="dock.poses">
           <button class="pose-card is-on" type="button" data-pose-clip="idle" data-pose-loop="true" aria-pressed="true">
             <span class="pose-card__figure" aria-hidden="true"><i></i><b></b></span>
@@ -516,11 +511,9 @@
             <span data-i18n="dock.pose.apose">A-Pose</span>
           </button>
         </div>
-        <p class="pose-note" data-pose-note data-i18n="dock.pose.note">姿态会直接改变舞台中的机器人。</p>
       </div>
       <div class="rail__view" data-rail-view="actions">
         <div class="rail__title" data-i18n="dock.actions">Actions</div>
-        <p class="rail__intro" data-i18n="dock.actions.intro">选择一个动作，让机器人立即开始表演。</p>
         <div class="rail__grid" data-rail-grid="motions"></div>
       </div>
       <div class="rail__view" data-rail-view="emotions">
@@ -531,7 +524,6 @@
       <div class="rail__view rail__view--skin" data-rail-view="skin">
         <div class="skin-view" data-skin-panel data-skin-view>
           <h3 class="skin-view__title" data-i18n="rail.left.skin">机器人外观</h3>
-          <p class="skin-view__hint" data-i18n="rail.left.skin.hint">选择一个机器人外观，或导入自己的模型。</p>
           <div class="skin-grid" data-skin-pick role="group"
                aria-label="机器人外观" data-i18n-aria="rail.left.skin">
             <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
@@ -617,7 +609,6 @@
     <div class="modal__head">
       <div class="modal__col">
         <div class="modal__title" data-modal-title data-i18n="modal.advance.title">Advance</div>
-        <div class="modal__sub" data-modal-sub data-i18n="modal.advance.sub">MuJoCo simulation</div>
       </div>
       <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义。
            其余弹窗由脚本按 data-advance-only 收掉 -->
@@ -879,7 +870,7 @@
   </button>
 </div>
 
-<script src="js/modal.js?v=28"></script>
+<script src="js/modal.js?v=29"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=12"></script>
