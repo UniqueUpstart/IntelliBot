@@ -23,6 +23,9 @@
   var API = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var HISTORY_KEY = 'intellibot.modelHistory';
   var busy = false;
+  var loaded = false;
+  var loadError = '';
+  statusNode.removeAttribute('data-i18n');
   var LEGACY_MODELS = {
     'deepseek-chat': 'deepseek-flash',
     'deepseek-reasoner': 'deepseek-v4-pro',
@@ -150,7 +153,7 @@
 
       var name = document.createElement('span');
       name.className = 'model-menu__name';
-      name.textContent = model;
+      name.textContent = modelLabel(model);
 
       var check = document.createElement('span');
       check.className = 'model-menu__check';
@@ -164,6 +167,8 @@
   }
 
   function paint(config) {
+    loaded = true;
+    loadError = '';
     current = {
       provider: config.provider || 'custom',
       base_url: config.base_url || '',
@@ -180,14 +185,14 @@
       : 'sk-…';
     renderDatalist(current.provider);
     renderMenu();
-    label.textContent = current.configured
-      ? current.model
-      : t('model.choose', '选择模型');
-    effort.hidden = !current.configured;
+    label.textContent = modelLabel(current.model) || t('model.choose', '选择模型');
+    effort.hidden = current.configured;
+    effort.removeAttribute('data-i18n');
+    effort.textContent = t('model.status.unconfigured', '未配置');
+    trigger.title = providerName(current.provider) + ' · ' + current.model +
+      (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置'));
     trigger.classList.toggle('is-ready', current.configured);
-    trigger.setAttribute('aria-label', current.configured
-      ? providerName(current.provider) + ' · ' + modelLabel(current.model)
-      : t('model.choose', '选择模型'));
+    trigger.setAttribute('aria-label', trigger.title);
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
       current.configured ? 'ready' : 'idle',
@@ -221,6 +226,9 @@
       paint(await request('GET'));
       setNote('');
     } catch (error) {
+      loadError = error.message;
+      label.textContent = t('model.status.offline', '服务未启动');
+      trigger.title = error.message;
       setStatus('error', t('model.status.offline', '服务未启动'));
       setNote(error.message, true);
     }
@@ -229,6 +237,9 @@
   async function save(patch, successText) {
     if (busy) return false;
     busy = true;
+    trigger.disabled = true;
+    trigger.setAttribute('aria-busy', 'true');
+    label.textContent = t('model.status.saving', '正在应用');
     saveButton.disabled = true;
     setStatus('loading', t('model.status.saving', '正在应用'));
     try {
@@ -238,11 +249,19 @@
       setNote(successText || t('model.saved', '模型配置已同步到对话'));
       return true;
     } catch (error) {
+      paint(current);
+      effort.hidden = false;
+      effort.textContent = t('model.status.error', '保存失败');
+      trigger.title = error.message;
       setStatus('error', t('model.status.error', '保存失败'));
       setNote(error.message, true);
+      // Keep the menu open so a failed switch is visible next to the composer.
+      openMenu();
       return false;
     } finally {
       busy = false;
+      trigger.disabled = false;
+      trigger.removeAttribute('aria-busy');
       saveButton.disabled = false;
     }
   }
@@ -333,7 +352,13 @@
     }
   });
   document.addEventListener('langchange', function () {
-    paint(current);
+    if (loaded) paint(current);
+    else if (loadError) {
+      label.textContent = t('model.status.offline', '服务未启动');
+      setStatus('error', t('model.status.offline', '服务未启动'));
+      setNote(loadError, true);
+      return;
+    }
     setNote('');
   });
 
