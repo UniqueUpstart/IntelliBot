@@ -1,14 +1,5 @@
 import * as THREE from 'three';
 
-const VIEWS = {
-  east:   { azimuth: 90,   elevation: 0,  label: '东', hint: '右视' },
-  south:  { azimuth: 0,    elevation: 0,  label: '南', hint: '正视' },
-  west:   { azimuth: -90,  elevation: 0,  label: '西', hint: '左视' },
-  north:  { azimuth: 180,  elevation: 0,  label: '北', hint: '后视' },
-  top:    { azimuth: 0,    elevation: 90, label: '上', hint: '俯视' },
-  bottom: { azimuth: 0,    elevation: -90,label: '下', hint: '仰视' },
-};
-
 const JOINT_CONFIGS = {
   'body1':    { axis: 'yaw', axes: ['yaw', 'pitch'], range: [-1.571, 1.571] },
   'head':     { axis: 'yaw',   range: [-1.2, 1.2] },
@@ -60,26 +51,31 @@ const ELEVATION_LIMIT = 89;
 const HOVER_DELAY_MS = 60;
 const WAIST_TRIGGER_Y = 0.045;
 const SHOULDER_PITCH_RADIUS = 0.045;
+const DEFAULT_VIEW_KEY = 'intellibot.default-view';
+const FRONT_VIEW = Object.freeze({ azimuth: 0, elevation: 0, distance: 1, mode: 'front' });
 
 let robo = null;
 let wrap = null;
 let camera = null;
-let panel = null;
-let viewButton = null;
 let marker = null;
 let markerBone = null;
 let ready = false;
 
 const raycaster = new THREE.Raycaster();
 const jointAxisParents = new Map();
-const view = { azimuth: 0, elevation: 0, distance: 1 };
+let defaultView = loadDefaultView();
+const view = {
+  azimuth: defaultView.azimuth,
+  elevation: defaultView.elevation,
+  distance: defaultView.distance,
+};
 const pointer = { x: 0, y: 0 };
 let drag = null;
-let activeView = null;
 let lastCamY = 0;
 let lastCamD = 1;
 let hoverTimer = 0;
 let hoverPoint = null;
+let hoverCanPose = false;
 
 const tempVec = new THREE.Vector3();
 const tempScale = new THREE.Vector3();
@@ -90,6 +86,35 @@ function clamp(value, lo, hi) {
 
 function normalizeAngle(value) {
   return THREE.MathUtils.euclideanModulo(value + 180, 360) - 180;
+}
+
+function loadDefaultView() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DEFAULT_VIEW_KEY) || 'null');
+    if (!saved || !Number.isFinite(saved.azimuth) || !Number.isFinite(saved.elevation)) {
+      return {...FRONT_VIEW};
+    }
+    return {
+      azimuth: normalizeAngle(saved.azimuth),
+      elevation: clamp(saved.elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT),
+      distance: Number.isFinite(saved.distance)
+        ? clamp(saved.distance, DISTANCE_MIN, DISTANCE_MAX)
+        : 1,
+      mode: saved.mode === 'custom' ? 'custom' : 'front',
+    };
+  } catch (error) {
+    return {...FRONT_VIEW};
+  }
+}
+
+function saveDefaultView(next) {
+  defaultView = {...next};
+  try {
+    localStorage.setItem(DEFAULT_VIEW_KEY, JSON.stringify(defaultView));
+  } catch (error) {
+    /* Private browsing may reject storage; the default still works this session. */
+  }
+  refreshDefaultViewButtons();
 }
 
 function canonicalJointName(name) {
@@ -131,8 +156,8 @@ function boot() {
   cacheJointAxes();
 
   createMarker();
-  buildPanel();
   bindInteractions();
+  bindResetAndDefaultControls();
   wrap.classList.add('vc-enabled');
   window.__robotView = { step };
   step(0, 1);
@@ -208,142 +233,54 @@ function hideMarker() {
   markerBone = null;
 }
 
-function buildPanel() {
-  viewButton = document.querySelector('.view-adjust-trigger');
-  panel = document.createElement('section');
-  panel.className = 'viewtool';
-  panel.id = 'robot-view-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', '视角调整');
-  panel.hidden = true;
-
-  const heading = document.createElement('div');
-  heading.className = 'vt-heading';
-  heading.innerHTML = '<span>视角调整</span><button class="vt-close" type="button" aria-label="关闭视角调整面板">×</button>';
-  panel.appendChild(heading);
-
-  const directions = document.createElement('div');
-  directions.className = 'vt-directions';
-  ['east', 'south', 'west', 'north', 'top', 'bottom'].forEach((key) => {
-    const preset = VIEWS[key];
-    const button = document.createElement('button');
-    button.className = 'vt-dir';
-    button.type = 'button';
-    button.dataset.view = key;
-    button.setAttribute('aria-pressed', 'false');
-    button.innerHTML = '<span>' + preset.label + '</span><small>' + preset.hint + '</small>';
-    button.addEventListener('click', () => setPreset(key));
-    directions.appendChild(button);
-  });
-  panel.appendChild(directions);
-
-  const actions = document.createElement('div');
-  actions.className = 'vt-actions';
-  actions.appendChild(actionButton('zoom-out', '缩小', '−', () => zoom(1 / 1.12)));
-  actions.appendChild(actionButton('zoom-in', '放大', '+', () => zoom(1.12)));
-  const resetViewButton = actionButton('reset-view', '复位视角', '视角复位', resetView);
-  resetViewButton.classList.add('vt-action-wide');
-  actions.appendChild(resetViewButton);
-  panel.appendChild(actions);
-
-  document.body.appendChild(panel);
-  refreshViewButtons();
-
-  panel.querySelector('.vt-close').addEventListener('click', closePanel);
-  window.addEventListener('resize', placePanel);
-
-  if (viewButton) {
-    viewButton.setAttribute('aria-controls', panel.id);
-    viewButton.setAttribute('aria-expanded', 'false');
-    viewButton.setAttribute('aria-haspopup', 'dialog');
-    viewButton.addEventListener('click', togglePanel);
-  }
+function bindResetAndDefaultControls() {
   const poseResetButton = document.querySelector('.pose-reset-trigger');
-  if (poseResetButton) poseResetButton.addEventListener('click', resetPose);
+  if (poseResetButton) poseResetButton.addEventListener('click', resetAll);
 
-  document.addEventListener('pointerdown', (event) => {
-    if (panel.hidden) return;
-    if (panel.contains(event.target) || (viewButton && viewButton.contains(event.target))) return;
-    closePanel();
-  }, true);
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !panel.hidden) closePanel();
+  document.querySelectorAll('[data-view-default]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.viewDefault === 'current') {
+        saveDefaultView({
+          azimuth: view.azimuth,
+          elevation: view.elevation,
+          distance: view.distance,
+          mode: 'custom',
+        });
+        return;
+      }
+      saveDefaultView({...FRONT_VIEW});
+      resetView();
+    });
   });
+  refreshDefaultViewButtons();
+  window.addEventListener('langchange', refreshDefaultViewButtons);
 }
 
-function actionButton(name, label, text, handler) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'vt-action';
-  button.dataset.action = name;
-  button.setAttribute('aria-label', label);
-  button.textContent = text;
-  button.addEventListener('click', handler);
-  return button;
-}
-
-function placePanel() {
-  if (!panel || panel.hidden) return;
-  const rect = viewButton ? viewButton.getBoundingClientRect() : {left: 16, bottom: 88};
-  const width = panel.offsetWidth || 300;
-  panel.style.left = Math.round(clamp(rect.left, 8, Math.max(8, window.innerWidth - width - 8))) + 'px';
-  panel.style.top = Math.round(rect.bottom + 10) + 'px';
-}
-
-function openPanel() {
-  if (!panel) return;
-  panel.hidden = false;
-  if (viewButton) {
-    viewButton.classList.add('is-active');
-    viewButton.setAttribute('aria-pressed', 'true');
-    viewButton.setAttribute('aria-expanded', 'true');
-  }
-  placePanel();
-}
-
-function closePanel() {
-  if (!panel) return;
-  panel.hidden = true;
-  if (viewButton) {
-    viewButton.classList.remove('is-active');
-    viewButton.setAttribute('aria-pressed', 'false');
-    viewButton.setAttribute('aria-expanded', 'false');
-  }
-}
-
-function togglePanel() {
-  if (panel.hidden) openPanel();
-  else closePanel();
-}
-
-function refreshViewButtons() {
-  if (!panel) return;
-  panel.querySelectorAll('[data-view]').forEach((button) => {
-    const active = button.dataset.view === activeView;
+function refreshDefaultViewButtons() {
+  document.querySelectorAll('[data-view-default]').forEach((button) => {
+    const mode = button.dataset.viewDefault === 'current' ? 'custom' : 'front';
+    const active = mode === defaultView.mode;
     button.classList.toggle('is-active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 }
 
-function setPreset(key) {
-  const preset = VIEWS[key];
-  if (!preset || !ready) return;
-  view.azimuth = preset.azimuth;
-  view.elevation = preset.elevation;
-  view.distance = 1;
-  activeView = key;
-  robo.setPointerAimPaused(true);
-  refreshViewButtons();
+function resetView() {
+  if (!ready) return;
+  view.azimuth = defaultView.azimuth;
+  view.elevation = defaultView.elevation;
+  view.distance = defaultView.distance;
+  robo.setPointerAimPaused(false);
   step(lastCamY, lastCamD);
 }
 
-function resetView() {
-  setPreset('south');
-}
-
-function resetPose() {
+function resetAll() {
   if (!ready || !robo.resetPose) return;
+  if (robo.stopGesture) robo.stopGesture();
+  if (robo.setMood) robo.setMood('calm');
   robo.resetPose();
+  if (robo.playClip) robo.playClip('idle', true);
+  resetView();
   hideMarker();
 }
 
@@ -359,6 +296,9 @@ function bindInteractions() {
   wrap.addEventListener('pointercancel', onPointerUp);
   wrap.addEventListener('pointerleave', () => {
     if (!drag) hideMarker();
+    hoverPoint = null;
+    hoverCanPose = false;
+    wrap.classList.remove('vc-can-pose', 'vc-hover-joint');
   });
   wrap.addEventListener('wheel', onWheel, { passive: false });
   wrap.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -372,48 +312,52 @@ function bindInteractions() {
   });
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Alt' && !drag) queueHover(pointer.x, pointer.y, true);
+  });
+  window.addEventListener('keyup', (event) => {
+    if (event.key === 'Alt' && !drag) queueHover(pointer.x, pointer.y, false);
+  });
 }
 
-/* 中键（button 1）直接在模型上拖拽环绕；左键留给关节。
-   视野调整不再走顶栏按钮 + 面板那套预设，按下就转，松开即停。 */
+/* 左键拖动在任何位置都环绕视角；Alt/Option + 左键才进入关节编辑。
+   两套手势因此不会争同一次按下，普通浏览也不会误扭到肢体。 */
 function onPointerDown(event) {
   if (!ready) return;
 
-  if (event.button === 1) {
-    event.preventDefault();
-    activeView = null;
-    refreshViewButtons();
+  if (event.button !== 0 && event.button !== 1) return;
+  event.preventDefault();
+  pointer.x = event.clientX;
+  pointer.y = event.clientY;
+
+  const joint = event.button === 0 && event.altKey
+    ? findJointAt(event.clientX, event.clientY)
+    : null;
+  if (joint) {
     drag = {
-      kind: 'camera',
+      kind: 'joint-pending',
       pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
+      bone: joint.bone,
+      config: joint.config,
+      hit: joint.point.clone(),
+      startX: event.clientX,
+      startY: event.clientY,
     };
-    robo.setPointerAimPaused(true);
-    wrap.classList.add('vc-camera');
+    showMarker(joint.bone, false);
+    wrap.classList.add('vc-joint');
     capturePointer(event.pointerId);
     return;
   }
 
-  if (event.button !== 0) return;
-  event.preventDefault();
-
-  const joint = findJointAt(event.clientX, event.clientY);
-  if (!joint) return;
-
-  pointer.x = event.clientX;
-  pointer.y = event.clientY;
   drag = {
-    kind: 'joint-pending',
+    kind: 'camera',
     pointerId: event.pointerId,
-    bone: joint.bone,
-    config: joint.config,
-    hit: joint.point.clone(),
-    startX: event.clientX,
-    startY: event.clientY,
+    x: event.clientX,
+    y: event.clientY,
   };
-  showMarker(joint.bone, false);
-  wrap.classList.add('vc-joint');
+  robo.setPointerAimPaused(true);
+  wrap.classList.remove('vc-hover-joint', 'vc-can-pose');
+  wrap.classList.add('vc-camera');
   capturePointer(event.pointerId);
 }
 
@@ -448,7 +392,7 @@ function onPointerMove(event) {
     }
   }
 
-  queueHover(event.clientX, event.clientY);
+  queueHover(event.clientX, event.clientY, event.altKey);
 }
 
 function startJointDrag(event) {
@@ -507,10 +451,10 @@ function onPointerUp(event) {
     wrap.releasePointerCapture(drag.pointerId);
   }
   drag = null;
-  wrap.classList.remove('vc-camera', 'vc-dragging-joint', 'vc-joint');
+  wrap.classList.remove('vc-camera', 'vc-dragging-joint', 'vc-joint', 'vc-can-pose');
 
   if (wasJoint || wasCamera) robo.setPointerAimPaused(false);
-  if (!wasJoint) queueHover(pointer.x, pointer.y);
+  if (!wasJoint) queueHover(pointer.x, pointer.y, false);
 }
 
 function onWheel(event) {
@@ -529,19 +473,21 @@ function capturePointer(pointerId) {
   }
 }
 
-function queueHover(clientX, clientY) {
+function queueHover(clientX, clientY, canPose = false) {
   hoverPoint = { x: clientX, y: clientY };
+  hoverCanPose = canPose;
   if (hoverTimer) return;
   hoverTimer = window.setTimeout(() => {
     hoverTimer = 0;
     if (drag || !hoverPoint) return;
-    const joint = findJointAt(hoverPoint.x, hoverPoint.y);
+    const joint = hoverCanPose ? findJointAt(hoverPoint.x, hoverPoint.y) : null;
     if (joint) {
       showMarker(joint.bone, false);
       wrap.classList.add('vc-hover-joint');
+      wrap.classList.add('vc-can-pose');
     } else {
       hideMarker();
-      wrap.classList.remove('vc-hover-joint');
+      wrap.classList.remove('vc-hover-joint', 'vc-can-pose');
     }
   }, HOVER_DELAY_MS);
 }
@@ -648,13 +594,11 @@ window.viewControl = {
   get view() {
     return {azimuth: view.azimuth, elevation: view.elevation, distance: view.distance};
   },
-  get preset() { return activeView; },
+  get defaultView() { return {...defaultView}; },
   get dragging() { return drag ? drag.kind : null; },
-  openPanel,
-  closePanel,
-  setPreset,
   resetView,
-  resetPose,
+  resetAll,
+  saveDefaultView,
 };
 
 if (robo && robo.ready) boot();

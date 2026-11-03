@@ -34,6 +34,7 @@ const I18N = {
     "rail.right.chat": "Chat",
     "rail.right.log": "Log",
     "rail.right.message": "Message",
+    "rail.right.reset": "Reset",
 
     "chat.placeholder": "Ask IntelliBot…",
     "chat.ask": "Ask IntelliBot",
@@ -100,6 +101,9 @@ const I18N = {
     "settings.robot": "Robot",
     "settings.robot.body": "Body",
     "settings.robot.head": "Head",
+    "settings.defaultView": "Default view",
+    "settings.defaultView.front": "Front",
+    "settings.defaultView.current": "Use current",
   },
 
   zh: {
@@ -133,6 +137,7 @@ const I18N = {
     "rail.right.chat": "聊天",
     "rail.right.log": "日志",
     "rail.right.message": "消息",
+    "rail.right.reset": "重置",
 
     "chat.placeholder": "问问 IntelliBot…",
     "chat.ask": "向 IntelliBot 提问",
@@ -199,6 +204,9 @@ const I18N = {
     "settings.robot": "机器人",
     "settings.robot.body": "上半身",
     "settings.robot.head": "头部",
+    "settings.defaultView": "默认视角",
+    "settings.defaultView.front": "正面",
+    "settings.defaultView.current": "使用当前视角",
   },
 };
 
@@ -233,6 +241,10 @@ function applyLang(lang) {
   document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
     const key = el.getAttribute("data-i18n-aria");
     el.setAttribute("aria-label", t(key));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    el.setAttribute("title", t(key));
   });
   document.querySelectorAll("[data-lang]").forEach((b) => {
     const on = b.getAttribute("data-lang") === lang;

@@ -19,7 +19,7 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=4"></script>
+<script src="js/i18n.js?v=5"></script>
   <link rel="stylesheet" href="css/base.css?v=4">
   <link rel="stylesheet" href="css/topbar.css?v=3">
   <link rel="stylesheet" href="css/rail.css?v=12">
@@ -29,7 +29,7 @@
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=11">
+<link rel="stylesheet" href="css/viewtool.css?v=12">
 </head>
 <body>
 
@@ -76,14 +76,10 @@
   </nav>
 </header>
 
-<button class="view-adjust-trigger" type="button" aria-label="视角调整" title="视角调整"
-        aria-pressed="false" aria-expanded="false" aria-controls="robot-view-panel">
-  <svg viewBox="0 0 32 32" aria-hidden="true">
-    <path d="M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16Z"/>
-    <circle cx="16" cy="16" r="4.5"/>
-  </svg>
-</button>
-<button class="pose-reset-trigger" type="button" aria-label="复位机器人姿态" title="复位机器人姿态">复位</button>
+<button class="pose-reset-trigger" type="button"
+        data-i18n="rail.right.reset" data-i18n-aria="rail.right.reset"
+        data-i18n-title="rail.right.reset"
+        aria-label="Reset" title="Reset">Reset</button>
 
 <!-- ===================== Stage ===================== -->
 <main class="stage" aria-hidden="true"><canvas class="bgfx" id="bgfx"></canvas></main>
@@ -515,6 +511,18 @@
               </div>
             </div>
           </div>
+          <div class="set__item">
+            <div class="set__name" data-i18n="settings.defaultView">Default view</div>
+            <div class="set__body">
+              <div class="seg" role="group" aria-label="Default robot view"
+                   data-i18n-aria="settings.defaultView">
+                <button class="seg__opt is-sel" type="button" data-view-default="front"
+                        aria-pressed="true"><span class="seg__lab" data-i18n="settings.defaultView.front">Front</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c.3.3.54.89.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+                <button class="seg__opt" type="button" data-view-default="current"
+                        aria-pressed="false"><span class="seg__lab" data-i18n="settings.defaultView.current">Use current</span><svg class="seg__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c.3.3.54.89.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
+              </div>
+            </div>
+          </div>
         </section>
         <section class="set__pane" data-set-pane="language" hidden>
           <div class="set__item">
@@ -590,7 +598,7 @@
 }
 </script>
 <script type="module" src="js/robot3d.js?v=24"></script>
-<script type="module" src="js/view-control.js?v=18"></script>
+<script type="module" src="js/view-control.js?v=20"></script>
 
 </body>
 </html>
