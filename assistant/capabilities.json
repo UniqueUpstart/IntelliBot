@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "limits": {
+    "max_commands": 6,
+    "max_motions": 4
+  },
+  "motions": [
+    {
+      "id": "wave",
+      "name": "挥手",
+      "description": "右手抬起并左右挥动",
+      "aliases": [
+        "挥手",
+        "打招呼",
+        "你好"
+      ],
+      "duration": 3.0
+    },
+    {
+      "id": "wave_both",
+      "name": "双手挥",
+      "description": "双手同时抬起并挥动",
+      "aliases": [
+        "双手挥",
+        "双手打招呼"
+      ],
+      "duration": 3.0
+    },
+    {
+      "id": "salute",
+      "name": "敬礼",
+      "description": "右手完成敬礼姿态",
+      "aliases": [
+        "敬礼",
+        "行礼"
+      ],
+      "duration": 2.5
+    },
+    {
+      "id": "heart",
+      "name": "比心",
+      "description": "双手在头顶组成心形",
+      "aliases": [
+        "比心",
+        "爱心"
+      ],
+      "duration": 2.5
+    },
+    {
+      "id": "cheer",
+      "name": "加油",
+      "description": "右手举起并做加油动作",
+      "aliases": [
+        "加油",
+        "鼓励"
+      ],
+      "duration": 2.5
+    },
+    {
+      "id": "dance",
+      "name": "舞动",
+      "description": "双臂和腰部按不同节奏摆动",
+      "aliases": [
+        "舞动",
+        "跳舞"
+      ],
+      "duration": 4.0
+    },
+    {
+      "id": "cha_cha",
+      "name": "cha-cha",
+      "description": "恰恰基本步：胯部左右摆动，双臂交替推送",
+      "aliases": [
+        "cha-cha",
+        "cha cha",
+        "恰恰",
+        "恰恰舞"
+      ],
+      "duration": 4.0
+    },
+    {
+      "id": "stretch",
+      "name": "伸懒腰",
+      "description": "双臂举过头顶并缓慢舒展",
+      "aliases": [
+        "伸懒腰",
+        "舒展"
+      ],
+      "duration": 3.0
+    },
+    {
+      "id": "surprised",
+      "name": "惊讶",
+      "description": "双臂张开并短暂停顿，缓慢收回",
+      "aliases": [
+        "惊讶",
+        "吃惊",
+        "吓一跳"
+      ],
+      "duration": 2.6
+    },
+    {
+      "id": "hug",
+      "name": "拥抱",
+      "description": "双臂向前展开后轻收，保持拥抱再放下",
+      "aliases": [
+        "拥抱",
+        "抱抱",
+        "抱一下",
+        "安慰"
+      ],
+      "duration": 4.0
+    },
+    {
+      "id": "refuse",
+      "name": "摆手拒绝",
+      "description": "右手抬起向外摆动两次，表达拒绝后放下",
+      "aliases": [
+        "摆手拒绝",
+        "拒绝",
+        "不要",
+        "不行"
+      ],
+      "duration": 3.0
+    },
+    {
+      "id": "street_dance",
+      "name": "街舞",
+      "description": "15 秒 128 BPM 全身 Hip-hop，包含弹跳、抬膝、侧移、转身和收势",
+      "aliases": [
+        "街舞",
+        "跳街舞",
+        "来段街舞",
+        "hip-hop",
+        "hiphop"
+      ],
+      "duration": 15.0
+    },
+    {
+      "id": "belly_laugh",
+      "name": "捧腹大笑",
+      "description": "双手捧腹、前仰后合大笑，抬手抱头继续笑，最后摆出马步收招姿势",
+      "aliases": [
+        "捧腹大笑",
+        "捧腹笑",
+        "哈哈大笑",
+        "大笑",
+        "奶娃笑",
+        "奶蛙笑"
+      ],
+      "duration": 10.5
+    }
+  ],
+  "poses": [
+    {
+      "id": "idle",
+      "name": "自然站立",
+      "description": "恢复网页刚加载时的自然站立与待机动画"
+    },
+    {
+      "id": "standby",
+      "name": "待机姿态",
+      "description": "进入稳定待机姿态"
+    },
+    {
+      "id": "raisehand",
+      "name": "举手姿态",
+      "description": "保持举手姿势"
+    },
+    {
+      "id": "apose",
+      "name": "A-Pose",
+      "description": "双臂展开成 A-Pose"
+    }
+  ],
+  "views": [
+    {
+      "id": "front",
+      "name": "正前视角",
+      "description": "从机器人正前方观察",
+      "azimuth": 0,
+      "elevation": 0
+    },
+    {
+      "id": "left",
+      "name": "左侧视角",
+      "description": "从机器人左侧观察",
+      "azimuth": -90,
+      "elevation": 0
+    },
+    {
+      "id": "right",
+      "name": "右侧视角",
+      "description": "从机器人右侧观察",
+      "azimuth": 90,
+      "elevation": 0
+    },
+    {
+      "id": "back",
+      "name": "后方视角",
+      "description": "从机器人后方观察",
+      "azimuth": 180,
+      "elevation": 0
+    },
+    {
+      "id": "up",
+      "name": "俯视视角",
+      "description": "从上方俯视机器人",
+      "azimuth": 0,
+      "elevation": 89
+    },
+    {
+      "id": "level",
+      "name": "平视视角",
+      "description": "与机器人保持水平视线",
+      "azimuth": 0,
+      "elevation": 0
+    },
+    {
+      "id": "down",
+      "name": "仰视视角",
+      "description": "从下方仰视机器人",
+      "azimuth": 0,
+      "elevation": -89
+    }
+  ],
+  "emotions": [
+    {
+      "id": "calm",
+      "name": "平静"
+    },
+    {
+      "id": "happy",
+      "name": "开心"
+    },
+    {
+      "id": "curious",
+      "name": "好奇"
+    },
+    {
+      "id": "wink",
+      "name": "眨眼"
+    },
+    {
+      "id": "focus",
+      "name": "专注"
+    },
+    {
+      "id": "alert",
+      "name": "警觉"
+    },
+    {
+      "id": "think",
+      "name": "思考"
+    },
+    {
+      "id": "sleep",
+      "name": "困倦"
+    },
+    {
+      "id": "angry",
+      "name": "生气"
+    },
+    {
+      "id": "sad",
+      "name": "难过"
+    },
+    {
+      "id": "scared",
+      "name": "害怕"
+    },
+    {
+      "id": "suspicious",
+      "name": "怀疑"
+    },
+    {
+      "id": "confused",
+      "name": "困惑"
+    },
+    {
+      "id": "proud",
+      "name": "自豪"
+    },
+    {
+      "id": "shy",
+      "name": "害羞"
+    },
+    {
+      "id": "bored",
+      "name": "无聊"
+    }
+  ],
+  "commandTypes": {
+    "motion": {
+      "parameter": "id",
+      "collection": "motions"
+    },
+    "pose": {
+      "parameter": "id",
+      "collection": "poses"
+    },
+    "view": {
+      "parameter": "preset",
+      "collection": "views"
+    },
+    "emotion": {
+      "parameter": "id",
+      "collection": "emotions"
+    },
+    "reset_pose": {},
+    "reset_view": {}
+  }
+}

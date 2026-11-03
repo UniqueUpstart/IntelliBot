@@ -65,6 +65,37 @@ class FakeAiHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+        if message == "invalid-command":
+            self.reply(
+                200,
+                {
+                    "reply": "错误命令",
+                    "action_id": None,
+                    "actions": [],
+                    "commands": [{"type": "view", "preset": "ceiling"}],
+                    "stop": False,
+                    "model": "deepseek-flash",
+                },
+            )
+            return
+        if message == "commands":
+            self.reply(
+                200,
+                {
+                    "reply": "组合命令",
+                    "action_id": "belly_laugh",
+                    "actions": ["belly_laugh"],
+                    "commands": [
+                        {"type": "view", "preset": "front"},
+                        {"type": "pose", "id": "idle"},
+                        {"type": "motion", "id": "belly_laugh"},
+                        {"type": "emotion", "id": "happy"},
+                    ],
+                    "stop": False,
+                    "model": "custom-model",
+                },
+            )
+            return
         if message in {"surprised", "hug", "refuse"}:
             self.reply(200, {"reply":"好的", "action_id":message, "actions":[message], "stop":False, "model":"deepseek-flash"})
             return
@@ -179,6 +210,16 @@ try:
     status, payload = call(backend_port, "POST", "/chat", {"message": "rate"}, str(uuid4()))
     assert status == 429 and payload["error"]["code"] == "AI_RATE_LIMITED"
     status, payload = call(backend_port, "POST", "/chat", {"message": "invalid-action"}, str(uuid4()))
+    assert status == 502 and payload["error"]["code"] == "AI_INVALID_RESPONSE"
+    status, payload = call(backend_port, "POST", "/chat", {"message": "commands"}, str(uuid4()))
+    assert status == 200, payload
+    assert payload["data"]["commands"] == [
+        {"type": "view", "preset": "front"},
+        {"type": "pose", "id": "idle"},
+        {"type": "motion", "id": "belly_laugh"},
+        {"type": "emotion", "id": "happy"},
+    ]
+    status, payload = call(backend_port, "POST", "/chat", {"message": "invalid-command"}, str(uuid4()))
     assert status == 502 and payload["error"]["code"] == "AI_INVALID_RESPONSE"
     if not authenticated:
         assert call(backend_port, "GET", "/capabilities")[1]["data"]["chat"] is True

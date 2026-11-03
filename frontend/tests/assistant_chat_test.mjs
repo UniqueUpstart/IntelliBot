@@ -83,23 +83,38 @@ globalThis.location = {search: ''};
 globalThis.sessionStorage = {getItem() { return null; }, setItem() {}, removeItem() {}};
 globalThis.requestAnimationFrame = callback => callback();
 globalThis.Event = class { constructor(type) { this.type = type; } };
+globalThis.CustomEvent = class extends Event {
+  constructor(type, options = {}) { super(type); this.detail = options.detail; }
+};
+const viewChanges = [];
 globalThis.window = {
   addEventListener() {},
+  dispatchEvent() {},
   matchMedia: () => ({matches: false}),
   intellibotPersona: {active: {prompt: '温柔知性的测试角色'}},
   robot3d: {
     ready: true,
     played: [],
+    clipsPlayed: [],
+    moods: [],
     stopped: 0,
     getGestureInfo(id) {
-      return ['salute', 'wave'].includes(id) ? {id, label: id, duration: 0} : null;
+      return ['salute', 'wave', 'belly_laugh'].includes(id) ? {id, label: id, duration: 0} : null;
     },
     playGesture(id) {
-      if (!['salute', 'wave'].includes(id)) return false;
+      if (!['salute', 'wave', 'belly_laugh'].includes(id)) return false;
       this.played.push(id);
       return true;
     },
+    playClip(id) { this.clipsPlayed.push(id); },
+    resetPose() { this.clipsPlayed.push('reset'); },
+    setMood(id) { this.moods.push(id); },
     stopGesture() { this.stopped += 1; },
+  },
+  viewControl: {
+    get view() { return {azimuth: 0, elevation: 0, distance: 1}; },
+    setView(value) { viewChanges.push(value); return true; },
+    resetView() { viewChanges.push('reset'); },
   },
 };
 
@@ -155,7 +170,7 @@ globalThis.fetch = async () => ({
 input.value = '后空翻';
 await window.intellibotChat.submit();
 assert.deepEqual(window.robot3d.played, ['salute']);
-assert.equal(log.children.at(-1).textContent, '动作未播放：backflip 不在主页白名单中');
+assert.equal(log.children.at(-1).textContent, '命令未执行：动作 backflip');
 
 globalThis.fetch = async () => ({
   ok: true,
@@ -168,6 +183,34 @@ input.value = '先挥手，再敬礼';
 await window.intellibotChat.submit();
 await new Promise(resolve => setTimeout(resolve, 350));
 assert.deepEqual(window.robot3d.played, ['salute', 'wave', 'salute']);
+
+globalThis.fetch = async () => ({
+  ok: true,
+  json: async () => ({
+    data: {
+      reply: '执行组合命令。',
+      actions: ['belly_laugh'],
+      commands: [
+        {type: 'view', preset: 'left'},
+        {type: 'motion', id: 'belly_laugh'},
+        {type: 'emotion', id: 'happy'},
+        {type: 'pose', id: 'apose'},
+        {type: 'reset_pose'},
+        {type: 'reset_view'},
+      ],
+      stop: false,
+      model: 'custom-model',
+    },
+    error: null,
+  }),
+});
+input.value = '执行组合命令';
+await window.intellibotChat.submit();
+await new Promise(resolve => setTimeout(resolve, 350));
+assert.deepEqual(window.robot3d.played.slice(-1), ['belly_laugh']);
+assert.deepEqual(window.robot3d.moods.slice(-2), ['happy', 'calm']);
+assert.deepEqual(window.robot3d.clipsPlayed.slice(-3), ['apose', 'reset', 'idle']);
+assert.equal(viewChanges.length, 2);
 
 globalThis.fetch = async () => ({
   ok: true,

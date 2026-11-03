@@ -6,7 +6,9 @@
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <deque>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <regex>
@@ -14,9 +16,53 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 using json = nlohmann::json;
 using Clock = std::chrono::steady_clock;
+
+bool load_assistant_capabilities(
+    std::unordered_set<std::string>& motions,
+    std::unordered_set<std::string>& poses,
+    std::unordered_set<std::string>& views,
+    std::unordered_set<std::string>& emotions,
+    int& max_commands,
+    int& max_motions) {
+  std::vector<std::string> candidates;
+  if (const char* configured = std::getenv("INTELLIBOT_CAPABILITIES")) candidates.emplace_back(configured);
+  candidates.insert(candidates.end(), {
+    "assistant/capabilities.json",
+    "../assistant/capabilities.json",
+    "../../assistant/capabilities.json",
+  });
+  for (const auto& path : candidates) {
+    std::ifstream input(path);
+    if (!input) continue;
+    try {
+      json value;
+      input >> value;
+      const auto load_ids = [](const json& items, std::unordered_set<std::string>& target) {
+        for (const auto& item : items) target.insert(item.at("id").get<std::string>());
+      };
+      load_ids(value.at("motions"), motions);
+      load_ids(value.at("poses"), poses);
+      load_ids(value.at("views"), views);
+      load_ids(value.at("emotions"), emotions);
+      max_commands = value.at("limits").at("max_commands").get<int>();
+      max_motions = value.at("limits").at("max_motions").get<int>();
+      if (motions.empty() || poses.empty() || views.empty() || emotions.empty() ||
+          max_commands < 1 || max_motions < 1) {
+        throw std::runtime_error("capability collections must not be empty");
+      }
+      return true;
+    } catch (const std::exception& error) {
+      std::cerr << "Invalid assistant capability manifest " << path << ": " << error.what() << "\n";
+      return false;
+    }
+  }
+  std::cerr << "assistant/capabilities.json not found\n";
+  return false;
+}
 
 // Simulation only: no ROS/robot links and no hardware commands are issued.
 int main(int argc, char** argv) {
@@ -127,10 +173,12 @@ int main(int argc, char** argv) {
     res.set_content(json{{"request_id", request_id}, {"data", data}, {"error", error}}.dump(), "application/json; charset=utf-8");
   };
   const std::unordered_map<std::string,int> actions{{"q1.wave",3004},{"q1.heart",3007},{"q1.cheer",3008}};
-  const std::unordered_set<std::string> ai_actions{
-    "wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch",
-    "surprised", "hug", "refuse", "street_dance", "belly_laugh"
-  };
+  std::unordered_set<std::string> ai_actions, ai_poses, ai_views, ai_emotions;
+  int max_ai_commands = 0, max_ai_motions = 0;
+  if (!load_assistant_capabilities(
+          ai_actions, ai_poses, ai_views, ai_emotions, max_ai_commands, max_ai_motions)) {
+    return 2;
+  }
   /* 页面若从别的本地端口打开（静态服务器、预览器），接口就是跨源的。
      只对 localhost / 127.0.0.1 来源放行，别把本机控制口暴露给任意网页。 */
   auto is_local_origin = [](const std::string& origin) {
@@ -337,7 +385,8 @@ int main(int argc, char** argv) {
           throw std::runtime_error("unknown ai action");
         }
         if (data.contains("actions")) {
-          if (!data["actions"].is_array() || data["actions"].size() > 4) {
+          if (!data["actions"].is_array() ||
+              data["actions"].size() > static_cast<size_t>(max_ai_motions)) {
             throw std::runtime_error("invalid ai action sequence");
           }
           for (const auto& action : data["actions"]) {
@@ -348,6 +397,47 @@ int main(int argc, char** argv) {
         }
         if (data.contains("stop") && !data["stop"].is_boolean()) {
           throw std::runtime_error("invalid ai stop command");
+        }
+        if (data.contains("commands")) {
+          if (!data["commands"].is_array() ||
+              data["commands"].size() > static_cast<size_t>(max_ai_commands)) {
+            throw std::runtime_error("invalid ai command sequence");
+          }
+          int motion_count = 0;
+          for (const auto& command : data["commands"]) {
+            if (!command.is_object() || !command.contains("type") || !command["type"].is_string()) {
+              throw std::runtime_error("invalid ai command");
+            }
+            const auto type = command["type"].get<std::string>();
+            if (type == "motion") {
+              if (!command.contains("id") || !command["id"].is_string() ||
+                  ai_actions.find(command["id"].get<std::string>()) == ai_actions.end()) {
+                throw std::runtime_error("unknown ai motion");
+              }
+              ++motion_count;
+            } else if (type == "pose") {
+              if (!command.contains("id") || !command["id"].is_string() ||
+                  ai_poses.find(command["id"].get<std::string>()) == ai_poses.end()) {
+                throw std::runtime_error("unknown ai pose");
+              }
+            } else if (type == "view") {
+              if (!command.contains("preset") || !command["preset"].is_string() ||
+                  ai_views.find(command["preset"].get<std::string>()) == ai_views.end()) {
+                throw std::runtime_error("unknown ai view");
+              }
+            } else if (type == "emotion") {
+              if (!command.contains("id") || !command["id"].is_string() ||
+                  ai_emotions.find(command["id"].get<std::string>()) == ai_emotions.end()) {
+                throw std::runtime_error("unknown ai emotion");
+              }
+            } else if (type != "reset_pose" && type != "reset_view") {
+              throw std::runtime_error("unknown ai command type");
+            }
+          }
+          if (motion_count > max_ai_motions ||
+              (data.value("stop", false) && !data["commands"].empty())) {
+            throw std::runtime_error("invalid ai command count");
+          }
         }
         response(res, 200, request_id, data);
       } catch (...) {

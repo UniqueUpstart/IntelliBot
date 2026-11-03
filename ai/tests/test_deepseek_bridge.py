@@ -140,8 +140,113 @@ class DeepSeekBridgeTest(unittest.TestCase):
         self.assertIn("上一次响应未能形成有效 JSON", requests[1]["messages"][0]["content"])
 
     def test_two_blank_responses_fail(self):
-        with self.assertRaisesRegex(BridgeError, "空白 JSON"):
+        with self.assertRaisesRegex(BridgeError, "有效的功能调用 JSON"):
             chat(self.config, "你好", [], lambda *_args, **_kwargs: completion("   "))
+
+    def test_fenced_and_mixed_json_are_accepted(self):
+        fenced = chat(
+            self.config,
+            "你好",
+            [],
+            lambda *_args, **_kwargs: completion(
+                '```json\n{"reply":"你好。","commands":[],"stop":false}\n```'
+            ),
+        )
+        self.assertEqual(fenced["reply"], "你好。")
+        self.assertEqual(fenced["commands"], [])
+
+        mixed = chat(
+            self.config,
+            "你好",
+            [],
+            lambda *_args, **_kwargs: completion(
+                '下面是结果：\n{"reply":"你好。","commands":[],"stop":false}\n希望有帮助。'
+            ),
+        )
+        self.assertEqual(mixed["reply"], "你好。")
+
+    def test_plain_text_falls_back_after_repair_attempt(self):
+        responses = iter([
+            completion("莎士比亚是英国剧作家。"),
+            completion("威廉·莎士比亚创作了《哈姆雷特》。"),
+        ])
+        result = chat(self.config, "介绍莎士比亚", [], lambda *_args, **_kwargs: next(responses))
+        self.assertEqual(result["reply"], "威廉·莎士比亚创作了《哈姆雷特》。")
+        self.assertEqual(result["commands"], [])
+        self.assertFalse(result["stop"])
+
+    def test_malformed_json_fails_after_repair_attempt(self):
+        with self.assertRaises(BridgeError) as raised:
+            chat(
+                self.config,
+                "你好",
+                [],
+                lambda *_args, **_kwargs: completion('{"reply":"损坏",'),
+            )
+        self.assertEqual(raised.exception.code, "AI_INVALID_RESPONSE")
+
+    def test_commands_are_normalized_and_projected_to_actions(self):
+        result = chat(
+            self.config,
+            "先切左视角，再播放捧腹大笑，然后开心",
+            [],
+            lambda *_args, **_kwargs: completion(
+                json.dumps(
+                    {
+                        "reply": "好的。",
+                        "commands": [
+                            {"type": "view", "preset": "left"},
+                            {"type": "motion", "id": "belly_laugh"},
+                            {"type": "emotion", "id": "happy"},
+                        ],
+                        "stop": False,
+                    }
+                )
+            ),
+        )
+        self.assertEqual(
+            result["commands"],
+            [
+                {"type": "view", "preset": "left"},
+                {"type": "motion", "id": "belly_laugh"},
+                {"type": "emotion", "id": "happy"},
+            ],
+        )
+        self.assertEqual(result["actions"], ["belly_laugh"])
+
+    def test_explicit_basic_action_is_recovered_when_model_omits_it(self):
+        result = chat(
+            self.config,
+            "和我挥挥手",
+            [],
+            lambda *_args, **_kwargs: completion(
+                '{"reply":"好的。","commands":[],"stop":false}'
+            ),
+        )
+        self.assertEqual(
+            result["commands"],
+            [{"type": "motion", "id": "wave"}],
+        )
+        self.assertEqual(result["actions"], ["wave"])
+
+    def test_json_mode_is_removed_when_provider_rejects_it(self):
+        requests = []
+
+        def opener(request, **_kwargs):
+            payload = json.loads(request.data.decode("utf-8"))
+            requests.append(payload)
+            if "response_format" in payload:
+                raise urllib.error.HTTPError(
+                    request.full_url, 400, "unsupported response_format", {}, io.BytesIO()
+                )
+            return completion('{"reply":"兼容成功。","commands":[],"stop":false}')
+
+        config = Config(api_key="test-key", provider="custom", model="local-model")
+        result = chat(config, "你好", [], opener)
+        self.assertEqual(result["reply"], "兼容成功。")
+        self.assertEqual(len(requests), 2)
+        self.assertIn("response_format", requests[0])
+        self.assertNotIn("response_format", requests[1])
 
     def test_rate_limit_is_mapped(self):
         def limited(request, timeout):

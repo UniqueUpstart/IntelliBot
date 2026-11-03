@@ -181,23 +181,102 @@
 
   function wait(milliseconds) { return new Promise(function (resolve) { setTimeout(resolve, milliseconds); }); }
 
-  async function playActions(actions) {
-    if (!Array.isArray(actions) || !actions.length) return;
+  var VIEW_PRESETS = {
+    front: {azimuth: 0, elevation: 0},
+    left: {azimuth: -90, elevation: 0},
+    right: {azimuth: 90, elevation: 0},
+    back: {azimuth: 180, elevation: 0},
+    up: {azimuth: 0, elevation: 89},
+    level: {azimuth: 0, elevation: 0},
+    down: {azimuth: 0, elevation: -89},
+  };
+  var POSE_LOOPS = {idle: true, standby: true, raisehand: false, apose: false};
+
+  function commandsFromResponse(data) {
+    if (Array.isArray(data.commands)) return data.commands.slice(0, 6);
+    var actions = Array.isArray(data.actions) ? data.actions : (data.action_id ? [data.action_id] : []);
+    return actions.slice(0, 4).map(function (id) { return {type: 'motion', id: id}; });
+  }
+
+  function applyPoseCommand(robot, poseId) {
+    if (!Object.prototype.hasOwnProperty.call(POSE_LOOPS, poseId)) return false;
+    if (typeof robot.stopGesture === 'function') robot.stopGesture();
+    if (poseId === 'idle' && typeof robot.resetPose === 'function') robot.resetPose();
+    if (poseId === 'idle' && typeof robot.setMood === 'function') robot.setMood('calm');
+    if (typeof robot.playClip !== 'function' || robot.playClip(poseId, POSE_LOOPS[poseId]) === false) {
+      return false;
+    }
+    window.dispatchEvent(new CustomEvent('robot-pose-change', {detail: {clip: poseId}}));
+    return true;
+  }
+
+  function executeCommand(command) {
     var robot = window.robot3d;
-    if (!robot || !robot.ready) { note('动作未播放：主页机器人尚未加载完成'); return; }
+    if (!command || typeof command.type !== 'string') return {ok: false, label: '无效命令'};
+    if (command.type === 'motion') {
+      var info = robot && robot.getGestureInfo ? robot.getGestureInfo(command.id) : null;
+      if (!info || !robot.playGesture(command.id, {source: 'chat'})) {
+        return {ok: false, label: '动作 ' + command.id, duration: 0};
+      }
+      return {ok: true, label: info.label, duration: info.duration};
+    }
+    if (command.type === 'pose') {
+      return {ok: !!robot && applyPoseCommand(robot, command.id), label: '姿态 ' + command.id, duration: 0};
+    }
+    if (command.type === 'reset_pose') {
+      return {ok: !!robot && applyPoseCommand(robot, 'idle'), label: '复位姿态', duration: 0};
+    }
+    if (command.type === 'emotion') {
+      if (!robot || typeof robot.setMood !== 'function') return {ok: false, label: '表情 ' + command.id};
+      robot.setMood(command.id);
+      return {ok: true, label: '表情 ' + command.id, duration: 0};
+    }
+    var viewControl = window.viewControl;
+    if (command.type === 'reset_view') {
+      if (!viewControl || typeof viewControl.resetView !== 'function') return {ok: false, label: '复位视角'};
+      viewControl.resetView();
+      return {ok: true, label: '复位视角', duration: 0};
+    }
+    if (command.type === 'view') {
+      var preset = VIEW_PRESETS[command.preset];
+      var current = viewControl && viewControl.view;
+      if (!preset || !current || typeof viewControl.setView !== 'function') {
+        return {ok: false, label: '视角 ' + command.preset};
+      }
+      var applied = viewControl.setView({
+        azimuth: preset.azimuth,
+        elevation: preset.elevation,
+        distance: current.distance,
+      });
+      return {ok: applied !== false, label: '视角 ' + command.preset, duration: 0};
+    }
+    return {ok: false, label: command.type};
+  }
+
+  async function playCommands(commands) {
+    if (!Array.isArray(commands) || !commands.length) return;
+    var robot = window.robot3d;
+    var needsRobot = commands.some(function (command) {
+      return command && ['motion', 'pose', 'reset_pose', 'emotion'].includes(command.type);
+    });
+    if (needsRobot && (!robot || !robot.ready)) {
+      note('命令未执行：主页机器人尚未加载完成');
+      return;
+    }
     var token = ++sequenceToken;
-    robot.stopGesture();
-    stopButton.hidden = false;
-    for (var index = 0; index < actions.length; index += 1) {
+    if (robot && typeof robot.stopGesture === 'function') robot.stopGesture();
+    stopButton.hidden = !commands.some(function (command) { return command && command.type === 'motion'; });
+    for (var index = 0; index < commands.length; index += 1) {
       if (token !== sequenceToken) return;
-      var actionId = actions[index];
-      var info = robot.getGestureInfo ? robot.getGestureInfo(actionId) : null;
-      if (!info || !robot.playGesture(actionId, {source: 'chat'})) {
-        note('动作未播放：' + actionId + ' 不在主页白名单中');
+      var result = executeCommand(commands[index]);
+      if (!result.ok) {
+        note('命令未执行：' + result.label);
         continue;
       }
-      status.textContent = '正在执行：' + info.label + '（' + (index + 1) + '/' + actions.length + '）';
-      await wait(Math.max(300, info.duration * 1000 + 250));
+      status.textContent = '正在执行：' + result.label + '（' + (index + 1) + '/' + commands.length + '）';
+      if (commands[index].type === 'motion') {
+        await wait(Math.max(300, result.duration * 1000 + 250));
+      }
     }
     if (token === sequenceToken) { stopButton.hidden = true; status.textContent = '动作完成'; }
   }
@@ -217,14 +296,17 @@
     try {
       var data = await requestReply(text, previous);
       updateRecord(thinking, data.reply);
-      var actions = Array.isArray(data.actions) ? data.actions.slice(0, 4) : (data.action_id ? [data.action_id] : []);
-      var actionRecord = data.stop ? ' [动作记录：已停止]' : (actions.length ? ' [动作记录：' + actions.join(', ') + ']' : '');
+      var commands = commandsFromResponse(data);
+      var commandRecord = commands.map(function (command) {
+        return command.type + ':' + (command.id || command.preset || '');
+      }).join(', ');
+      var actionRecord = data.stop ? ' [动作记录：已停止]' : (commands.length ? ' [动作记录：' + commandRecord + ']' : '');
       history = history.concat([
         {role: 'user', content: text},
         {role: 'assistant', content: data.reply.slice(0, 500 - actionRecord.length) + actionRecord},
       ]).slice(-10);
       if (data.stop) stopActions('已按指令停止');
-      else if (actions.length) playActions(actions);
+      else if (commands.length) playCommands(commands);
       else status.textContent = tr('chat.status.ready', '待命');
       scheduleStageHide();
       return true;

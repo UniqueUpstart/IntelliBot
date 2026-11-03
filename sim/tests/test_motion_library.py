@@ -46,6 +46,16 @@ class MotionLibraryTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_assistant_capabilities_are_current(self) -> None:
+        generator = SIM_DIR.parent / "scripts" / "generate_assistant_capabilities.py"
+        result = subprocess.run(
+            [sys.executable, str(generator), "--check"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_invalid_joint_is_reported(self) -> None:
         original = GESTURES["salute"]["pose"]
         try:
