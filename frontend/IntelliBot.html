@@ -1025,11 +1025,6 @@
                   <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
                 </button>
                 <button class="model-preset" type="button" data-model-preset
-                        data-provider="custom" data-base-url="https://api.openai.com/v1"
-                        data-api-format="openai" data-prefill-model="gpt-4.1-mini">
-                  <strong>GPT-4.1 mini</strong><span>快速均衡</span>
-                </button>
-                <button class="model-preset" type="button" data-model-preset
                         data-provider="zhipu" data-base-url="https://open.bigmodel.cn/api/paas/v4"
                         data-api-format="openai" data-prefill-model="glm-4-flash">
                   <strong>GLM-4-Flash</strong><span>免费 · 国内直连</span>
@@ -1040,22 +1035,29 @@
                   <strong data-i18n="model.preset.custom">自定义</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
                 </button>
               </div>
-              <label class="model-field">
+              <div class="model-field">
                 <span data-i18n="model.provider">模型格式</span>
-                <select data-model-format>
+                <select data-model-format data-i18n-aria="model.provider" aria-label="模型格式">
                   <option value="openai" data-i18n="model.format.openai">OpenAI</option>
                   <option value="anthropic" data-i18n="model.format.anthropic">Anthropic</option>
                 </select>
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.baseUrl">API 地址</span>
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.apiKey">API Key</span>
+                <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
+                       data-i18n-aria="model.apiKey" aria-label="API Key" placeholder="sk-…">
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.baseUrl">接口网址</span>
                 <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
+                       data-i18n-aria="model.baseUrl" aria-label="接口网址"
                        placeholder="https://api.example.com/v1">
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.model">模型</span>
+              </div>
+              <div class="model-field">
+                <span data-i18n="model.model">模型名称</span>
                 <span class="model-field__control">
                   <input data-model-name type="text" spellcheck="false" autocomplete="off"
+                         data-i18n-aria="model.model" aria-label="模型名称"
                          list="model-name-options" placeholder="deepseek-flash">
                   <button class="model-field__fetch" type="button" data-model-fetch
                           data-i18n-title="model.fetch.list" data-i18n-aria="model.fetch.list"
@@ -1067,12 +1069,7 @@
                   </button>
                 </span>
                 <datalist id="model-name-options"></datalist>
-              </label>
-              <label class="model-field">
-                <span data-i18n="model.apiKey">API Key</span>
-                <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
-                       placeholder="sk-…">
-              </label>
+              </div>
               <!-- 说明行平时是空的，只在保存成功或报错时由脚本填一句；
                    空着时由 css/rail.css 里的 .model-view__note:empty 收掉，不占格 -->
               <p class="model-view__note" data-model-note></p>
