@@ -15,7 +15,9 @@
   if (!field) return;
 
   var PAD_LEFT = 16;
-  var PAD_RIGHT = 72;
+  /* 右边让出的位置：发送钮 36 + 距右 6 + 缝 10 = 52，与
+     css/chat.css 里 .composer__input 的 padding-right 同值 */
+  var PAD_RIGHT = 52;
   var PAD_Y = 14;
   var LINE = 20;
   var MIN_H = PAD_Y * 2 + LINE;
@@ -52,6 +54,23 @@
     field.style.height = Math.min(Math.max(content, MIN_H), MAX_H) + 'px';
     field.style.overflowY = content > MAX_H + 1 ? 'auto' : 'hidden';
   }
+
+  /* 点这一格以外的任何地方，都把这枚输入框的选中态收掉。
+     不能指望浏览器自己收：模型画布那边在 pointerdown 上 preventDefault
+     （要拖关节、也不希望一拖就选中页面文字），而默认行为一旦被拦，
+     焦点就不会从 textarea 转走，那道主题色内描边会一直挂着，
+     看上去像还在等着输入。所以自己在捕获阶段先收 —— 早于画布那层的
+     pointerdown，也早于按钮自己的按下动画。
+     落点仍在输入框或发送钮上就放过：那两处是「还在这格上操作」，
+     选中态该留着，发完一条接着打下一条也不用再点一次框。
+     其它会把焦点带走的元素（胶囊、栏体、弹窗）本来就由浏览器接管，
+     这里补的那次 blur 只是把顺序提到前面，不会有第二遍 */
+  document.addEventListener('pointerdown', function (event) {
+    if (document.activeElement !== field) return;
+    var target = event.target;
+    if (target && target.closest && target.closest('.composer__input, .composer__send')) return;
+    field.blur();
+  }, true);
 
   field.addEventListener('input', layout);
   window.addEventListener('resize', layout);

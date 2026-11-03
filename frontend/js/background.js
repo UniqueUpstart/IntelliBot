@@ -1,7 +1,6 @@
 /* 背景点阵，三种样式，由 Settings 弹窗切换：
-   plain    点阵是一张有弹性、会传导的膜：鼠标扫过时按速度给一圈点一个向外推的
-            冲量，再顺着运动方向拽一把，位移经由邻居扩散传出去，靠弹簧和阻尼回位，
-            于是掠过之处泛起一圈自己散掉的波阵；静下来就一帧都不画。
+   plain    只有一层常驻的基础网格点，指针扫过也不动。它整片预渲染在底图里，
+            换到这一档之后一次都不再重画，等于一张静态背景。
    magnetic 鼠标周围的一圈点被「磁铁」推开，同时变深、变大。三件事都由点到鼠标的
             距离决定，越近越强；位移和浓度各存一份，每帧朝目标缓一步，所以鼠标甩走、
             移出窗口时，点是自己滑回原位的，不会瞬移。
@@ -9,7 +8,7 @@
             每个波源向外发一道环，环长大、变厚再淡掉，于是指针身后拖着一串前前后后
             的波纹，停手后它们继续扩散到散尽，画面回到空底。
 
-   plain / magnetic 里，远处不动的点不重画：它们早就预渲染在底图里，每帧贴一次底图
+   magnetic 里，远处不动的点不重画：它们早就预渲染在底图里，每帧贴一次底图
    即可，只有被扰动的那几百个点需要「先擦掉原位、再按新位置画回来」。 */
 (function () {
   var cvs = document.getElementById('bgfx');
@@ -34,27 +33,7 @@
   var pal = [];
   var mx = -1e5, my = -1e5;     /* 鼠标位置；移出窗口就扔到屏幕外，磁场自然消失 */
   var R2 = 0, ease = .4, lastN = 0;
-  var MODE = 'magnetic';    /* plain：弹性波阵；magnetic：磁铁推开；wave：从指针扩散的波阵 */
-
-  /* ---------- Plain：弹性位移场 ----------
-     每个点记两个量：位移 d 和速度 v。鼠标扫过时，
-       1）按速度给一圈点一个向外的推力（RAD），
-       2）再给一份沿运动方向的拽力（FLOW），点被带着往前走；
-     松手后靠弹簧回位（K）把 v 拉回零、阻尼（DAMP）吃掉多余动能，
-     再让位移在邻居之间扩散（DIFF），扰动就一圈圈摊开、变淡、回位。
-     力度全部乘鼠标速度：停住就不再注入能量，否则点会一直鼓在那里。 */
-  var W_R     = 160;    /* 推力半径 px */
-  var W_RAD   = .1;    /* 径向推力：每帧、按速度比例 */
-  var W_FLOW  = .05;    /* 顺运动方向的拽力：指针每走 1px 给多少速度 */
-  var W_K     = .04;   /* 弹簧回位刚度 */
-  var W_DAMP  = .9;     /* 每帧速度阻尼（60fps 基准） */
-  var W_DIFF  = .3;    /* 邻居扩散比例：波能传多远 */
-  var W_REF   = 16;     /* 位移换算成颜色/大小的参考值，越小越显眼 */
-  var W_R2 = 0;
-  var FDX = null, FDY = null, FVX = null, FVY = null;                 /* 位移、速度 */
-  var NDX = null, NDY = null, NVX = null, NVY = null;                 /* 双缓冲 */
-  var pvx = 0, pvy = 0;   /* 上一帧到现在指针走过的 px，用来算注入力度 */
-  var mts = 1;            /* 本帧的时间片，60fps 为 1 */
+  var MODE = 'magnetic';    /* plain：静态基础网格；magnetic：磁铁推开；wave：从指针扩散的波阵 */
 
   /* ---------- Wave：从指针扩散的波阵 ----------
      一个波源就是一道环：出生时半径 0，此后按 SPD 匀速长大，
@@ -97,12 +76,7 @@
     var ddx = e.clientX - mx, ddy = e.clientY - my;
     /* 第一次进来 mx 在屏幕外，那一步差值没有意义，扔掉 */
     if (ddx > -4e3 && ddx < 4e3) {
-      if (MODE === 'plain') {
-        pvx += ddx; pvy += ddy;
-        /* 一帧里挪得再快也就这么多，超了当甩不出更大力，免得从窗口外跳回来时炸开 */
-        if (pvx > 80) pvx = 80; else if (pvx < -80) pvx = -80;
-        if (pvy > 80) pvy = 80; else if (pvy < -80) pvy = -80;
-      } else if (MODE === 'wave') {
+      if (MODE === 'wave') {
         emitPath(mx, my, e.clientX, e.clientY);
       }
     }
@@ -113,7 +87,7 @@
 
   /* 指针离开窗口：把磁铁收走，点自己滑回去；波源留在原地，让最后一圈自己走完 */
   window.addEventListener('pointerout', function (e) {
-    if (!e.relatedTarget) { mx = -1e5; my = -1e5; pvx = 0; pvy = 0; wAcc = 0; wake(); }
+    if (!e.relatedTarget) { mx = -1e5; my = -1e5; wAcc = 0; wake(); }
   }, { passive: true });
 
   /* 算这一帧每个点的位移与浓度，返回还在动的点数 */
@@ -186,7 +160,7 @@
   }
 
   /* 本帧全部点（原位置到新位置之间）的外包框，带 s 与半像素余量 */
-  function boxOfDots(n, useField) {
+  function boxOfDots(n) {
     var k, idx, i, j, x, y, s, t, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (k = 0; k < n; k++) {
       idx = LIST[k];
@@ -194,8 +168,8 @@
       j = (idx - i) / cols;
       t = IN[idx];
       s = BASE_S + (DOT_MAX - BASE_S) * t;
-      x = i * CELL + (useField ? FDX[idx] : OX[idx]);
-      y = j * CELL + (useField ? FDY[idx] : OY[idx]);
+      x = i * CELL + OX[idx];
+      y = j * CELL + OY[idx];
       if (x - s < x0) x0 = x - s;
       if (y - s < y0) y0 = y - s;
       if (x + s > x1) x1 = x + s;
@@ -204,10 +178,11 @@
     return [x0 - 1, y0 - 1, x1 + 1, y1 + 1];
   }
 
-  /* 每帧入口：Plain 走位移场，Wave 走波源，Magnetic 走距离磁场。
+  /* 每帧入口：Plain 不参与动画（点阵全在底图里，一张静止的网格），
+     Wave 走波源，Magnetic 走距离磁场。
      返回值是「这一帧还有没有东西在动」，静止时外面据此停掉 rAF */
   function paint() {
-    if (MODE === 'plain') return paintField();
+    if (MODE === 'plain') return false;
     if (MODE === 'wave') return paintWave();
     var n = update();
     if (!n) {
@@ -222,7 +197,7 @@
 
     /* 本帧的绘制范围并上上一帧：上一帧画出的点就在那里，一起被底图盖掉，
        不用再逐点 fillRect 擦一遍（点最多时有上千个，那也是一千次绘制调用） */
-    var box = boxOfDots(n, false);
+    var box = boxOfDots(n);
     var rx0 = prevBox ? Math.min(box[0], prevBox[0]) : box[0];
     var ry0 = prevBox ? Math.min(box[1], prevBox[1]) : box[1];
     var rx1 = prevBox ? Math.max(box[2], prevBox[2]) : box[2];
@@ -240,112 +215,6 @@
       if (lv > 31) lv = 31;
       if (lv !== last) { ctx.fillStyle = pal[lv]; last = lv; }
       ctx.fillRect(i * CELL + OX[idx] - s / 2, j * CELL + OY[idx] - s / 2, s, s);
-    }
-    prevBox = box;
-    return true;
-  }
-
-  /* 一帧推进：把这一帧的速度注入、弹簧、阻尼、扩散一次算完。
-     返回被扰动的点数；没有扰动时外面会停手，画布留在底图上不重画 */
-  function updateField() {
-    /* 上一帧已经彻底静下来，这一帧指针又没动：整场不用再算 */
-    if (lastN === 0 && pvx === 0 && pvy === 0) return 0;
-    var ts = mts;                              /* 以 60fps 为 1 的时间片 */
-    var speed = Math.sqrt(pvx * pvx + pvy * pvy);
-    var gate = speed > .35 ? Math.min(1, Math.pow(speed / 12, .6)) : 0;  /* 12px/帧≈720px/s 满力，慢移也留一点 */
-    var damp = Math.pow(W_DAMP, ts);
-    var diff = Math.min(1, W_DIFF * ts);
-    var n = 0, i, j, idx, x, y, gx, gy, d2, d, u, ux, uy;
-    var vx, vy, dx, dy, sx, sy, m, ax, ay, ox, oy, mag, t, tx;
-
-    for (j = 0; j < rows; j++) {
-      y = j * CELL;
-      if (y > H + 8) break;
-      for (i = 0; i < cols; i++) {
-        x = i * CELL;
-        if (x > W + 8) break;
-        idx = j * cols + i;
-        vx = FVX[idx]; vy = FVY[idx];
-        dx = FDX[idx]; dy = FDY[idx];
-
-        if (gate) {
-          gx = x - mx; gy = y - my; d2 = gx * gx + gy * gy;
-          if (d2 < W_R2) {
-            u = 1 - Math.sqrt(d2) / W_R;
-            u = u * u * (3 - 2 * u);           /* 圈边平、中间陡，没有折角 */
-            d = Math.sqrt(d2) || .0001;
-            ux = gx / d; uy = gy / d;
-            vx += ux * u * W_RAD * gate * ts;  /* 径向：把点往外顶 */
-            vy += uy * u * W_RAD * gate * ts;
-            vx += pvx * u * W_FLOW * ts;       /* 顺向：点被带着往前走 */
-            vy += pvy * u * W_FLOW * ts;
-          }
-        }
-
-        vx -= dx * W_K * ts;                   /* 弹簧：位移越大，回拉越强 */
-        vy -= dy * W_K * ts;
-        vx *= damp; vy *= damp;
-
-        /* 邻居平均：位移往外摊，扰动才会一圈圈传出去，而不是原地抖 */
-        sx = 0; sy = 0; m = 0;
-        if (i > 0)       { sx += FDX[idx - 1];    sy += FDY[idx - 1];    m++; }
-        if (i < cols - 1){ sx += FDX[idx + 1];    sy += FDY[idx + 1];    m++; }
-        if (j > 0)       { sx += FDX[idx - cols]; sy += FDY[idx - cols]; m++; }
-        if (j < rows - 1){ sx += FDX[idx + cols]; sy += FDY[idx + cols]; m++; }
-        ax = sx / m; ay = sy / m;
-
-        NVX[idx] = vx; NVY[idx] = vy;
-        ox = dx + vx * ts + (ax - dx) * diff;
-        oy = dy + vy * ts + (ay - dy) * diff;
-        NDX[idx] = ox; NDY[idx] = oy;
-
-        mag = Math.sqrt(ox * ox + oy * oy);
-        t = mag / W_REF;
-        if (t > 1) t = 1;
-        IN[idx] = t;
-        if (mag > .25) LIST[n++] = idx;
-      }
-    }
-
-    tx = FDX; FDX = NDX; NDX = tx;
-    tx = FDY; FDY = NDY; NDY = tx;
-    tx = FVX; FVX = NVX; NVX = tx;
-    tx = FVY; FVY = NVY; NVY = tx;
-
-    pvx = 0; pvy = 0;                          /* 这一帧的路程用完了 */
-    return n;
-  }
-
-  /* Plain 的绘制和 Magnetic 同一套「擦原位、画新位」：
-     先把整张底图贴回来，再抹掉被扰动点的原位，最后按位移画回去。
-     差别只在位置是位移场给的，不是距离磁场直接算的 */
-  function paintField() {
-    var n = updateField();
-    if (!n) {
-      if (prevBox) { restoreBox(prevBox[0], prevBox[1], prevBox[2], prevBox[3]); prevBox = null; }
-      lastN = 0;
-      return false;
-    }
-    lastN = n;
-
-    var k, i, j, idx, s, t, lv, last = -1;
-    var box = boxOfDots(n, true);
-    var rx0 = prevBox ? Math.min(box[0], prevBox[0]) : box[0];
-    var ry0 = prevBox ? Math.min(box[1], prevBox[1]) : box[1];
-    var rx1 = prevBox ? Math.max(box[2], prevBox[2]) : box[2];
-    var ry1 = prevBox ? Math.max(box[3], prevBox[3]) : box[3];
-    restoreBox(rx0, ry0, rx1, ry1);
-
-    for (k = 0; k < n; k++) {
-      idx = LIST[k];
-      i = idx % cols;
-      j = (idx - i) / cols;
-      t = IN[idx];
-      s = BASE_S + (DOT_MAX - BASE_S) * t;
-      lv = (t * 31) | 0;
-      if (lv > 31) lv = 31;
-      if (lv !== last) { ctx.fillStyle = pal[lv]; last = lv; }
-      ctx.fillRect(i * CELL + FDX[idx] - s / 2, j * CELL + FDY[idx] - s / 2, s, s);
     }
     prevBox = box;
     return true;
@@ -537,7 +406,7 @@
   }
 
   /* 背景样式由 Settings 弹窗写入，键名与弹窗脚本里的一致。
-     纯静态点阵那一种已经删掉，plain 现在就是位移场：
+     plain 就是那层静态基础网格，没有任何交互：
      旧版存过 matrix 的，这里也读成 plain，不用去改 localStorage */
   var BG_KEY = 'intellibot.bg';
   function readMode() {
@@ -550,12 +419,10 @@
   }
   function resetField() {
     if (OX) { OX.fill(0); OY.fill(0); IN.fill(0); }
-    if (FDX) { FDX.fill(0); FDY.fill(0); FVX.fill(0); FVY.fill(0); }
-    if (NDX) { NDX.fill(0); NDY.fill(0); NVX.fill(0); NVY.fill(0); }
     if (ACC) ACC.fill(0);
     SRC.length = 0;
     nTouch = 0;
-    pvx = 0; pvy = 0; wAcc = 0;
+    wAcc = 0;
     lastN = 0;
     prevBox = null;      /* 底图马上要重铺，旧的脏矩形没有意义了 */
   }
@@ -564,9 +431,9 @@
     /* 换样式先把上一种留下的位移、浓度、波源清掉：
        只停住不推进的话，点会永远歪在最后一次鼠标位置上，波也会在后一种样式里接着走 */
     resetField();
-    buildBase();          /* wave 的底图不带点阵，换过来要重铺一次 */
+    buildBase();          /* wave 的底图不带点阵，plain 换回来要重铺一次 */
     drawBase();
-    wake();
+    wake();               /* plain 下第一帧就返回 false，循环随即停掉 */
   }
   window.Bgfx = { setStyle: setStyle, getStyle: function () { return MODE; } };
 
@@ -604,19 +471,10 @@
     OY = new Float32Array(cols * rows);
     IN = new Float32Array(cols * rows);
     LIST = new Int32Array(cols * rows);
-    FDX = new Float32Array(cols * rows);
-    FDY = new Float32Array(cols * rows);
-    FVX = new Float32Array(cols * rows);
-    FVY = new Float32Array(cols * rows);
-    NDX = new Float32Array(cols * rows);
-    NDY = new Float32Array(cols * rows);
-    NVX = new Float32Array(cols * rows);
-    NVY = new Float32Array(cols * rows);
     ACC = new Float32Array(cols * rows);
     TOUCH = new Int32Array(cols * rows);
     SRC.length = 0; nTouch = 0; wAcc = 0; lastEmit = 0;
     R2 = R * R;
-    W_R2 = W_R * W_R;
     lastN = 0;
     prevBox = null;
     buildPalette();
@@ -635,6 +493,9 @@
   var lastT = 0, rafId = 0, idleTimer = 0;
 
   function wake() {
+    /* plain 是一张静态网格，底图铺好之后就再没有东西要推进：
+       指针、尺寸、主题变化都不用点火，循环一次都不进 */
+    if (MODE === 'plain') return;
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = 0; }
     if (rafId) return;
     lastT = 0;                              /* 重开循环时重新计时，别拿旧时间戳算 dt */
@@ -647,7 +508,6 @@
     lastT = t;
     if (dt > .05) dt = .05;                 /* 切标签页回来别一下跳完 */
     ease = 1 - Math.pow(1 - .4, dt * 60);   /* 与帧率无关的跟随速度 */
-    mts = Math.min(2, dt * 60);             /* 波阵的物理步长，同样按帧率折算 */
     if (paint()) { rafId = requestAnimationFrame(frame); return; }
     /* wave 停手后还要补一道呼吸波：不排帧，用定时器睡到该出波的那一刻再唤醒 */
     if (MODE === 'wave' && W_IDLE && mx > -1e4) {

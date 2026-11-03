@@ -7,9 +7,10 @@
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   /* 仿真面板里的胶囊（手臂/腰/腿/联动、姿态/动作/步态、右侧工具按钮）、
-     弹窗右上角的连接按钮、左栏编辑页的类型三选与提交钮，
+     弹窗右上角的连接按钮、左栏编辑页的类型三选与提交钮、
+     右下视角条里那两枚圆钮，以及同一簇的眼睛与复位，
      同样是「底片 + --press」结构，一并接管 */
-  var SEL = '.pill, .item, .seg__opt,' +
+  var SEL = '.pill, .vt-round, .view-adjust-trigger, .pose-reset-trigger, .item, .seg__opt,' +
             '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn,' +
             '.edit__type, .edit__reset, .edit__add';
   var PRESS_PILL = 1.0;   // 顶栏胶囊压入档位（× --press-k 得缩放比例）

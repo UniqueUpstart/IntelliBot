@@ -174,6 +174,60 @@ export const Q1_MOTIONS = Object.freeze({
       ]
     }
   },
+  "cha_cha": {
+    "label": "cha-cha",
+    "duration": 4.0,
+    "pose": {
+      "left_shoulder_pitch_joint": -0.55,
+      "right_shoulder_pitch_joint": -0.55,
+      "left_shoulder_roll_joint": 0.3,
+      "right_shoulder_roll_joint": -0.3,
+      "left_shoulder_yaw_joint": -0.15,
+      "right_shoulder_yaw_joint": 0.15,
+      "left_elbow_joint": 1.05,
+      "right_elbow_joint": 1.05,
+      "waist_roll_joint": 0.0,
+      "waist_yaw_joint": 0.0
+    },
+    "oscillation": {
+      "waist_roll_joint": [
+        0.13,
+        6.28
+      ],
+      "waist_yaw_joint": [
+        0.22,
+        6.28,
+        1.5707963267948966
+      ],
+      "left_shoulder_pitch_joint": [
+        0.3,
+        6.28
+      ],
+      "right_shoulder_pitch_joint": [
+        0.3,
+        6.28,
+        3.141592653589793
+      ],
+      "left_shoulder_roll_joint": [
+        0.12,
+        6.28,
+        3.141592653589793
+      ],
+      "right_shoulder_roll_joint": [
+        -0.12,
+        6.28
+      ],
+      "left_elbow_joint": [
+        0.25,
+        12.57
+      ],
+      "right_elbow_joint": [
+        0.25,
+        12.57,
+        1.5707963267948966
+      ]
+    }
+  },
   "stretch": {
     "label": "伸懒腰",
     "description": "双臂举过头顶并缓慢舒展",

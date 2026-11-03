@@ -1,5 +1,27 @@
 import * as THREE from 'three';
 
+/* 两个循环轴。方位不写东南西北，按眼睛看到的位置直接报「正 / 左 / 右 / 后」；
+   俯仰三档「上 / 平 / 下」。
+   rotate 是方位图标里那支箭头的转角：基准图形箭头朝下（正对观众），
+   左视把相机挪到左边，箭头就转过 270°；后视翻 180° 朝上。
+   水平那枚按数组顺序走：正 → 左 → 右 → 后 → 正，想换顺序只动这个数组 */
+const VIEW_CYCLE = [
+  { key: 'front', label: '正', azimuth: 0,   rotate: 0 },
+  { key: 'left',  label: '左', azimuth: -90, rotate: 270 },
+  { key: 'right', label: '右', azimuth: 90,  rotate: 90 },
+  { key: 'back',  label: '后', azimuth: 180, rotate: 180 },
+];
+const TILT_CYCLE = [
+  { key: 'up',    label: '上', elevation: 89 },
+  { key: 'level', label: '平', elevation: 0 },
+  { key: 'down',  label: '下', elevation: -89 },
+];
+const TILT_UP = TILT_CYCLE[0];
+const TILT_LEVEL = TILT_CYCLE[1];
+const TILT_DOWN = TILT_CYCLE[2];
+/* 俯仰超过这一档就归到上/下，其余算平 */
+const TILT_SPLIT = 45;
+
 const JOINT_CONFIGS = {
   'body1':    { axis: 'yaw', axes: ['yaw', 'pitch'], range: [-1.571, 1.571] },
   'head':     { axis: 'yaw',   range: [-1.2, 1.2] },
@@ -45,8 +67,12 @@ const JOINT_PIXEL_TO_RAD = 0.009;
 const ORBIT_PIXEL_TO_DEG = 0.35;
 const TILT_PIXEL_TO_DEG = 0.3;
 const WHEEL_ZOOM_K = 0.0012;
+/* 缩放系数：1 就是各档取景算出的那个距离。
+   近端 0.5 是以头为锚点往里推，机身跟着上下张开；
+   远端 1.25 只留四分之一圈的余量 —— 取景本来就把机身顶到上下沿，
+   再往外退只会让脚下空出一片，观感上只是变小 */
 const DISTANCE_MIN = 0.5;
-const DISTANCE_MAX = 3.2;
+const DISTANCE_MAX = 1.25;
 const ELEVATION_LIMIT = 89;
 const HOVER_DELAY_MS = 60;
 const WAIST_TRIGGER_Y = 0.045;
@@ -57,11 +83,19 @@ const FRONT_VIEW = Object.freeze({ azimuth: 0, elevation: 0, distance: 1, mode: 
 let robo = null;
 let wrap = null;
 let camera = null;
+let dock = null;
+let panel = null;
+let viewButton = null;
+let azimuthButton = null;
+let tiltButton = null;
 let marker = null;
 let markerBone = null;
+let limbBone = null;
+let limbMeshes = [];
 let ready = false;
 
 const raycaster = new THREE.Raycaster();
+const ndcPoint = new THREE.Vector2();
 const jointAxisParents = new Map();
 let defaultView = loadDefaultView();
 const view = {
@@ -73,15 +107,70 @@ const pointer = { x: 0, y: 0 };
 let drag = null;
 let lastCamY = 0;
 let lastCamD = 1;
+/* 缩放基准点：滚轮缩放以头部为准，头在画面里的位置保持不变。
+   zoomAnchorS 是头部在视锥里的纵向归一化偏移（屏幕上那个位置与它成正比，
+   定义见 zoom()），缩放时用它反解新的注视点高度，偏移就不变。
+   null 表示还没缩放过，镜头仍按取景算出的注视点走 */
+let zoomAnchorS = null;
+let zoomBaseCamY = 0;   /* 上一次取景给出的注视高度，用来识别切档 / resize */
+let lastLookY = 0;      /* 上一帧实际使用的注视点高度 */
 let hoverTimer = 0;
 let hoverPoint = null;
 let hoverCanPose = false;
 
 const tempVec = new THREE.Vector3();
 const tempScale = new THREE.Vector3();
+/* 机器人整体的屏幕外接矩形：整块 .robofx 铺满视口，指针压在任何地方都会
+   走到悬浮判定上，而真正需要射线求交的只有机器人身上那一小块。先投一次
+   包围盒（8 个角），落在外面就直接返回，省掉一次遍历全模型的三角形求交 */
+let modelBox = null;
+let screenRect = null;
+let screenRectAt = 0;
+const rectBox = new THREE.Box3();
+const rectCorner = new THREE.Vector3();
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
+}
+
+/* 指数逼近：每秒走掉 (1 - e^(-dt/τ)) 的剩余距离，帧率高低都是同一条曲线。
+   比 gsap 轻，也不需要一次动画注册一个补间 —— 关节高亮是逐帧状态，
+   不是一次性的入场，目标随时可能被下一次悬浮改掉 */
+function approach(current, target, dt, tau) {
+  if (current === target) return target;
+  const next = current + (target - current) * (1 - Math.exp(-dt / tau));
+  return Math.abs(target - next) < 0.002 ? target : next;
+}
+
+/* 固定时长的两档过渡，给关节标记和高亮颜色用。
+   上面那条指数曲线走的「距离」取决于起点：刚碰到关节就移开，
+   褪色只剩很短的一截，看着像动画被掐掉。这里每次目标一变就从当前值
+   重新计时、走满整段时长，进场短、退场长，离开后一定能看到完整的一趟。
+   曲线用 easeOutCubic：起手快、落定缓，与页面里那一档手感一致 */
+function makeGlide(value) {
+  return { value: value, from: value, to: value, k: 1 };
+}
+
+function glide(state, target, dur, dt) {
+  if (state.to !== target) {
+    state.from = state.value;
+    state.to = target;
+    state.k = 0;
+  }
+  if (state.k < 1) {
+    state.k = Math.min(1, state.k + dt / dur);
+    const e = 1 - Math.pow(1 - state.k, 3);
+    state.value = state.from + (state.to - state.from) * e;
+  }
+  return state.value;
+}
+
+/* 直接落到某个值、把过渡状态一起归位（新关节出现、材质已还原时用） */
+function resetGlide(state, value) {
+  state.value = value;
+  state.from = value;
+  state.to = value;
+  state.k = 1;
 }
 
 function normalizeAngle(value) {
@@ -153,10 +242,14 @@ function boot() {
   camera = robo.camera;
   ready = true;
   robo.model.updateMatrixWorld(true);
+  /* 绑定姿势下的整体包围盒量一次：判「指针在不在机器人身上」用它，
+     比每次去遍历 63 个网格划算得多 */
+  modelBox = new THREE.Box3().setFromObject(robo.model);
   cacheJointAxes();
 
   createMarker();
   bindInteractions();
+  buildPanel();
   bindResetAndDefaultControls();
   wrap.classList.add('vc-enabled');
   window.__robotView = { step };
@@ -165,6 +258,12 @@ function boot() {
 
 function step(camY, camD) {
   if (!ready) return;
+  /* 取景基础高度变了（切 body / head、窗口尺寸变化）：旧的缩放锚点作废，
+     否则镜头会硬钉着上一套取景里的头，和新的构图互相拽 */
+  if (Math.abs(camY - zoomBaseCamY) > 0.004) {
+    zoomBaseCamY = camY;
+    zoomAnchorS = null;
+  }
   lastCamY = camY;
   lastCamD = camD;
   const heading = robo.viewHeading || 0;
@@ -173,9 +272,19 @@ function step(camY, camD) {
   const distance = camD * view.distance;
   const horizontal = Math.cos(elevation) * distance;
 
+  /* 缩放中：注视点由「头部在画面里的固定偏移」反推，相机绕它转，
+     头就钉在原处，身体随远近张开或收拢；没缩放时仍是取景给出的高度。
+     分母里那项 x·sinE 是俯仰带来的深度变化，扣掉之后抬头、低头时也能钉住 */
+  const sinE = Math.sin(elevation);
+  const denom = zoomAnchorS === null ? 0 : 1 - zoomAnchorS * sinE;
+  const lookY = zoomAnchorS === null || Math.abs(denom) < 0.2
+    ? camY
+    : headAnchorY() - (zoomAnchorS * distance) / denom;
+  lastLookY = lookY;
+
   camera.position.set(
     Math.sin(azimuth) * horizontal,
-    camY + Math.sin(elevation) * distance,
+    lookY + Math.sin(elevation) * distance,
     Math.cos(azimuth) * horizontal
   );
 
@@ -186,29 +295,189 @@ function step(camY, camD) {
   } else {
     camera.up.set(0, 1, 0);
   }
-  camera.lookAt(0, camY, 0);
-  camera.updateMatrixWorld(true);
+  camera.lookAt(0, lookY, 0);
+  /* 只要相机自己的矩阵：它没有父级，force 传 true 反而会把整棵场景树重建一遍 */
+  camera.updateMatrixWorld();
+  /* 关节标记的尺寸按屏幕像素算，必须等相机这一帧的位姿定下来再写；
+     缓动也挂在这里，robot3d 每帧调一次 step，正好当刷新节拍 */
+  updateJointFx();
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     robo.renderer.render(robo.scene, camera);
   }
 }
 
+/* 关节标记与肢体高亮都取 --hint：模型颜色虽然写在 three 里，
+   色值仍以 design token 为准，主题换了下次悬浮就会拿到新值。
+   缓存一份 Color，raw 没变就不再新建 */
+let hintColor = null;
+let hintRaw = '';
+
+function hintTint() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--hint').trim() || '#5f9b73';
+  if (!hintColor || raw !== hintRaw) {
+    hintRaw = raw;
+    hintColor = new THREE.Color(raw);
+  }
+  return hintColor;
+}
+
+/* ---- 关节标记 ----
+   球体按屏幕像素定大小：半径固定 12px，相机推近拉远、换机型都不变。
+   换算见 updateMarker 里那几行 —— fov 24 的透视相机，距离 d 处一屏高
+   相当于 2·d·tan(fov/2) 个世界单位，除以画布高度就是每像素多少世界单位；
+   再除掉骨骼自己的世界缩放，得到的局部 scale 才落在 12px。
+   出现不是「啪」地亮一下：位移上没有变化，尺寸从 15% 涨到 100%、
+   透明度从 0 涨到悬停档，两条共用同一段固定时长，读起来是颜色从关节
+   中心填出来。按下拖动时透明度再缓缓升到选中档，松手缓缓退回 ——
+   两个档位之间不再是直接赋值那种跳。 */
+const MARKER_RADIUS_PX = 12;
+const MARKER_OPACITY_IDLE = 0.50;
+const MARKER_OPACITY_ACTIVE = 0.75;
+/* 时长（秒）：出现 110ms、退场 220ms，比原来那条指数曲线更快到位，
+   退场仍比进场长一倍，收得从容但不拖尾 */
+const MARKER_IN = 0.11;
+const MARKER_OUT = 0.22;
+/* 拖动加深那一档还是指数逼近：它不是「出现/离开」，是两个状态之间的深浅，
+   跟着指针走，不需要一段固定时长 */
+const MARKER_SELECT_TAU = 0.12;
+/* 涨开的起点：15% 半径配 0 透明度，肉眼看是从一个点铺开成圆 */
+const MARKER_GROW_FROM = 0.15;
+
+const markerFx = { ap: makeGlide(0), select: 0, want: false, active: false };
+
 function createMarker() {
   const geometry = new THREE.SphereGeometry(1, 16, 12);
   const material = new THREE.MeshBasicMaterial({
-    color: 0x91d2c3,
+    color: 0x5f9b73,
     transparent: true,
-    opacity: 0.78,
+    opacity: MARKER_OPACITY_IDLE,
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
   });
+  material.color.copy(hintTint());
   marker = new THREE.Mesh(geometry, material);
   marker.name = '__robot_joint_marker';
   marker.userData.viewMarker = true;
   marker.renderOrder = 999;
   marker.visible = false;
+}
+
+/* ---- 肢体高亮 ----
+   关节一转，跟着动的就是它下面那整根骨骼链（模型里每个零件都挂在骨节点下，
+   没有蒙皮权重），所以「会动的肢体」= 该骨骼的全部后代节点里的 mesh。
+   做法是给这些 mesh 换一份自己独占的材质副本（原材质可能被身体别处共用，
+   直接改会把别的部位一起染绿），离开时把原材质接回去、副本丢掉。
+   只动基色一路，比例就是 --hint 压在原色上的等效不透明度：
+   壳是近白的，0.25 约等于叠一层四分之一浓度的 hint，暗部保持原样。
+   副本记着自己的底色，每帧按一个 0…1 的比例往 hint 上靠，
+   所以离开时是缓缓褪回原色再还原材质，按下拖动时比例再推深一档 */
+const TINT_MIX = 0.25;
+/* 按下拖动时再推深一档：与标记的透明度同步加重，而不是整块肢体突然变色 */
+const TINT_MIX_ACTIVE = 0.40;
+const TINT_IN = 0.13;
+/* 退场比进场长一倍：离开关节时颜色完整地褪一趟，而不是刚缩回一点就被还原 */
+const TINT_OUT = 0.30;
+const TINT_SELECT_TAU = 0.12;
+
+const tintFx = { gl: makeGlide(0), select: 0, want: false, active: false };
+/* 本轮高亮取到的 --hint：--hint 是计算样式，逐帧读会逼着浏览器重算样式，
+   所以一条肢体只读一次，换关节或换主题时才重新取 */
+let limbHint = null;
+
+/* 复制一份材质，并把「没被染过」的底色记在副本自己的 userData 上。
+   每帧的染色都是「底色 → hint」的插值，所以渐入渐出只需改一个 0…1 的
+   比例，不必反复克隆材质，也不用在结束时猜原来是什么颜色 */
+function tintRecord(material) {
+  if (Array.isArray(material)) return material.map(tintRecord);
+  if (!material) return material;
+  /* 面罩的自发光承载表情贴图、胸前指示灯本身就是发光件，
+     染成 hint 会把它们本来的颜色盖掉，这两类原样返回 */
+  if (/^(face|emissive)$/i.test(material.name || '')) return material;
+  const tinted = material.clone();
+  tinted.userData.vcBase = tinted.color ? tinted.color.clone() : null;
+  tinted.needsUpdate = true;
+  return tinted;
+}
+
+/* 按当前比例把一份副本染到 hint 上：底色向 hint 插值，
+   mix 就等于「hint 以这个不透明度叠在底色上」 */
+function applyTint(material, mix, hint) {
+  if (Array.isArray(material)) {
+    material.forEach((item) => applyTint(item, mix, hint));
+    return;
+  }
+  if (!material || !material.userData) return;
+  const base = material.userData.vcBase;
+  if (!base || !material.color) return;
+  material.color.copy(base).lerp(hint, mix);
+}
+
+function highlightLimb(bone) {
+  if (!bone) return;
+  /* 同一根骨骼：只把目标重新点亮，正在淡出的那一段接着往上走，
+     不重新建副本 —— 否则悬停在同一个关节上会看到两次涨开 */
+  if (limbBone === bone) {
+    tintFx.want = true;
+    return;
+  }
+  /* 换到另一根骨骼：上一根直接接回原材质，不做交叉淡化。
+     两根骨骼的子树会重叠（骨骼是嵌套的），留着一起淡会互相覆写副本 */
+  restoreLimb();
+  const hint = hintTint();
+  limbHint = hint.clone();
+  const meshes = [];
+  bone.traverse((node) => {
+    if (!node.isMesh || node.userData.viewMarker) return;
+    meshes.push(node);
+  });
+  meshes.forEach((mesh) => {
+    const original = mesh.material;
+    const tinted = tintRecord(original);
+    mesh.userData.vcTint = { original, tinted };
+    mesh.material = tinted;
+    applyTint(tinted, 0, limbHint);
+  });
+  limbBone = bone;
+  limbMeshes = meshes;
+  resetGlide(tintFx.gl, 0);
+  tintFx.want = true;
+}
+
+/* 离开关节：只把目标关掉，真正的还原交给每帧 —— 等 level 收到 0 再
+   接回原材质，这样褪色那条不会被从半途掐断 */
+function clearLimbHighlight() {
+  tintFx.want = false;
+}
+
+/* 立刻还原：换关节、重置姿态这类「不该再看到上一根」的场合用 */
+function restoreLimb() {
+  limbMeshes.forEach((mesh) => {
+    const record = mesh.userData.vcTint;
+    if (!record) return;
+    mesh.material = record.original;
+    disposeTinted(record.original, record.tinted);
+    delete mesh.userData.vcTint;
+  });
+  limbMeshes = [];
+  limbBone = null;
+  limbHint = null;
+  resetGlide(tintFx.gl, 0);
+  tintFx.select = 0;
+  tintFx.want = false;
+}
+
+/* 副本可能是材质数组：逐项比一下，跳过没被复制的那种（面罩、指示灯） */
+function disposeTinted(original, tinted) {
+  if (Array.isArray(tinted)) {
+    tinted.forEach((item, index) => {
+      const base = Array.isArray(original) ? original[index] : original;
+      if (item && item !== base) item.dispose();
+    });
+    return;
+  }
+  if (tinted && tinted !== original) tinted.dispose();
 }
 
 function showMarker(bone, active) {
@@ -218,19 +487,292 @@ function showMarker(bone, active) {
     bone.add(marker);
     marker.position.set(0, 0, 0);
     markerBone = bone;
+    /* 换关节重新涨开一次：从上一个关节滑过来时，这枚点是「重新长出来」
+       的，不该带着上一个的大小直接出现在新位置 */
+    resetGlide(markerFx.ap, 0);
+    markerFx.select = active ? 1 : 0;
   }
-  bone.getWorldScale(tempScale);
-  const largestScale = Math.max(Math.abs(tempScale.x), Math.abs(tempScale.y), Math.abs(tempScale.z), 0.0001);
-  marker.scale.setScalar(0.024 / largestScale);
-  marker.material.opacity = active ? 0.95 : 0.7;
+  marker.material.color.copy(hintTint());
+  markerFx.want = true;
+  markerFx.active = !!active;
+  tintFx.active = !!active;
   marker.visible = true;
 }
 
 function hideMarker() {
   if (!marker) return;
-  marker.visible = false;
-  if (marker.parent) marker.parent.remove(marker);
-  markerBone = null;
+  /* 只关目标，不立刻 visible=false：等透明度退到 0 再由每帧摘掉，
+     否则涨开动画白做，收的时候也会「啪」地消失 */
+  markerFx.want = false;
+  markerFx.active = false;
+  tintFx.active = false;
+}
+
+/* 逐帧推进：标记与肢体高亮共用一份时间差。标签页挂起再回来时
+   dt 会被夹到 50ms 以内，避免一帧就把整段缓动走完 */
+let lastFxTime = 0;
+
+function updateJointFx() {
+  const now = performance.now();
+  const dt = lastFxTime ? clamp((now - lastFxTime) / 1000, 0.001, 0.05) : 0.016;
+  lastFxTime = now;
+  updateMarker(dt);
+  updateTint(dt);
+}
+
+function updateMarker(dt) {
+  if (!marker) return;
+  /* 已经收干净、也没有新目标：不必每帧再算一遍过渡 */
+  if (!marker.visible && !markerFx.want) return;
+  const appear = glide(markerFx.ap, markerFx.want ? 1 : 0, markerFx.want ? MARKER_IN : MARKER_OUT, dt);
+  markerFx.select = approach(markerFx.select, markerFx.active ? 1 : 0, dt, MARKER_SELECT_TAU);
+
+  /* 退场走满整段才摘掉：k 到 1 表示这一趟已经播完，不是「透明度够低了」 */
+  if (!markerFx.want && markerFx.ap.k >= 1) {
+    marker.visible = false;
+    if (marker.parent) marker.parent.remove(marker);
+    markerBone = null;
+    resetGlide(markerFx.ap, 0);
+    return;
+  }
+  if (!marker.visible || !markerBone) return;
+
+  /* 12px 屏幕半径 → 世界半径 → 除掉骨骼世界缩放得到局部 scale。
+     骨骼若被非等比缩放，取最大的那一轴做除数，宁可略小也不撑出椭圆 */
+  marker.getWorldPosition(tempVec);
+  const distance = Math.max(camera.position.distanceTo(tempVec), 0.01);
+  /* 画布高度按绘制缓冲反算（画布 CSS 尺寸与视口一致），别读 clientHeight ——
+     那是布局值，每帧问一次排版会拖慢悬浮高亮的起手 */
+  const cvs = robo.renderer.domElement;
+  const height = cvs.height / (robo.renderer.getPixelRatio() || 1) || 1;
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5);
+  const worldRadius = (MARKER_RADIUS_PX * 2 * tanV * distance) / height;
+  markerBone.getWorldScale(tempScale);
+  const parentScale = Math.max(
+    Math.abs(tempScale.x), Math.abs(tempScale.y), Math.abs(tempScale.z), 0.0001
+  );
+  const grow = MARKER_GROW_FROM + (1 - MARKER_GROW_FROM) * appear;
+  marker.scale.setScalar((worldRadius / parentScale) * grow);
+
+  /* 透明度两段叠加：先按出现进度从 0 起，再按选中进度在悬停档与选中档之间走 */
+  const level =
+    MARKER_OPACITY_IDLE + (MARKER_OPACITY_ACTIVE - MARKER_OPACITY_IDLE) * markerFx.select;
+  marker.material.opacity = level * appear;
+}
+
+function updateTint(dt) {
+  if (!limbMeshes.length) return;
+  const level = glide(tintFx.gl, tintFx.want ? 1 : 0, tintFx.want ? TINT_IN : TINT_OUT, dt);
+  tintFx.select = approach(tintFx.select, tintFx.active ? 1 : 0, dt, TINT_SELECT_TAU);
+
+  /* 同样等这一趟走完再还原材质：k 到 1 才是终点 */
+  if (!tintFx.want && tintFx.gl.k >= 1) {
+    restoreLimb();
+    return;
+  }
+  if (!limbHint) return;
+  const mix = (TINT_MIX + (TINT_MIX_ACTIVE - TINT_MIX) * tintFx.select) * level;
+  limbMeshes.forEach((mesh) => applyTint(mesh.material, mix, limbHint));
+}
+
+function buildPanel() {
+  dock = document.querySelector('.viewdock');
+  if (!dock) return;
+  viewButton = dock.querySelector('.view-adjust-trigger');
+  panel = dock.querySelector('.viewdock__body');
+  if (!panel) return;
+
+  /* 一排三枚圆钮：水平四向、俯仰三向、复位。
+     没有标题行 —— 右端那枚眼睛本身就是开合入口，再点一次、点面板外或
+     按 Esc 都能收起；方位不写东南西北，直接报「正 / 左 / 右 / 后」。
+     复位放在最右、紧贴眼睛：前两枚是「往哪走」，它是「回到原点」，
+     挨着入口不参与逐档切换，误触的代价也最小 */
+  const row = document.createElement('div');
+  row.className = 'vt-row';
+
+  azimuthButton = roundButton('cycle-azimuth', '切换水平视角');
+  azimuthButton.addEventListener('click', cycleAzimuth);
+  row.appendChild(azimuthButton);
+
+  tiltButton = roundButton('cycle-tilt', '切换俯仰视角');
+  tiltButton.addEventListener('click', cycleTilt);
+  row.appendChild(tiltButton);
+
+  const resetButton = roundButton('reset-view', '复位视角');
+  resetButton.innerHTML = RESET_GLYPH;
+  resetButton.addEventListener('click', resetView);
+  row.appendChild(resetButton);
+
+  panel.appendChild(row);
+  refreshViewButtons();
+
+  if (viewButton) {
+    viewButton.setAttribute('aria-controls', panel.id);
+    viewButton.setAttribute('aria-expanded', 'false');
+    viewButton.addEventListener('click', togglePanel);
+  }
+  const poseResetButton = document.querySelector('.pose-reset-trigger');
+  if (poseResetButton) poseResetButton.addEventListener('click', resetPose);
+
+  /* 面板从按钮那块长出来，点到它自己或内部都不算「点外面」 */
+  document.addEventListener('pointerdown', (event) => {
+    if (!dock.classList.contains('is-open')) return;
+    if (dock.contains(event.target)) return;
+    closePanel();
+  }, true);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && dock.classList.contains('is-open')) closePanel();
+  });
+}
+
+/* 两枚胶囊里不放字，放图标。
+   方位那枚画成罗盘：一圈淡环代表模型的水平面，指针指到相机站的那一侧，
+   四档共用这一个图形，只把指针转过 90 的倍数 ——
+   正 = 朝下（相机在近端）、左 = 朝左、右 = 朝右、后 = 朝上。
+   指针是实心的、环是淡的，跟俯仰那枚的细线箭头在形状上分得很开。
+   俯仰那枚三档各一张：向上箭头、一条水平的双向箭头、向下箭头，
+   分别对应仰视、平视、俯视。全部跟 currentColor 走，悬停反白时一起变。
+   四张图都与顶栏那两枚（眼睛、复位）用同一个 0 0 24 24 的框、同一档
+   1.8 描边，图形本身也铺到 2…22：这样并排时四枚图标读起来是同一个
+   24×24 的尺寸，而不是有的 15、有的 20 */
+
+const AZIMUTH_GLYPH =
+  '<circle cx="12" cy="12" r="8.8" stroke-opacity=".45"/>' +
+  '<path d="M12 22.4 17.2 12 12 14.2 6.8 12Z" fill="currentColor" stroke="none"/>';
+const TILT_GLYPH = {
+  up:    '<path d="M12 21.8V2.2"/><path d="M4.3 9.9 12 2.2l7.7 7.7"/>',
+  level: '<path d="M2.2 12h19.6"/><path d="M6.5 8.2 2.6 12l3.9 3.8"/>' +
+         '<path d="M17.5 8.2 21.4 12l-3.9 3.8"/>',
+  down:  '<path d="M12 2.2v19.6"/><path d="M4.3 14.1 12 21.8l7.7-7.7"/>',
+};
+
+/* 复位：画面四角各留一段开口的框，中心一个点 —— 取景框归中。
+   刻意不用回转箭头：栏体右边那枚 .pose-reset-trigger 已经是那个图形，
+   两枚并排时同形不同义最难分。框的四角与中心点铺到 3…21，和其他几枚
+   同样落在 24 的格子里 */
+const RESET_GLYPH =
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path d="M3 8.6V3h5.6"/><path d="M15.4 3H21v5.6"/>' +
+    '<path d="M21 15.4V21h-5.6"/><path d="M8.6 21H3v-5.6"/>' +
+    '<circle cx="12" cy="12" r="2.4"/>' +
+  '</svg>';
+
+function azimuthSvg(rotate) {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<g transform="rotate(' + rotate + ' 12 12)">' + AZIMUTH_GLYPH + '</g>' +
+    '</svg>';
+}
+
+function tiltSvg(key) {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    (TILT_GLYPH[key] || TILT_GLYPH.level) + '</svg>';
+}
+
+/* 条里的圆钮：样式在 css/viewtool.css 的 .vt-round 里，底色涨开与按下压弹
+   沿用顶栏胶囊那一套，由 js/press.js 接管（它按 .vt-round 这个选择器抓） */
+function roundButton(action, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'vt-round';
+  button.dataset.action = action;
+  /* 只留 aria-label：原生 title 会在悬停时弹一个黑底小框，和这块极简的
+     胶囊不搭，提示信息都交给读屏 */
+  button.setAttribute('aria-label', label);
+  return button;
+}
+
+/* 开合只切一个类：宽高走 CSS 的 0.3s，形变与阴影由 js/panels.js 的
+   MutationObserver 接住 is-open 的变化去补间，和账号胶囊同一套 */
+function openPanel() {
+  if (!dock) return;
+  dock.classList.add('is-open');
+  if (viewButton) {
+    viewButton.classList.add('is-active');
+    viewButton.setAttribute('aria-pressed', 'true');
+    viewButton.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function closePanel() {
+  if (!dock) return;
+  dock.classList.remove('is-open');
+  if (viewButton) {
+    viewButton.classList.remove('is-active');
+    viewButton.setAttribute('aria-pressed', 'false');
+    viewButton.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function togglePanel() {
+  if (!dock) return;
+  if (dock.classList.contains('is-open')) closePanel();
+  else openPanel();
+}
+
+/* 当前落在哪一档：方位取最近的一格（拖到一半时按最近的报），
+   俯仰只看正负，过半才算上 / 下 */
+function nearestAzimuth(azimuth) {
+  let best = VIEW_CYCLE[0];
+  let bestDiff = Infinity;
+  VIEW_CYCLE.forEach((entry) => {
+    const diff = Math.abs(normalizeAngle(azimuth - entry.azimuth));
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = entry;
+    }
+  });
+  return best;
+}
+
+function nearestTilt(elevation) {
+  if (elevation > TILT_SPLIT) return TILT_UP;
+  if (elevation < -TILT_SPLIT) return TILT_DOWN;
+  return TILT_LEVEL;
+}
+
+/* 两枚循环钮上的图标就是当前状态：中键拖拽、点按钮之后都要跟着换。
+   只有状态真的变了才写 DOM，拖拽时每帧调用也不会反复重建 SVG */
+function refreshViewButtons() {
+  if (azimuthButton) {
+    const horizontal = nearestAzimuth(view.azimuth);
+    if (azimuthButton.dataset.state !== horizontal.key) {
+      azimuthButton.dataset.state = horizontal.key;
+      azimuthButton.innerHTML = azimuthSvg(horizontal.rotate);
+      azimuthButton.setAttribute('aria-label', '切换水平视角，当前' + horizontal.label + '视');
+    }
+  }
+  if (tiltButton) {
+    const vertical = nearestTilt(view.elevation);
+    if (tiltButton.dataset.state !== vertical.key) {
+      tiltButton.dataset.state = vertical.key;
+      tiltButton.innerHTML = tiltSvg(vertical.key);
+      tiltButton.setAttribute('aria-label', '切换俯仰视角，当前' + vertical.label + '视');
+    }
+  }
+}
+
+function applyAngles(azimuth, elevation) {
+  view.azimuth = normalizeAngle(azimuth);
+  view.elevation = clamp(elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT);
+  zoomAnchorS = null;      /* 换了方位或俯仰，旧的头部锚点不再成立 */
+  robo.setPointerAimPaused(true);
+  step(lastCamY, lastCamD);
+}
+
+/* 水平钮按数组顺序走一格，俯仰保持不动 */
+function cycleAzimuth() {
+  if (!ready) return;
+  const current = nearestAzimuth(view.azimuth);
+  const next = VIEW_CYCLE[(VIEW_CYCLE.indexOf(current) + 1) % VIEW_CYCLE.length];
+  applyAngles(next.azimuth, view.elevation);
+}
+
+/* 俯仰钮按数组顺序走一格：上 → 平 → 下 → 上 */
+function cycleTilt() {
+  if (!ready) return;
+  const current = nearestTilt(view.elevation);
+  const next = TILT_CYCLE[(TILT_CYCLE.indexOf(current) + 1) % TILT_CYCLE.length];
+  applyAngles(view.azimuth, next.elevation);
 }
 
 function bindResetAndDefaultControls() {
@@ -265,14 +807,28 @@ function refreshDefaultViewButtons() {
   });
 }
 
+/* 缩放基准：头骨中心的世界高度。头顶往下折 8.9% 身高就是头的中心，
+   与关节命中那套用的是同一个点，模型缩放或换机型都跟着走 */
+function headAnchorY() {
+  if (!modelBox) return lastCamY;
+  return modelBox.max.y - 0.089 * (modelBox.max.y - modelBox.min.y);
+}
+
+/* 回到默认视角：方位、俯仰、远近一起归位，缩放锚点作废。
+   设置里那两项 data-view-default 决定「默认」是正前方、还是上次存下的姿态 */
 function resetView() {
   if (!ready) return;
   view.azimuth = defaultView.azimuth;
   view.elevation = defaultView.elevation;
   view.distance = defaultView.distance;
+  zoomAnchorS = null;
   robo.setPointerAimPaused(false);
   step(lastCamY, lastCamD);
 }
+
+/* 姿态复位与视角复位合成一次「回到原样」：心情、动作、姿势、镜头全归位。
+   页面右侧那枚 Reset 走这里 */
+const resetPose = resetAll;
 
 function resetAll() {
   if (!ready || !robo.resetPose) return;
@@ -282,10 +838,24 @@ function resetAll() {
   if (robo.playClip) robo.playClip('idle', true);
   resetView();
   hideMarker();
+  clearLimbHighlight();
 }
 
 function zoom(factor) {
-  view.distance = clamp(view.distance * factor, DISTANCE_MIN, DISTANCE_MAX);
+  if (!ready) return;
+  const before = view.distance;
+  const after = clamp(before * factor, DISTANCE_MIN, DISTANCE_MAX);
+  if (after === before) return;
+  /* 先把「当前画面里头在哪」量下来：头部与注视点的纵向差，除以「距离 +
+     这段差在视线方向上的投影」，就是它在视锥里的归一化偏移（屏幕上那个
+     位置与它成正比）。缩放完按新距离反解注视点，这个偏移不变，于是头停在
+     原位、身体上下张开。距离回到 1 时反解出的注视点正好是取景给的那个高度 */
+  const anchor = headAnchorY();
+  const x0 = anchor - lastLookY;
+  const d0 = lastCamD * before;
+  const den = d0 + x0 * Math.sin(THREE.MathUtils.degToRad(view.elevation));
+  if (Math.abs(den) > 1e-4) zoomAnchorS = x0 / den;
+  view.distance = after;
   step(lastCamY, lastCamD);
 }
 
@@ -295,7 +865,10 @@ function bindInteractions() {
   wrap.addEventListener('pointerup', onPointerUp);
   wrap.addEventListener('pointercancel', onPointerUp);
   wrap.addEventListener('pointerleave', () => {
-    if (!drag) hideMarker();
+    if (!drag) {
+      hideMarker();
+      clearLimbHighlight();
+    }
     hoverPoint = null;
     hoverCanPose = false;
     wrap.classList.remove('vc-can-pose', 'vc-hover-joint');
@@ -343,6 +916,7 @@ function onPointerDown(event) {
       startY: event.clientY,
     };
     showMarker(joint.bone, false);
+    highlightLimb(joint.bone);
     wrap.classList.add('vc-joint');
     capturePointer(event.pointerId);
     return;
@@ -453,7 +1027,10 @@ function onPointerUp(event) {
   wrap.classList.remove('vc-camera', 'vc-dragging-joint', 'vc-joint', 'vc-can-pose');
 
   if (wasJoint || wasCamera) robo.setPointerAimPaused(false);
-  if (!wasJoint) queueHover(pointer.x, pointer.y, false);
+  /* 松手后重新判定一次悬浮：拖完指针可能已经离开关节，也可能还压在别的关节上。
+     高亮先留着，等这次判定给出结果（命中就换成新关节，落空就清掉），
+     否则松手瞬间会闪一下原色 */
+  queueHover(pointer.x, pointer.y, false);
 }
 
 function onWheel(event) {
@@ -482,10 +1059,12 @@ function queueHover(clientX, clientY, canPose = false) {
     const joint = hoverCanPose ? findJointAt(hoverPoint.x, hoverPoint.y) : null;
     if (joint) {
       showMarker(joint.bone, false);
+      highlightLimb(joint.bone);
       wrap.classList.add('vc-hover-joint');
       wrap.classList.add('vc-can-pose');
     } else {
       hideMarker();
+      clearLimbHighlight();
       wrap.classList.remove('vc-hover-joint', 'vc-can-pose');
     }
   }, HOVER_DELAY_MS);
@@ -495,11 +1074,21 @@ function findJointAt(clientX, clientY) {
   if (!robo.model) return null;
   const rect = wrap.getBoundingClientRect();
   if (!rect.width || !rect.height) return null;
-  const ndc = new THREE.Vector2(
+  /* 先过一道屏幕矩形：机身跟着指针在转，矩形每 100ms 重投一次就够，
+     期间只多留 12px 余量，边缘不会误判成「没压上」。
+     判定在射线之前，指针压在大片空白上时连求交都不用做 */
+  const bounds = modelScreenRect(rect);
+  if (bounds) {
+    const pad = 12;
+    if (clientX < bounds.left - pad || clientX > bounds.right + pad
+      || clientY < bounds.top - pad || clientY > bounds.bottom + pad) {
+      return null;
+    }
+  }
+  raycaster.setFromCamera(ndcPoint.set(
     ((clientX - rect.left) / rect.width) * 2 - 1,
     -((clientY - rect.top) / rect.height) * 2 + 1
-  );
-  raycaster.setFromCamera(ndc, camera);
+  ), camera);
   const hits = raycaster.intersectObjects(robo.model.children, true);
   const hit = hits.find((entry) => entry.object.isMesh && !entry.object.userData.viewMarker);
   if (!hit) return null;
@@ -515,6 +1104,32 @@ function findJointAt(clientX, clientY) {
     config = hit.point.y >= waist.y ? WAIST_YAW_CONFIG : WAIST_PITCH_CONFIG;
   }
   return {bone, config, point: hit.point.clone()};
+}
+
+/* 机器人整体的屏幕外接矩形，缓存 100ms。机身随指针慢慢转，100ms 内的
+   偏差不过一两像素，外面还留着 12px 余量，够用 */
+function modelScreenRect(rect) {
+  if (!modelBox) return null;
+  const now = performance.now();
+  if (screenRect && now - screenRectAt < 100) return screenRect;
+  rectBox.copy(modelBox).applyMatrix4(robo.model.matrixWorld);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < 8; i += 1) {
+    rectCorner.set(
+      i & 1 ? rectBox.max.x : rectBox.min.x,
+      i & 2 ? rectBox.max.y : rectBox.min.y,
+      i & 4 ? rectBox.max.z : rectBox.min.z
+    ).project(camera);
+    const x = rect.left + (rectCorner.x * 0.5 + 0.5) * rect.width;
+    const y = rect.top + (-rectCorner.y * 0.5 + 0.5) * rect.height;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  screenRect = {left: x0, top: y0, right: x1, bottom: y1};
+  screenRectAt = now;
+  return screenRect;
 }
 
 function findJointOwner(object) {
@@ -594,10 +1209,17 @@ window.viewControl = {
     return {azimuth: view.azimuth, elevation: view.elevation, distance: view.distance};
   },
   get defaultView() { return {...defaultView}; },
+  get azimuth() { return nearestAzimuth(view.azimuth).key; },
+  get tilt() { return nearestTilt(view.elevation).key; },
   get dragging() { return drag ? drag.kind : null; },
+  openPanel,
+  closePanel,
   resetView,
   resetAll,
+  resetPose,
   saveDefaultView,
+  cycleAzimuth,
+  cycleTilt,
 };
 
 if (robo && robo.ready) boot();

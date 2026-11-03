@@ -29,7 +29,10 @@ class MotionLibraryTest(unittest.TestCase):
         validate_motion_library(set(self.qadr), self.ranges)
         self.assertEqual(
             set(GESTURES),
-            {"wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch", "surprised", "hug", "refuse"},
+            {
+                "wave", "wave_both", "salute", "heart", "cheer",
+                "dance", "cha_cha", "stretch", "surprised", "hug", "refuse",
+            },
         )
         self.assertEqual(set(PRESETS), {"stand", "tpose", "squat", "hands_up", "reach"})
 

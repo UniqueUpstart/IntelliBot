@@ -23,6 +23,8 @@ const I18N = {
     "rail.left.type": "Type",
     "rail.left.name": "Name",
     "rail.left.intro": "Intro",
+    "rail.left.name.ph": "Enter…",
+    "rail.left.intro.ph": "Enter…",
     "rail.left.reset": "Reset",
     "rail.left.add": "Add",
     "rail.left.group.action": "Action",
@@ -30,6 +32,10 @@ const I18N = {
     "rail.left.group.tendance": "Tendance",
     "rail.left.brief": "Brief Intro",
     "rail.left.duration": "Expected Duration(s)",
+    "rail.left.card.chacha": "cha-cha",
+    "rail.left.card.chacha.brief": "Cha-cha basic step",
+    "rail.left.card.dance": "Dance",
+    "rail.left.card.dance.brief": "Sway on the beat",
 
     "rail.right.chat": "Chat",
     "rail.right.log": "Log",
@@ -38,6 +44,7 @@ const I18N = {
 
     "chat.placeholder": "Ask IntelliBot…",
     "chat.ask": "Ask IntelliBot",
+    "chat.send": "Send",
 
     "dock.gestures": "Gestures",
     "dock.emotions": "Emotions",
@@ -50,8 +57,6 @@ const I18N = {
     "modal.advance.sub": "MuJoCo simulation",
     "modal.privacy.title": "Privacy",
     "modal.privacy.sub": "Privacy Policy",
-    "modal.contact.title": "Contact",
-    "modal.contact.sub": "Contact & Feedback",
 
     "sim.connect_btn": "Connect Sim",
     "sim.connected": "Connected",
@@ -126,6 +131,8 @@ const I18N = {
     "rail.left.type": "类型",
     "rail.left.name": "名称",
     "rail.left.intro": "简介",
+    "rail.left.name.ph": "请输入…",
+    "rail.left.intro.ph": "请输入…",
     "rail.left.reset": "重置",
     "rail.left.add": "添加",
     "rail.left.group.action": "动作",
@@ -133,6 +140,10 @@ const I18N = {
     "rail.left.group.tendance": "趋势",
     "rail.left.brief": "简介",
     "rail.left.duration": "预计时长(秒)",
+    "rail.left.card.chacha": "cha-cha",
+    "rail.left.card.chacha.brief": "恰恰基本步",
+    "rail.left.card.dance": "舞动",
+    "rail.left.card.dance.brief": "随节拍摆动",
 
     "rail.right.chat": "聊天",
     "rail.right.log": "日志",
@@ -141,6 +152,7 @@ const I18N = {
 
     "chat.placeholder": "问问 IntelliBot…",
     "chat.ask": "向 IntelliBot 提问",
+    "chat.send": "发送",
 
     "dock.gestures": "手势",
     "dock.emotions": "表情",
@@ -153,8 +165,6 @@ const I18N = {
     "modal.advance.sub": "MuJoCo 仿真",
     "modal.privacy.title": "隐私",
     "modal.privacy.sub": "隐私政策",
-    "modal.contact.title": "联系",
-    "modal.contact.sub": "联系与反馈",
 
     "sim.connect_btn": "连接仿真",
     "sim.connected": "已连接",

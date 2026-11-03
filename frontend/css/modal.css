@@ -126,18 +126,44 @@
   max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .set__list{display:flex; flex-direction:column; gap:2px; min-height:0}
-/* 选项：一行一个，左对齐，与标题同一条左基线（所以不留左内边距，
-   右边留 6 是为了文字不贴分割线） */
+/* 选项：一行一个，左对齐，与标题同一条左基线。
+   左列选项沿用顶栏胶囊那套 hover —— 文字往右让出箭头的位置，
+   箭头从左侧浮上来。字与箭头各是一层绝对定位的块：
+   位移只走 transform，不碰 padding / left —— 后者每帧都会让左列重排，
+   而左列紧贴着右侧的选项页，重排一次就把整块设置页也带着抖一下。
+   箭头滑过的距离是「1em + 16」：箭头本体宽 1em，与字之间留 16 */
 .set__tab{
-  height:34px; padding:0 6px 0 0;
+  position:relative;
+  height:34px; padding:0;
   border:0; border-radius:0; background:transparent; cursor:pointer;
   font-family:inherit; font-weight:var(--fw); font-size:var(--fs-18);
   line-height:1; letter-spacing:.2px; text-align:left;
   color:var(--text-reduced);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  /* 箭头浮起时左缘会露出到字左边，溢出裁掉才不顶到面板内边距外 */
+  overflow:hidden;
   transition:color .12s linear;
 }
-.set__tab:hover{color:var(--text-primary)}
+.set__tab svg{fill:currentColor}
+.set__tab__label{
+  position:absolute; top:50%; left:0;
+  /* 预留出箭头那条道：右移之后右缘正好贴上按钮右缘，不会在窄屏被裁掉半截字。
+     两个 calc 用同一个表达式，改滑行距离时两处一起改 */
+  max-width:calc(100% - (1em + 16px));
+  transform:translateY(-50%);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:transform var(--dur) var(--ease);
+}
+.set__tab__arrow{
+  position:absolute; top:50%; left:0;
+  width:1em; height:1em; display:block;
+  transform:translateY(-50%) translateX(-4px);
+  opacity:0;
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+/* 字色不跟 hover 走：左栏是导航，配色只区分「当前这一项」与其余，
+   指针扫过时字色一变就等于多出一个状态；位移加箭头已经足够说明可点 */
+.set__tab:hover .set__tab__label{transform:translate(calc(1em + 16px), -50%)}
+.set__tab:hover .set__tab__arrow{opacity:1; transform:translateY(-50%) translateX(0)}
 .set__tab.is-sel{color:var(--theme)}
 /* 左区 25% 的面板内宽放下 18 号的 Appearance 还绰绰有余（约 100px 对 158px），
    所以任何宽度都不降字号；700 以下只放宽左区、标题收一档 */
@@ -260,13 +286,14 @@
 
 
 
-/* ── Privacy / Contact：纯文本页 ──────────────────────────────────
-   两枚账号菜单胶囊没有可操作的控件，只有一段说明，所以不用 Settings 那套
+/* ── Privacy：纯文本页 ────────────────────────────────────────────
+   账号菜单里那枚胶囊没有可操作的控件，只有一段说明，所以不用 Settings 那套
    左右分栏：标题留给顶部标题区，下面整块是一个滚动区，一块一块往下排。
    节奏与 Settings 右区对齐 —— 16 号小标题、14 号正文、条间 4。
    条款多了就直接滚，顶部不加雾带：那条雾带原本是给栏体做的（内容滑到栏顶时
    化掉边缘），搬到弹窗里会把第一条的小标题洗浅，没有提示作用，
-   所以这里只有 overflow-y 一层，滚动条隐掉，其余保持朴素 */
+   所以这里只有 overflow-y 一层，滚动条隐掉，其余保持朴素
+   （Contact 已改成账号菜单里的两段式链接入口，不再走这套弹窗） */
 .doc{
   display:flex; flex-direction:column;
   flex:1 1 auto; min-height:0;
@@ -280,10 +307,6 @@
   scrollbar-width:none;   /* 不显示滚动条：条宽会把行挤窄，右端就不再与标题区齐平 */
 }
 .doc__body::-webkit-scrollbar{width:0; height:0}
-/* Contact 那种「整块只有一个链接」的页：横纵都居中。纵向也居中是必须的 ——
-   只横不纵时链接贴在滚动区顶端，下面一大片空白，看着像没排完。
-   align-items 同时把链接从 stretch 收回自身宽度，胶囊不会被拉满整行 */
-.doc__body--mid{align-items:center; justify-content:center}
 /* 一条一款：序号 + 小标题在上，正文距它 2。
    条与条只隔 4（上面那条 gap）—— 序号本身就是分组标记，不必再靠大留白分隔；
    正文用默认行距（line-height:normal），1.6 那种松排法配上 4 的条间距，
@@ -317,16 +340,4 @@
   font-size:.92em; letter-spacing:0;
   color:var(--text-secondary);
 }
-/* 外链就是一段文字：不套胶囊、不铺底色、不画描边、不带箭头，
-   字号 24 直接压在滚动区里。颜色仍取主题色 —— 它要靠颜色而不是
-   框子说明「这行能点」。悬停不做任何视觉变化：没有下划线、没有位移，
-   也没有底色与描边的收放，字号与颜色一进一出完全一致；
-   只有键盘聚焦时那道焦点框还在，保证不用鼠标也看得出位置 */
-.doc__link{
-  display:inline;
-  font-size:var(--fs-24); line-height:1.2; letter-spacing:.2px;
-  color:var(--theme); text-decoration:none;
-}
-.doc__link:focus-visible{outline:2px solid var(--theme); outline-offset:4px}
-.doc__link-lab{white-space:nowrap}
 

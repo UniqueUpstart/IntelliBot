@@ -81,7 +81,7 @@ python sim/mujoco_bridge.py --print-joints   # 关节名、类型、限位、是
 
 ## 手势
 
-七个动作集中定义在 `motion_library.py`，启动时会检查关节名、数值、摆动范围和模型限位。动态动作完成后会平滑回到自然站姿。
+八个动作集中定义在 `motion_library.py`，启动时会检查关节名、数值、摆动范围和模型限位。动态动作完成后会平滑回到自然站姿。
 
 | 名字 | 关节组合 | 视觉效果 |
 |---|---|---|
@@ -91,9 +91,10 @@ python sim/mujoco_bridge.py --print-joints   # 关节名、类型、限位、是
 | `cheer` | 右肩 roll -2.39 / yaw -0.76，肘 0.56，pitch 以 6.5 rad/s 前后推 | 右手举到脸前上方敲门式往复 |
 | `wave_both` | 双肩 pitch -2.95 / roll ±1.81 / yaw ∓1.38，roll 同步镜像摆 6.0 rad/s | 双手同时挥，节奏一致、方向相反 |
 | `dance` | 肩 pitch 分别按 3.0 / 4.5 rad/s 摆，肘 -0.25 再叠加 0.45 同频开合，腰 yaw 0.35 | 大臂带小臂一起摆，腰跟着扭 |
+| `cha_cha` | 肩 pitch -0.55 / roll ±0.30 / yaw ∓0.15，肘 1.05；腰 roll 0.13 与 yaw 0.22 同频、相差 90°，双肩 pitch 反相，肘部按 12.57 rad/s 收放 | 胯部左右摆动画圆，双臂交替前后推送，肘部随快拍收放，像恰恰基本步 |
 | `stretch` | 双肩 pitch -3.03 / roll ±0.22 / yaw ∓0.28，肘 0.48，慢速小幅开合 | 双手举到头后，像伸完舒展 |
 
-要加动作就在 `motion_library.py` 的 `GESTURES` 中加一项。`pose` 是基准姿势，`osc` 是正弦摆动（幅度, 角频率），`duration_s` 是持续时间，`return_to_rest` 决定完成后是否回到站姿；`description` 和 `aliases` 供页面及后续大模型选择动作使用。
+要加动作就在 `motion_library.py` 的 `GESTURES` 中加一项。`pose` 是基准姿势，`osc` 是正弦摆动（幅度, 角频率[, 初相]），`duration_s` 是持续时间，`return_to_rest` 决定完成后是否回到站姿；`description` 和 `aliases` 供页面及后续大模型选择动作使用。
 
 ## 姿态、步态、视角
 

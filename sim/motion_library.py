@@ -126,6 +126,37 @@ GESTURES: dict[str, dict] = {
         "duration_s": 4.0,
         "return_to_rest": True,
     },
+    "cha_cha": {
+        "label": "cha-cha",
+        "description": "恰恰基本步：胯部左右摆动，双臂交替推送",
+        "aliases": ["cha-cha", "cha cha", "恰恰", "恰恰舞"],
+        "pose": {
+            "left_shoulder_pitch_joint": -0.55,
+            "right_shoulder_pitch_joint": -0.55,
+            "left_shoulder_roll_joint": 0.30,
+            "right_shoulder_roll_joint": -0.30,
+            "left_shoulder_yaw_joint": -0.15,
+            "right_shoulder_yaw_joint": 0.15,
+            "left_elbow_joint": 1.05,
+            "right_elbow_joint": 1.05,
+            "waist_roll_joint": 0.0,
+            "waist_yaw_joint": 0.0,
+        },
+        # 胯摆按 120 bpm 一拍一次（ω = 2π），roll 与 yaw 相差四分之一周做出画圆；
+        # 手臂在同一个拍点上前后反相推拉，肘部走双倍频对应恰恰的「快-快-快」三连
+        "osc": {
+            "waist_roll_joint": (0.13, 6.28),
+            "waist_yaw_joint": (0.22, 6.28, math.pi / 2),
+            "left_shoulder_pitch_joint": (0.30, 6.28),
+            "right_shoulder_pitch_joint": (0.30, 6.28, math.pi),
+            "left_shoulder_roll_joint": (0.12, 6.28, math.pi),
+            "right_shoulder_roll_joint": (-0.12, 6.28),
+            "left_elbow_joint": (0.25, 12.57),
+            "right_elbow_joint": (0.25, 12.57, math.pi / 2),
+        },
+        "duration_s": 4.0,
+        "return_to_rest": True,
+    },
     "stretch": {
         "label": "伸懒腰",
         "description": "双臂举过头顶并缓慢舒展",

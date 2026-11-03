@@ -10,6 +10,7 @@
   var clearButton = composer.querySelector('[data-assistant-clear]');
   var stopButton = composer.querySelector('[data-assistant-stop]');
   var status = composer.querySelector('[data-assistant-status]');
+  var sendIcon = sendButton && sendButton.querySelector('.composer__send-icon');
   if (!panel || !log || !input || !sendButton || !clearButton || !stopButton ||
       !status) return;
 
@@ -42,6 +43,46 @@
     log.appendChild(node);
     scrollBottom();
   }
+
+  /* 发送钮的两态只看框里有没有字：有字就铺满主题色、箭头反色，
+     空着回到主题色描边 + --panel 底片。字是边打边判的，
+     所以挂在 input 上，和 js/composer.js 的量尺寸各自独立 */
+  function paintSend() {
+    /* 飞行途中不换态：提交那一刻输入框已经被清空，但按钮还得保持实心，
+       等箭头从下方落回来（animationend）再退回空心，否则它是在半路换的衣服 */
+    if (sendIcon && sendIcon.classList.contains('is-flying')) return;
+    sendButton.classList.toggle('is-filled', input.value.trim().length > 0);
+  }
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var flyTimer = 0;
+
+  /* 收尾：摘掉 is-flying，再按当前输入框重新判一次实心/空心 ——
+     飞行途中涂的实心就是为了在这里退回空心 */
+  function endFly() {
+    if (flyTimer) { clearTimeout(flyTimer); flyTimer = 0; }
+    if (!sendIcon || !sendIcon.classList.contains('is-flying')) return;
+    sendIcon.classList.remove('is-flying');
+    paintSend();
+  }
+
+  function flySendIcon() {
+    /* 关掉动效的人不发这一帧：CSS 那边 animation:none 之后
+       animationend 不会触发，is-flying 会一直挂着，按钮就再也不会换态了 */
+    if (!sendIcon || reduceMotion.matches) return;
+    /* 连按（Enter 敲两下）时把动画重头放一遍：先摘类、强制一次回流再挂上，
+       不然类名没变，浏览器不会重启同一条 animation */
+    sendIcon.classList.remove('is-flying');
+    void sendIcon.offsetWidth;
+    sendIcon.classList.add('is-flying');
+    /* animationend 是主路径，这条 700 的定时器只是兜底（演示动画 .62s）：
+       标签页被挂起、元素被 display:none 掉时动画会被取消、不会派发 end，
+       少了这一手按钮就永远停在实心态 */
+    clearTimeout(flyTimer);
+    flyTimer = setTimeout(endFly, 700);
+  }
+
+  if (sendIcon) sendIcon.addEventListener('animationend', endFly);
 
   function setPending(value) {
     pending = value;
@@ -120,6 +161,8 @@
   async function submit() {
     var text = input.value.trim();
     if (!text || pending) return;
+    /* 空框与「正在等回复」都退出去，所以箭头只在真的发出东西时才飞 */
+    flySendIcon();
     var previous = history.slice(-10);
     message('user', text);
     input.value = '';
@@ -158,6 +201,8 @@
     }
   }
 
+  input.addEventListener('input', paintSend);
+  paintSend();
   input.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();

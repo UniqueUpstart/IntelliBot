@@ -81,7 +81,9 @@
     return { k: 'x', v: node.classList.contains('rail--right') ? SLIDE : -SLIDE };
   }
   /* 投影挂在表面层上（栏体的 .rail__surface / 账号的 .user__surface），
-     不是被 scale 的那层，所以阴影跟着形变走、但模糊半径的补间不会和 scale 抢属性 */
+     不是被 scale 的那层，所以阴影跟着形变走、但模糊半径的补间不会和 scale 抢属性。
+     视角条没有独立底片了 —— 它现在是顶栏托盘 .group 里的一格，
+     投影与底片都由托盘给，所以这里对它取不到表面，只补形变那一路 */
   function surfaceOf(node) {
     return node.querySelector('.rail__surface, .user__surface');
   }
@@ -195,7 +197,7 @@
     });
   };
 
-  var nodes = Array.prototype.slice.call(document.querySelectorAll('.rail, .user'));
+  var nodes = Array.prototype.slice.call(document.querySelectorAll('.rail, .user, .viewdock'));
   nodes.forEach(function (n) { n.__open = n.classList.contains('is-open'); });
 
   new MutationObserver(function (records) {

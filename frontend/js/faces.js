@@ -114,8 +114,8 @@ function ink(ctx, w) {
   ctx.lineWidth = w;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = '#fff';
-  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = inkColor;
+  ctx.fillStyle = inkColor;
 }
 
 /* 眨眼就是把整只眼沿水平线压扁。压在眼睛自己身上而不是缩放到脸上，
@@ -594,14 +594,31 @@ export const MOODS = [
 
 const byId = (id) => MOODS.find((m) => m.id === id) || MOODS[0];
 
-/* 把某个表情画到任意尺寸的画布上：底色涂黑，再按虚拟画布比例落笔 */
-export function paint(ctx, w, h, id, t) {
-  const mood = byId(id);
+/* 底色：默认清成透明 —— 缩略图不画自己的底，要透出卡里那块矩形底色；
+   传 bg 才铺一层。3D 面罩吃的是 emissiveMap，必须铺黑，
+   黑色对自发光就是「不发光」 */
+function frame(ctx, w, h, bg) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
+  ctx.clearRect(0, 0, w, h);
+  if (bg) {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+  }
   ctx.setTransform(w / VW, 0, 0, h / VH, 0, 0);
+}
+
+/* 墨色：五官默认白（面罩上只能是白，别的颜色都会暗一档）。
+   缩略图另给两支 —— 平时取 --text-secondary 与左栏图标同色，
+   选中时取 --panel 与卡片填充同色，见下面的 thumbInk / thumbInkOn */
+let inkColor = '#fff';
+
+/* 把某个表情画到任意尺寸的画布上，再按虚拟画布比例落笔 */
+export function paint(ctx, w, h, id, t, opts) {
+  const o = opts || {};
+  inkColor = o.ink || '#fff';
+  const mood = byId(id);
+  frame(ctx, w, h, o.bg);
   if (mood.roll) {
     ctx.translate(VW / 2, VH / 2);
     ctx.rotate((mood.roll * Math.PI) / 180);
@@ -611,6 +628,110 @@ export function paint(ctx, w, h, id, t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
+/* —— 一次性的覆盖表情 ——
+   不进 MOODS、也不出现在右栏缩略图里，只接管 3D 面罩一小会儿。
+   到点自己失效，draw 每帧查一次表，不需要额外的定时器；
+   这样即使中间切换了语言、切了表情，也不会留下一个卡住的图案。 */
+let flash = null;
+
+export function flashFace(draw, ms) {
+  const now = performance.now();
+  flash = {draw, t0: now, until: now + (ms || 900)};
+}
+
+export function clearFlash() {
+  flash = null;
+}
+
+/* 主题色：面罩吃的是 emissiveMap，画什么颜色就发什么光 */
+function themeColor() {
+  const root = getComputedStyle(document.documentElement);
+  const dark = document.documentElement.dataset.theme === 'dark';
+  return root.getPropertyValue(dark ? '--theme-dark' : '--theme').trim() || '#91d2c3';
+}
+
+/* 勾：一笔画出来。起笔 0.2s 走完，之后停住，退场按剩余时间淡掉 */
+export function flashCheck(ms) {
+  const color = themeColor();
+  flashFace((ctx, e, fade) => {
+    const k = Math.min(1, e / 0.2);
+    const grow = 0.88 + 0.12 * (1 - Math.pow(1 - k, 3));
+    const A = {x: 27, y: 57};
+    const B = {x: 43, y: 74};
+    const C = {x: 73, y: 33};
+    const s1 = Math.hypot(B.x - A.x, B.y - A.y);
+    const s2 = Math.hypot(C.x - B.x, C.y - B.y);
+    const len = (s1 + s2) * k;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.translate(50, 57);
+    ctx.scale(grow, grow);
+    ctx.translate(-50, -57);
+
+    const stroke = (width, alpha) => {
+      ctx.globalAlpha = alpha * fade;
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(A.x, A.y);
+      if (len <= s1) {
+        const q = len / s1;
+        ctx.lineTo(A.x + (B.x - A.x) * q, A.y + (B.y - A.y) * q);
+      } else {
+        ctx.lineTo(B.x, B.y);
+        const q = Math.min(1, (len - s1) / s2);
+        ctx.lineTo(B.x + (C.x - B.x) * q, B.y + (C.y - B.y) * q);
+      }
+      ctx.stroke();
+    };
+
+    stroke(17, 0.22);   /* 外面先罩一层淡的，屏上看着像自己会亮 */
+    stroke(9.5, 1);
+    ctx.globalAlpha = 1;
+  }, ms || 820);
+}
+
+/* 下载：一支箭头落进托盘。拖动卡片时一直挂在屏上（until 给到无穷，
+   由调用方 clearFlash 收尾），松手接住的那一刻换成思考脸 */
+export function flashDownload() {
+  const color = themeColor();
+  flashFace((ctx, e) => {
+    /* 箭头轻轻往下探一点，屏上就不是一张死图；托盘不动 */
+    const bob = Math.sin(e * 2.2) * 1.6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const paint = (width, alpha, fn) => {
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      fn();
+      ctx.stroke();
+    };
+
+    const arrow = () => {
+      ctx.moveTo(50, 26 + bob);
+      ctx.lineTo(50, 60 + bob);
+      ctx.moveTo(37, 47 + bob);
+      ctx.lineTo(50, 60 + bob);
+      ctx.lineTo(63, 47 + bob);
+    };
+    const tray = () => {
+      ctx.moveTo(32, 70);
+      ctx.lineTo(32, 78);
+      ctx.lineTo(68, 78);
+      ctx.lineTo(68, 70);
+    };
+
+    paint(17, 0.22, () => { arrow(); tray(); });   /* 外面罩一层淡的，看着像自己在发光 */
+    paint(9.5, 1, arrow);
+    paint(9.5, 1, tray);
+    ctx.globalAlpha = 1;
+  }, Infinity);
+}
+
 /* 给 3D 那张贴图用：一块固定尺寸的画布 + 一个按当前表情重绘的入口 */
 export function createScreen(w, h) {
   const canvas = document.createElement('canvas');
@@ -618,11 +739,26 @@ export function createScreen(w, h) {
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   const t0 = performance.now();
+
+  function render(seconds) {
+    if (flash && performance.now() < flash.until) {
+      frame(ctx, w, h, '#000');
+      const left = (flash.until - performance.now()) / 1000;
+      /* 最后 0.16s 淡出，勾消失时不会硬切回眼睛 */
+      flash.draw(ctx, seconds, left < 0.16 ? Math.max(0, left / 0.16) : 1);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    if (flash) flash = null;
+    /* 面罩要黑底白脸：底色不黑，emissiveMap 上整块都会发光 */
+    paint(ctx, w, h, current, seconds, {bg: '#000', ink: '#fff'});
+  }
+
   return {
     canvas,
-    draw(seconds) { paint(ctx, w, h, current, seconds); },
+    draw(seconds) { render(seconds); },
     /* 按「从建屏到现在」算时间，切换表情时图案从同一相位重新开始 */
-    drawNow() { paint(ctx, w, h, current, (performance.now() - t0) / 1000); },
+    drawNow() { render((performance.now() - t0) / 1000); },
   };
 }
 
@@ -652,6 +788,10 @@ export function setMood(id, options = {}) {
     c.classList.toggle('is-on', on);
     c.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  /* 选中态换的是墨色，不用等下一轮 70ms 的重绘：这里立刻把这几张重画一遍，
+     点下去那一拍就变色 */
+  const now = performance.now() / 1000;
+  cards.forEach((c) => { if (c.ctx) paintThumb(c, now); });
   listeners.forEach((fn) => fn(id, options.source || 'user'));
 }
 
@@ -659,6 +799,57 @@ export function setMood(id, options = {}) {
 
 const THUMB_W = 96;     /* 两倍于 48 的显示尺寸，缩放屏上不发毛 */
 const THUMB_H = 112;
+
+/* 缩略图的墨色：屏上不铺底，五官直接用 --text-secondary，
+   和左栏那排图标一个色，深浅两套主题自动跟着翻。
+   选中时卡底铺满 theme，墨改画 --panel —— 也就是卡片自己的填充色，
+   五官看起来像从卡面上镂出来的一块，跟面板、胶囊是同一支底色。
+   这里要的是不透明的那份：--panel 本身带 .75 / .80 的透明度，
+   原样画上去五官会透出 theme 的绿、边缘发虚，所以读出来先把 alpha 抹掉。
+   颜色在这里算、不靠 CSS 的 invert 滤镜：滤镜翻的是当前这支墨（text-secondary），
+   翻出来对不上 panel 的色相 */
+let thumbInk = '#2d2d2d';
+let thumbInkOn = '#fafafa';
+let themeSeen = '';
+
+/* 只取颜色的前三个通道，丢掉透明度：#rrggbbaa / #rgba / rgba() 都收成不透明形式。
+   canvas 的 fillStyle 不做这层折算，直接喂进去会按 alpha 混合 */
+function opaque(color) {
+  const c = color.trim();
+  const fn = /^rgba?\(([^)]+)\)$/i.exec(c);
+  if (fn) {
+    const parts = fn[1].split(/[\s,/]+/).filter(Boolean);
+    if (parts.length >= 3) return 'rgb(' + parts.slice(0, 3).join(',') + ')';
+    return c;
+  }
+  const hex = /^#([0-9a-f]{4}|[0-9a-f]{8})$/i.exec(c);
+  if (hex) {
+    const h = hex[1];
+    /* #RGBA 的每一位都要展开成两位，#RRGGBBAA 只需砍掉尾巴 */
+    return h.length === 4
+      ? '#' + h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+      : '#' + h.slice(0, 6);
+  }
+  return c;
+}
+
+function readThumbInk() {
+  const root = document.documentElement;
+  const now = root.dataset.theme === 'dark' ? 'dark' : 'light';
+  if (now === themeSeen) return;
+  themeSeen = now;
+  const cs = getComputedStyle(root);
+  const v = cs.getPropertyValue('--text-secondary').trim();
+  if (v) thumbInk = v;
+  const p = cs.getPropertyValue('--panel').trim();
+  if (p) thumbInkOn = opaque(p);
+}
+
+function paintThumb(card, seconds) {
+  paint(card.ctx, THUMB_W, THUMB_H, card.dataset.mood, seconds, {
+    ink: card.classList.contains('is-on') ? thumbInkOn : thumbInk,
+  });
+}
 
 let running = false;
 let lastPaint = 0;
@@ -670,23 +861,33 @@ function loop(ts) {
   const rail = document.getElementById('rail-tools');
   if (rail && !rail.classList.contains('is-open')) return;
   lastPaint = ts;
+  readThumbInk();
   const t = ts / 1000;
-  for (const c of cards) paint(c.ctx, THUMB_W, THUMB_H, c.dataset.mood, t);
+  for (const c of cards) paintThumb(c, t);
 }
 
 function mount() {
   const grid = document.querySelector('[data-rail-grid="emotions"]');
   if (!grid) return;
+  readThumbInk();
 
   /* 卡片是 rails.js 先铺的空白占位，这里只往里面塞屏，不换节点 ——
      磁吸脚本已经把这些卡收进自己的列表，换掉 DOM 就得重扫一遍 */
   Array.prototype.slice.call(grid.children, 0, MOODS.length).forEach((card, i) => {
     const mood = MOODS[i];
+
+    /* 屏是「矩形 + 画布」两层：
+       .mood__scr 只负责量出那块 96:112 的区域，底色和描边一概没有，
+       画布透明，五官压在最后 —— 脸就这么浮在卡面上。
+       hover / 选中时亮起的是卡的边框（CSS 那侧），跟这块屏无关 */
+    const scr = document.createElement('span');
+    scr.className = 'mood__scr';
     const cv = document.createElement('canvas');
-    cv.className = 'mood__scr';
+    cv.className = 'mood__cv';
     cv.width = THUMB_W;
     cv.height = THUMB_H;
-    card.appendChild(cv);
+    scr.appendChild(cv);
+    card.appendChild(scr);
 
     card.classList.add('is-mood');
     card.classList.toggle('is-on', mood.id === current);
@@ -708,7 +909,9 @@ function mount() {
 
     card.ctx = cv.getContext('2d');
     cards.push(card);
-    paint(card.ctx, THUMB_W, THUMB_H, mood.id, 0.5);
+    /* 先落一帧静止的脸：静止帧模式下循环压根不跑，这一帧就是全部；
+       描边那圈是 CSS 的活，不需要在这里跟着状态重画 */
+    paintThumb(card, 0.5);
   });
 
   /* 系统里开了「减少动态效果」就只画一帧静态的，不跑循环 */

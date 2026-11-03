@@ -14,7 +14,6 @@ gsap.registerPlugin(ScrollTrigger);
 (function () {
   function setup(body) {
     var titles = Array.prototype.slice.call(body.querySelectorAll('.sc-group__title'));
-    if (!titles.length) return;
 
     /* 标题盒顶边离面板顶端的距离，与 CSS 的 --title-top 同源；
        改标题位置只动那一个变量，这里量一次就同步，不用两处对齐。
@@ -26,9 +25,10 @@ gsap.registerPlugin(ScrollTrigger);
       titleTop = isNaN(v) ? 12 : v;
     }
 
-    /* 内容撑不满时没有可滚的距离，顶上那条雾带压在空白上只是一块灰，收掉更好看。
+    /* 内容撑不满时没有可滚的距离，上下两条雾带压在空白上只剩两块灰，收掉更好看。
        判定结果写成属性交给 CSS —— 雾带是 body 的兄弟节点，得从面板往下选。
-       留 1px 容差：分数高度取整后 scrollHeight 与 clientHeight 常差半像素 */
+       留 1px 容差：分数高度取整后 scrollHeight 与 clientHeight 常差半像素。
+       这一条与标题无关：右栏那页没有组标题，两条雾带要不要显一样靠它 */
     function fit() {
       var next = body.scrollHeight - body.clientHeight > 1 ? 'on' : 'off';
       if (body.getAttribute('data-scroll') !== next) body.setAttribute('data-scroll', next);
@@ -55,6 +55,53 @@ gsap.registerPlugin(ScrollTrigger);
       return Math.max(end - pinTop(), s + 1);
     }
 
+    /* 面板开合会改宽高、切视图会换掉显示的组、窗口缩放会改换行，
+       三者都要重新量一次起止点。统一防抖，避免宽度过渡那 0.3s 里刷上百次 */
+    var timer = 0;
+    function relayout() {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        measure();
+        fit();
+        if (titles.length) ScrollTrigger.refresh();
+      }, 160);
+    }
+
+    measure();
+    fit();
+    /* 面板开合时高度一路在变，雾带要不要显示得跟着走。这里不进防抖：
+       量一次 scrollHeight 很便宜，进防抖反而会让动画里多出几百毫秒的错档 */
+    if (window.ResizeObserver) new ResizeObserver(function () { fit(); relayout(); }).observe(body);
+    if (window.MutationObserver) {
+      /* 切视图是瞬时换显示，得当场重算。走 160ms 防抖的话，这段空窗里标题还按
+         上一套 start/end 的进度挂在 opacity 0 上 —— 卡片已经出来了、标题却要等
+         防抖结束才浮出来，看着就是「标题比卡片晚出现」 */
+      new MutationObserver(function () {
+        clearTimeout(timer);
+        measure();
+        fit();
+        if (titles.length) ScrollTrigger.refresh();
+      }).observe(body, { attributes: true, attributeFilter: ['data-view'] });
+
+      /* 卡片是脚本后来才填进来的（右栏的手势 / 表情、左栏钉住的卡），
+         内容高度当场就变，同样不能等防抖。雾带那条判定必须跟上，
+         否则空页面会先挂着两条灰带、等下一次 resize 才收 */
+      new MutationObserver(fit).observe(body, { childList: true, subtree: true });
+
+      /* 图钉会藏掉整组/整张卡片，内容高度当场就变，同样不能等防抖 */
+      body.addEventListener('pinchange', function () {
+        clearTimeout(timer);
+        measure();
+        fit();
+        if (titles.length) ScrollTrigger.refresh();
+      });
+    }
+    window.addEventListener('resize', titles.length ? relayout : fit);
+
+    /* 右栏那页没有组标题，上面这些量完就到此为止：
+       data-scroll 已经写在 body 上，雾带由 CSS 收 */
+    if (!titles.length) return;
+
     titles.forEach(function (t, i) {
       gsap.fromTo(t, { opacity: 1 }, {
         opacity: 0,
@@ -71,39 +118,6 @@ gsap.registerPlugin(ScrollTrigger);
       });
     });
 
-    /* 面板开合会改宽高、切视图会换掉显示的组、窗口缩放会改换行，
-       三者都要重新量一次起止点。统一防抖，避免宽度过渡那 0.3s 里刷上百次 */
-    var timer = 0;
-    function relayout() {
-      clearTimeout(timer);
-      timer = setTimeout(function () { measure(); fit(); ScrollTrigger.refresh(); }, 160);
-    }
-
-    measure();
-    fit();
-    /* 面板开合时高度一路在变，雾带要不要显示得跟着走。这里不进防抖：
-       量一次 scrollHeight 很便宜，进防抖反而会让动画里多出几百毫秒的错档 */
-    if (window.ResizeObserver) new ResizeObserver(function () { fit(); relayout(); }).observe(body);
-    if (window.MutationObserver) {
-      /* 切视图是瞬时换显示，得当场重算。走 160ms 防抖的话，这段空窗里标题还按
-         上一套 start/end 的进度挂在 opacity 0 上 —— 卡片已经出来了、标题却要等
-         防抖结束才浮出来，看着就是「标题比卡片晚出现」 */
-      new MutationObserver(function () {
-        clearTimeout(timer);
-        measure();
-        fit();
-        ScrollTrigger.refresh();
-      }).observe(body, { attributes: true, attributeFilter: ['data-view'] });
-
-      /* 图钉会藏掉整组/整张卡片，内容高度当场就变，同样不能等防抖 */
-      body.addEventListener('pinchange', function () {
-        clearTimeout(timer);
-        measure();
-        fit();
-        ScrollTrigger.refresh();
-      });
-    }
-    window.addEventListener('resize', relayout);
     relayout();
   }
 

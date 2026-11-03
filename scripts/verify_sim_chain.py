@@ -129,8 +129,8 @@ def main() -> int:
         "对不上说明 --xml 指的不是 q1_v3_mc.xml",
     )
     gesture_ids = {g.get("id") for g in table.get("gestures") or []}
-    expected_gestures = {"wave", "wave_both", "salute", "heart", "cheer", "dance", "stretch"}
-    chain.step("七个动作均可用", gesture_ids == expected_gestures, str(sorted(gesture_ids)))
+    expected_gestures = {"wave", "wave_both", "salute", "heart", "cheer", "dance", "cha_cha", "stretch"}
+    chain.step("八个动作均可用", gesture_ids == expected_gestures, str(sorted(gesture_ids)))
     metadata_ok = all(g.get("description") and g.get("duration_s", 0) > 0 for g in table.get("gestures") or [])
     chain.step("动作元数据完整", metadata_ok, "每个动作应有说明和持续时间")
     chain.step(

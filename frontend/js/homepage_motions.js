@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {moodId, setMood, onMood} from './faces.js?v=5';
-import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js';
+import {moodId, setMood, onMood} from './faces.js?v=15';
+import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=2';
 import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=2';
 
 const MOTION_BY_ID = Object.fromEntries([
@@ -44,7 +44,7 @@ function smoothstep(value) {
   return t * t * (3 - 2 * t);
 }
 
-function samplePose(id, progress) {
+export function samplePose(id, progress) {
   const motion = Q1_MOTIONS[id];
   const time = progress * motion.duration;
   const blend = Math.min(smoothstep(progress / 0.16), smoothstep((1 - progress) / 0.18));
@@ -121,6 +121,18 @@ function createBindings(model, retarget = RETARGET) {
   const missing = Object.keys(retarget).filter((joint) => !bindings[joint]);
   if (missing.length) throw new Error(`主页模型缺少动作骨骼：${missing.join(', ')}`);
   return [...groups.values()];
+}
+
+/* 把「关节 → 骨骼 / 局部轴 / 绑定四元数」摊平出来，给机械臂这类临时姿态用：
+   调用方按绝对关节角给值，这里负责减去自然站姿再乘到绑定姿势上 */
+export function createJointBindings(model) {
+  const map = {};
+  createBindings(model).forEach((group) => {
+    group.bindings.forEach(({joint, axis}) => {
+      map[joint] = {bone: group.bone, axis, rest: group.rest};
+    });
+  });
+  return map;
 }
 
 function buildClip(motion, groups) {
@@ -281,6 +293,12 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   };
 }
 
+/* 已经搬进左栏 Action 的两条动作（舞动、cha-cha）不再在右栏重复出现 ——
+   右栏只剩另外六条。卡面也不再写名字：模型就绪后换成机器人做这个动作的缩略图，
+   模型没加载出来（或者没有 WebGL）时退回名字，卡片不至于空着 */
+const RAIL_EXCLUDE = new Set(['dance', 'cha_cha']);
+const RAIL_MOTIONS = HOME_MOTIONS.filter((motion) => !RAIL_EXCLUDE.has(motion.id));
+
 export function mountHomeMotionControls(play) {
   const grid = document.querySelector('[data-rail-grid="gestures"]');
   if (grid) {
@@ -292,12 +310,13 @@ export function mountHomeMotionControls(play) {
   }
   const cards = grid ? Array.from(grid.children) : [];
 
-  HOME_MOTIONS.forEach((motion, index) => {
+  RAIL_MOTIONS.forEach((motion, index) => {
     const card = cards[index];
     if (!card) return;
     card.classList.add('is-motion');
     card.dataset.motion = motion.id;
-    card.innerHTML = `<span class="motion__label">${motion.label}</span>`;
+    card.innerHTML = `<span class="motion__label">${motion.label}</span>`
+      + '<img class="motion__thumb" alt="" decoding="async" draggable="false" hidden>';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `播放${motion.label}动作`);
@@ -331,6 +350,30 @@ export function mountHomeMotionControls(play) {
       activateDance();
     });
   }
+
+  /* 缩略图是 3D 那侧离屏渲染出来的（见 robot3d.js 的 motionThumb）。
+     模型 6.4MB，比这段脚本晚就绪：先留名字，robot-ready 再补一次 */
+  function fillThumbs() {
+    const api = window.robot3d;
+    if (!api || typeof api.motionThumb !== 'function') return false;
+    let filled = false;
+    RAIL_MOTIONS.forEach((motion, index) => {
+      const card = cards[index];
+      if (!card) return;
+      const img = card.querySelector('.motion__thumb');
+      if (!img || img.getAttribute('src')) return;
+      const url = api.motionThumb(motion.id);
+      if (!url) return;
+      img.src = url;
+      img.hidden = false;
+      const label = card.querySelector('.motion__label');
+      if (label) label.remove();
+      filled = true;
+    });
+    return filled;
+  }
+
+  if (!fillThumbs()) window.addEventListener('robot-ready', fillThumbs, { once: true });
 
   return (activeId) => {
     cards.forEach((card) => {

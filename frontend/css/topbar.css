@@ -12,8 +12,17 @@
 .topbar > *{pointer-events:auto}
 
 .brand{
+  /* 与左栏那条图标列共用同一条中线：栏体左沿 --edge、宽 --rail-w，
+     图标列左右各留 16、图标本体 48，中线就落在栏宽的一半处。
+     品牌块自己 40 见方，补上「半个栏宽 − 半个图标」正好压到那条线上；
+     栏体展开时图标列仍贴在栏根，这条对齐在开合两种状态下都成立。
+     竖直方向不用管：顶栏 align-items:center，它已经与胶囊、圆形按钮同一水平线 */
+  margin-left:calc(var(--rail-w) / 2 - 20px);
   width:40px; height:40px; display:grid; place-items:center;
   border-radius:10px;
+  /* 只是标志，不是入口：整块不吃指针，也就没有 hover、点下去也没有跳转。
+     覆盖上面 .topbar > * 的 pointer-events:auto（同为 0,1,0，这条在后面） */
+  pointer-events:none;
 }
 .brand svg{width:40px; height:40px; display:block}
 /* logo 的深浅两块跟主题走：前两笔是深色骨架，在 night 下必须提亮，
@@ -285,6 +294,36 @@
 .user__menu .pill .pill__label{left:12px; transform:translateY(-50%)}
 .user__menu .pill:hover .pill__label{transform:translate(calc(1em + 16px), -50%)}
 .user__menu .pill.is-active:hover .pill__label{left:12px; transform:translateY(-50%)}
+
+/* Contact 两段式的第二段：文字换成仓库地址。
+   地址比「Contact」长一倍多，字号比其余菜单项小一档（--fs-16）、两端各留 12，
+   装不下就用省略号收尾，免得字被面板的 overflow 切在半截上；
+   hover 的右移与箭头一并停掉 —— 字已经顶到右边，再右移会把开头推出胶囊，
+   箭头也会压在地址上。
+   字色不另设：与 Contact 同色（.pill 的 --text-reduced），换字前后只有内容变，
+   颜色不动；hover 仍照全站的规矩反白，与 Settings / Privacy / Advance 同一个反馈 */
+.user__menu .pill.is-link:hover{color:var(--text-invert)}
+.user__menu .pill.is-link .pill__label{
+  left:12px; right:12px;
+  font-size:var(--fs-16);
+  overflow:hidden; text-overflow:ellipsis;
+}
+.user__menu .pill.is-link:hover .pill__label{transform:translateY(-50%)}
+.user__menu .pill.is-link .pill__arrow{opacity:0; transform:translateY(-50%) translateX(-4px)}
+
+/* Contact 换字的两段动画：旧字淡出并轻轻上浮 → 换文案 → 新字从下方淡入。
+   位移走独立的 translate 属性，不碰 label 自己的 transform（那条管居中与 hover 右移），
+   两者叠加，换字时不会把字横向拽偏 */
+@keyframes pill-swap-out{
+  from{opacity:1; translate:0 0}
+  to{opacity:0; translate:0 -3px}
+}
+@keyframes pill-swap-in{
+  from{opacity:0; translate:0 3px}
+  to{opacity:1; translate:0 0}
+}
+.pill.is-swap-out .pill__label{animation:pill-swap-out .11s var(--ease) both}
+.pill.is-swap-in .pill__label{animation:pill-swap-in .16s var(--ease) both}
 
 /* 整块触发区：覆盖收起态的 240×48，键盘可达 */
 .user__trigger{

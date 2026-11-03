@@ -42,22 +42,229 @@ body:has(.rail--right.is-hidden) .pose-reset-trigger{right:var(--edge)}
   outline-offset:3px;
 }
 
+/* ============================================================
+   顶栏：视角调整
+   这条托盘本身就是一个 .group，排在 Preference 那条左边：外壳、内边距 4、
+   组内间距 8、高 48、底片与柔光全部沿用顶栏那套，立体磁吸也一并继承
+   （js/magnet.js 的配置按 .group 抓，这里不用另写一行）。
+   托盘里两枚按钮都是 40（--pill-h），与导航胶囊同高，也正好是 48 减两侧 4。
+   左端是视角条，右端是复位 —— 复位在眼睛右边，两者的缝就是组内那 8。
+   视角条收起时就是一枚 40 的圆；点开后右端钉住，只有宽度从 40 长到 136，
+   高度一直是 40，圆角 20 正好是半高，于是那个圆横着长成一条胶囊。
+   展开后里面是三个同直径的圆：两枚视角钮（.vt-round）加右端那枚眼睛，
+   圆心同高、彼此间隔 8，两边不留边距 —— 圆钮的四条弧正好与胶囊两端的
+   圆头同心相切（40 的圆装进 20 半径的圆头，中间不留缝）。
+   宽度只朝左长：托盘是 .nav 里靠右的一端，胶囊右沿、眼睛圆心、右边的
+   复位钮都不动，只有胶囊的左端一路顶到托盘左沿，开合看过去是
+   「从左端抽出来」。
+   形变与账号胶囊共用同一套：--sx/--sy 由 js/panels.js 补间，宽度过渡
+   和栏体 80 → 601、账号 48 → 246 同一条 0.3s 曲线。
+   ============================================================ */
+.viewdock{
+  position:relative;
+  flex:0 0 auto;
+  width:var(--pill-h);        /* 40：收起时就是这一枚圆 */
+  height:var(--pill-h);       /* 高度开合前后都是 40，只有宽度在变 */
+  --sx:1;
+  --sy:1;
+  /* 原点在右沿中点：宽度只朝左长，右缘与圆心都不动 */
+  transform-origin:100% 50%;
+  scale:var(--sx) var(--sy);
+  transition:width .3s var(--ease);
+}
+/* 展开宽度 184 = 40x4 圆钮 + 8x3 间隔，四枚圆心等距，
+   两端与胶囊圆头同心相切，见下面 .viewdock__body */
+.viewdock.is-open{width:calc(var(--pill-h) * 4 + 24px)}
+
+/* 触发按钮 = 第三个圆：收起与展开都是 40，右缘都贴 0 ——
+   托盘的内边距 4 已经把它让进圆头里，所以这里不需要任何几何补间，
+   开合时图标一像素不挪，只是左边多长出两枚视角钮。
+   底片本身透明，hover 的填色由下面那层共用的 ::before 提供 */
+.view-adjust-trigger{
+  position:absolute; right:0; top:0;
+  width:var(--pill-h); height:var(--pill-h);
+  display:grid; place-items:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text-reduced);
+  cursor:pointer;
+  /* 负层级的填色要停在按钮自己的层叠上下文里，才压得住底下的面板 */
+  isolation:isolate;
+  /* 压在内层内容之上：展开后按钮停在右端，内容会铺到它左边，
+     不提层的话那一段会被 .viewdock__body 接走点击 */
+  z-index:2;
+  transition:color .1s cubic-bezier(.7,0,.84,.16);
+}
+/* 展开中这枚眼睛亮着：底片常驻主题色、图标反白，和顶栏 .pill.is-active
+   同一套说法 —— 面板已经打开，入口这一格是「按下去的」 */
+.view-adjust-trigger.is-active{color:var(--text-invert); transition:color .1s cubic-bezier(.16,.84,.3,1)}
+.view-adjust-trigger.is-active::before{
+  scale:1;
+  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
+}
+.view-adjust-trigger svg{
+  width:24px; height:24px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+/* 只留键盘可达性的描边；鼠标的反馈全交给下面那层填色 */
+.view-adjust-trigger:focus-visible{outline:2px solid var(--theme-dark); outline-offset:3px}
+
+/* 面板内容：两枚圆钮并排，间隔 8，圆心与右端那枚眼睛落在同一条水平线上，
+   三枚同直径（40），圆心等距。
+   这一层只干两件事：裁剪与淡入淡出。圆头用 overflow:hidden + 999 圆角，
+   与胶囊同一曲率 —— 收起时盒子只有 40 见方，露出的就是一个圆。
+   两枚钮自己不在这层排队，而是贴在 .vt-row 上、按 right 48 挂住
+   （48 = 眼睛 40 + 间隔 8）：它们的绝对位置从第一帧起就是展开后的位置，
+   盒子向左长多少、就从圆头里露出多少，像被抽出来；若跟着盒子左沿排，
+   它们会被一起往左推，成了「被推着走」 */
+.viewdock__body{
+  position:absolute; inset:0;
+  border-radius:999px;
+  overflow:hidden;
+  z-index:1;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .2s var(--ease), visibility 0s linear .2s;
+}
+.viewdock.is-open .viewdock__body{
+  opacity:1; visibility:visible; pointer-events:auto;
+  transition:opacity .3s var(--ease), visibility 0s;
+}
+
+/* 三枚钮的那一排：挂在胶囊右端往左 48 的位置，高度与按钮同高、贴顶，
+   宽度由内容撑出 136（40 + 8 + 40 + 8 + 40） */
+.vt-row{
+  position:absolute; top:0; right:calc(var(--pill-h) + 8px);
+  display:flex; align-items:center; gap:8px;
+}
+
+/* 三枚圆钮：水平四向、俯仰三向、复位，直径取 --pill-h（40），正好填满托盘里
+   这一格的高度（48 减上下各 4）。
+   底色的涨开与按下压弹沿用顶栏 .pill 那一套：静止时无底色、
+   无描边，线条取 --text-reduced；hover 时 ::before 从圆心涨满整圆、图标反白；
+   按下由 js/press.js 逐帧写 --press，底片按 1 - --press × --press-k
+   缩进去再弹回 */
+.vt-round{
+  position:relative;
+  flex:0 0 auto;
+  width:var(--pill-h);
+  height:var(--pill-h);
+  appearance:none; -webkit-appearance:none;
+  display:grid; place-items:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text-reduced);
+  line-height:1;
+  cursor:pointer;
+  /* isolate 让负层级的底片停在这枚按钮内部：只压在自己的透明底上、
+     不越到面板底片，也保证图标始终画在它上面 */
+  isolation:isolate;
+  transition:color .1s cubic-bezier(.7,0,.84,.16);
+}
+.vt-round::before{
+  content:''; position:absolute; inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;   /* 放大后不改变命中区域 */
+  scale:0;
+  transform-origin:50% 50%;
+  transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
+  /* 两条通道各管各的：transform 服务按下压入（--press 由 GSAP 逐帧写），
+     scale 服务底色的涨开与缩回 */
+  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
+}
+.vt-round:hover{color:var(--text-invert); transition:color .1s cubic-bezier(.16,.84,.3,1)}
+.vt-round:hover::before{
+  scale:1;
+  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
+}
+/* 按下期间关掉 transform 过渡，否则每帧的新值会被再平滑一次，压弹变拖沓；
+   scale 那条留着，边按边在涨的底色不会中途冻住 */
+.vt-round.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
+/* 焦点框往里收：最左那枚紧贴胶囊的圆头，描边式的框会被这层裁剪切掉半边，
+   改成负偏移画在圆内，键盘走到它时仍然是一整圈 */
+.vt-round:focus-visible{outline:2px solid var(--theme-dark); outline-offset:-2px}
+
+/* 图标：24 见方（与右端那枚眼睛、更右边的复位同一档）、1.8 描边，
+   颜色跟 currentColor —— hover 时和底片一起反白，
+   尺寸固定，不随档位变化跳动 */
+.vt-round svg{
+  width:24px; height:24px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* 填色统一走两枚圆钮共用的一层：底色不是淡入，是从圆心涨满整个圆，
+   抬手再缩回去；按下时 --press 由 js/press.js 逐帧写，底片按
+   1 - --press × --press-k 再压一格，与视角条里那两枚完全同一套。
+   层 z-index:-1 藏在按钮内部（按钮上有 isolation:isolate），
+   所以只盖住自己的底、不越到面板上，图标始终在它上面 */
+.view-adjust-trigger::before{
+  content:''; position:absolute; inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;   /* 涨开后不改变命中区域 */
+  scale:0;
+  transform-origin:50% 50%;
+  transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
+  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
+}
+/* hover 的换色曲线单独给：进场 (.16,.84,.3,1)、出场 (.7,0,.84,.16)。
+   三枚（眼睛、复位、视角条里那两枚）走同一条，进出一致 */
+.view-adjust-trigger:hover{
+  color:var(--text-invert);
+  transition:color .1s cubic-bezier(.16,.84,.3,1);
+}
+.view-adjust-trigger:hover::before{
+  scale:1;
+  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
+}
+/* 按下期间关掉 transform 过渡，否则逐帧写入的 --press 会被再平滑一次，
+   压弹变拖沓；scale 那条留着，边按边涨的填色不会中途冻住 */
+.view-adjust-trigger.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
+
+/* 视角控制开着时这层是整屏接收指针的（舞台铺满视口，见 robot.css 的 .robofx），
+   空白处一律给普通箭头：大片背景上挂着抓取手型，会让人以为随便一处都能拖，
+   而真正能拖的只有关节 —— 那几处由下面两条自己换成手型 */
 .robofx.vc-enabled{
   pointer-events:auto;
-  cursor:grab;
-  touch-action:none;
+  cursor:default;
   user-select:none;
   -webkit-user-select:none;
 }
+/* 关节：能拖，给抓取手型；按住拖走的那一刻（vc-camera）和正在拨关节
+   （vc-dragging-joint）都是实心抓手 */
 .robofx.vc-hover-joint,
 .robofx.vc-can-pose{cursor:crosshair}
 .robofx.vc-camera,
 .robofx.vc-dragging-joint{cursor:grabbing}
 
-@media (prefers-reduced-motion:reduce){
-  .pose-reset-trigger{transition:none}
-}
 @media (max-width:640px){
+  .group--view{display:none}
   .pose-reset-trigger,
   body:has(.rail--right.is-open) .pose-reset-trigger{right:var(--edge)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .viewdock,
+  .view-adjust-trigger,
+  .viewdock__body,
+  .pose-reset-trigger,
+  .vt-round{transition:none}
+  /* 填色那层同样不做动画：悬停时直接到位 */
+  .view-adjust-trigger::before,
+  .pose-reset-trigger::before,
+  .vt-round::before{transition:none}
 }

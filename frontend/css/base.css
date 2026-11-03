@@ -148,8 +148,25 @@
 }
 
 *{box-sizing:border-box}
+/* 按钮上的字与图标不参与选中 —— button 的默认行为各浏览器不一致，
+   Safari 双击按钮会把标签拉成选区，拖拽起手时指针扫过也会顺手带出一片蓝。
+   user-select 是继承属性，写在容器上就够，里面的 span、svg 一并管住；
+   .sc 是 div 做的卡片、.brand 是 span 做的标志，都不是 button，单独列出来。
+   输入框、聊天气泡、文档正文不在其列 —— 那些字是要让人复制的 */
+button,
+[role="button"],
+.brand,
+.sc,
+.rail__card,
+.card-ghost{
+  -webkit-user-select:none;
+  user-select:none;
+}
+/* 拖卡片的那一两秒整页都不选中：指针从栏里扫到机器人身上，
+   沿路的正文会被拉成选区，松手后还留着一条蓝 */
+body.is-card-drag{user-select:none; -webkit-user-select:none}
 /* 选中文字：底用 hint 的 75% 不透明，字反白。写在这里统一生效，
-   输入框、气泡、卡片都算。要改浓淡只调 75% 这个数 */
+   输入框、气泡、面板正文都算。要改浓淡只调 75% 这个数 */
 ::selection{background:color-mix(in srgb, var(--hint) 75%, transparent); color:var(--text-invert)}
 ::-moz-selection{background:color-mix(in srgb, var(--hint) 75%, transparent); color:var(--text-invert)}
 html,body{height:100%}

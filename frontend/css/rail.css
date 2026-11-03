@@ -113,15 +113,22 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
 [data-panel-body]:not([data-view]) [data-rail-view="gestures"]{display:block}
 
-/* 分栏标题：字面与左栏的 .sc-group__title 同一套（600、text-secondary）。
-   吸顶位置取 .panel__body 的上内边距（--pad-y），正好与静止位置重合，
-   滚起来标题不动、卡片从它下面过；z-index 压在雾带（3）之上，
-   所以被糊开的是卡片，标题始终清楚 */
+/* 分栏标题：字号、字距、字色、行盒与吸顶位置都对齐左栏的 .sc-group__title（24 号）
+   —— 两边是同一级标题，只是左边按指令组排、右边按视图排。
+   吸顶位置仍是「雾带中线减半个标题盒」那一套：--title-top 由 .rail__panel 给，
+   --pad-y 是本面板的上内边距（20），所以 top 写成两者之差，实际落在 12，
+   与左栏的 12 同高。z-index 压在雾带（3）之上，卡片从它下面过时标题始终清楚 */
 .rail__title{
-  position:sticky; top:var(--pad-y, 20px); z-index:4;
-  margin:0 0 12px;
-  font-size:var(--fs-16); line-height:1; letter-spacing:.4px; font-weight:var(--fw);
+  position:sticky; top:calc(var(--title-top) - var(--pad-y)); z-index:4;
+  margin:0 0 8px;
+  font-size:24px; line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);
+}
+/* 每页第一枚标题：静止位置与吸顶位置重合，都用 --title-top（遮罩中线 24 减
+   半个 24 号标题盒的 12）。正文自带 --pad-y 的上留白，这里用同样的差值抵掉，
+   写法和左栏 .sc-group.is-first 那条一致 */
+.rail__view > .rail__title:first-child{
+  margin-top:calc(var(--title-top) - var(--pad-y));
 }
 /* 卡片网格：一行四张，列宽用 1fr 摊满，卡片靠 aspect-ratio 保持方格 */
 .rail__grid{
@@ -130,7 +137,11 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   gap:8px;
 }
 /* 动作卡片：方格、圆角 16，底与指令卡同一支 --card。
-   hover 的填色覆盖层照 .sc 的做法只动 opacity（合成器上做），
+   两种状态各管一件事：
+     hover —— 只亮边框（inset 1.5px 的 theme 描边，不占位，卡里的图与屏不会跳）
+     选中 —— 边框同样是 theme，底片铺满 theme；表情卡的脸换成补色，
+             手势卡只点亮底、缩略图保持原样
+   底片用 ::before 那层常驻的 theme 色块，靠 opacity 开合，合成器上做。
    3D 悬浮交给磁吸脚本（js/magnet.js 的 .rail__card 那一条） */
 .rail__card{
   position:relative; isolation:isolate;
@@ -138,6 +149,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   border-radius:16px;
   background:var(--card);
   overflow:hidden;
+  /* 描边常驻透明，亮起只换颜色。用 inset 的 box-shadow 而不是 border ——
+     不占位，卡里的屏和图尺寸都不会在切换那一瞬动一下 */
+  box-shadow:inset 0 0 0 1.5px transparent;
+  transition:box-shadow .1s cubic-bezier(.7,0,.84,.16);
 }
 .rail__card::before{
   content:''; position:absolute; inset:0; z-index:0;
@@ -145,41 +160,70 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   background:var(--theme);
   opacity:0;
   transform:translateZ(0);
-  transition:opacity .1s linear;
+  transition:opacity .14s cubic-bezier(.16,.84,.3,1);
   pointer-events:none;
 }
-.rail__card:hover::before{opacity:1}
-/* 已选态：底片常驻，hover 不再提亮（与 .pill 那套同一条规矩） */
-.rail__card.is-on{box-shadow:inset 0 0 0 1px var(--theme)}
-.rail__card.is-on::before,
-.rail__card.is-on:hover::before{opacity:.18}
+/* hover 只亮边框：整卡填色会把图和脸盖掉，选框与内容必须分层 */
+.rail__card:hover,
+.rail__card:focus-visible{
+  box-shadow:inset 0 0 0 1.5px var(--theme);
+  transition:box-shadow .14s cubic-bezier(.16,.84,.3,1);
+}
+/* 选中：底片铺满 theme。边框留着 —— 选中之后再 hover 也不该有第二层变化 */
+.rail__card.is-on{box-shadow:inset 0 0 0 1.5px var(--theme)}
+.rail__card.is-on::before{opacity:1}
 
-/* 手势卡：中文标签两三个字，居中。卡片比原来底栏那版（64）大了一档，
-   字号跟着提到 14，不然一张 116 的方格里只剩两粒小字 */
+/* 手势卡：卡面是机器人做这个动作的缩略图（离屏渲染的半身像，见 robot3d.js），
+   模型没就绪时先显示英文名，图一到就撤掉。图压在最上层，
+   hover 只亮边框，选中时 theme 底片才从图后面透出来 */
 .rail__card.is-motion{
   display:grid; place-items:center;
-  padding:10px;
-  color:var(--text-primary);
   cursor:pointer;
+  color:var(--text-primary);
   font-size:var(--fs-14); line-height:1.25;
   letter-spacing:.02em; text-align:center;
 }
-.rail__card.is-motion:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
 .motion__label{position:relative; z-index:1; pointer-events:none}
-.rail__card.is-motion.is-on .motion__label{color:var(--text-primary)}
+/* 选中底色是 theme，字跟着反白，与顶栏胶囊选中时同一条规矩 */
+.rail__card.is-motion.is-on .motion__label{color:var(--text-invert)}
+.motion__thumb{
+  position:relative; z-index:1;
+  width:88%; height:88%;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+  /* 图是透明底上的白壳，卡面也是浅色：给轮廓垫一层薄影，
+     不然肩线和手臂会化进卡片里。
+     选中时不反色 —— 那层 theme 底只是把卡「点亮」，
+     机器人还是原来那个白壳，反成暗部会读成另一张图 */
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.22));
+}
 
-/* 表情卡：卡里嵌一块小黑屏，屏上画的就是机器人面罩上那张发光脸
+/* 表情卡：卡里嵌一块矩形屏，屏上画的就是机器人面罩上那张脸
    （同一份画法，见 js/faces.js）。
-   屏宽取卡宽的 66%，高度交给 canvas 自身的 96×112 去定 ——
-   百分比宽度总能对上一个有确定宽度的格子，栏宽变化时屏与卡的比例也不变 */
-.rail__card.is-mood{display:grid; place-items:center; cursor:pointer}
-.rail__card.is-mood:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+   屏宽取卡宽的 66%，比例跟着 canvas 的 96×112 走 ——
+   百分比宽度总能对上一个有确定宽度的格子，栏宽变化时屏与卡的比例也不变。
+   屏本身什么都不画：没有底色、也没有描边，只是一块透明画布。
+   hover 亮的是外面这张方卡的边框；选中时整卡铺 theme 底，
+   底下那块屏是透明的，所以底会顺着脸谱的空隙透上来，脸用面板色（--panel）
+   压在上面，读起来像卡面被镂空了一块 */
+.rail__card.is-mood{
+  display:grid; place-items:center; cursor:pointer;
+}
 .mood__scr{
   position:relative; z-index:1;
   display:block;
-  width:66%; height:auto;
-  border-radius:10px;
-  background:#15171a;
+  width:66%;
+  aspect-ratio:96 / 112;
+}
+.mood__cv{
+  position:absolute; inset:0;
+  display:block;
+  width:100%; height:100%;
+  /* 选中时的墨色由 faces.js 直接换一支画（--panel，即卡片填充色），
+     不在这层做滤镜：滤镜翻的是屏上现有的 text-secondary，色相不对，
+     而且重绘是 70ms 一拍，滤镜虽然即时，颜色却和脸谱的其它细节不同源 */
 }
 
 /* 右栏面板：上内边距留给标题与雾带，标题就在这条内边距上吸住不动 */
@@ -261,8 +305,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item[data-panel="Action"]{--itc:var(--series-green-light)}
 .item[data-panel="Dialog"]{--itc:var(--series-blue-light)}
 .item[data-panel="Tendance"]{--itc:var(--series-pink-light)}
-.item[data-panel="Gestures"]{--itc:var(--series-blue-light)}
-.item[data-panel="Emotions"]{--itc:var(--series-pink-light)}
+/* 右栏两枚不与左栏的指令分组色走：那一列是「看机器人」的入口，
+   与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
+.item[data-panel="Gestures"]{--itc:var(--theme)}
+.item[data-panel="Emotions"]{--itc:var(--theme)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），
    同样不带边；进场这条曲线先快后慢，尾巴慢慢贴住圆周。
    出场不在这里写，回到基态时用镜像曲线，等于原路缩回 */

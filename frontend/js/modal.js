@@ -2,14 +2,18 @@
    打开时先把面板压到挤窄态（x 0.75 / y 0.9）；透明度 0.4s 走 panelOut，
    缩放分两段 —— 0.25s power2.out 撑过 1 到 1.02，再用 0.75s elastic.out(1.1, .8) 落定；
    收回时缩放与透明度一起 0.4s 走 panelIn（末段先轻微反向再收拢）。
-   阴影跟栏体同一套：柔光半径 --sh 16→32、透明度 --sh-a .10→.20，
-   时长共用那 0.25 / 0.75 两段，与形变一起鼓、一起落，弹窗才有「浮起来又落定」的分量。
+   阴影跟栏体同一套：柔光 16→32、透明度 .10→.20，时长共用那 0.25 / 0.75 两段，
+   与形变一起鼓、一起落，弹窗才有「浮起来又落定」的分量。但阴影不再是 box-shadow
+   补间，而是两层独立元素切 opacity（见 cards.css 的 .modal__glow）——
+   每帧重画一道 32px 模糊是弹出掉帧的主因。
    本工程没引 CustomEase，曲线按同一组控制点采表插值，和栏体那段 pop() 等价。 */
 (function () {
   var root = document.getElementById('modal');
   if (!root || !window.gsap) return;
   var panel = root.querySelector('.modal__panel');
-  var NAMES = ['Preference', 'Advance', 'Settings', 'Privacy', 'Contact'];
+  /* Contact 不在这张表里：账号菜单那枚胶囊改成两段式链接入口（js/contact.js），
+     不再有对应的弹窗 */
+  var NAMES = ['Preference', 'Advance', 'Settings', 'Privacy'];
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   /* ---------- 面板外挂的两块底板 ---------- */
@@ -138,8 +142,7 @@
     Advance:    { sub: 'MuJoCo simulation' },
     Settings:   { sub: 'Appearance' },
     /* 账号菜单里那两枚也是这套弹窗。说明行讲的是各自的内容，不是占位 */
-    Privacy:    { sub: '隐私政策' },
-    Contact:    { sub: '联系与反馈' }
+    Privacy:    { sub: '隐私政策' }
   };
   var titleL = panel.querySelectorAll('[data-modal-title]');
   var subL   = panel.querySelectorAll('[data-modal-sub]');
@@ -160,15 +163,13 @@
     Preference: 'modal.preference.title',
     Advance: 'modal.advance.title',
     Settings: 'settings.title',
-    Privacy: 'modal.privacy.title',
-    Contact: 'modal.contact.title'
+    Privacy: 'modal.privacy.title'
   };
   var SUB_KEY = {
     Preference: 'modal.preference.available',
     Advance: 'modal.advance.sub',
     Settings: 'settings.appearance',
-    Privacy: 'modal.privacy.sub',
-    Contact: 'modal.contact.sub'
+    Privacy: 'modal.privacy.sub'
   };
 
   function paint(name) {
@@ -203,13 +204,10 @@
       el.hidden = !isSet;
     });
     if (head) head.hidden = isSet;
-    /* Privacy / Contact 各是一段纯文本（.doc），和 Settings 一样按弹窗名整块切。
-       这两块没有内部状态，切走再回来内容不变，不需要另外复位 */
+    /* Privacy 是一段纯文本（.doc），和 Settings 一样按弹窗名整块切。
+       这块没有内部状态，切走再回来内容不变，不需要另外复位 */
     Array.prototype.forEach.call(panel.querySelectorAll('[data-privacy-only]'), function (el) {
       el.hidden = name !== 'Privacy';
-    });
-    Array.prototype.forEach.call(panel.querySelectorAll('[data-contact-only]'), function (el) {
-      el.hidden = name !== 'Contact';
     });
   }
 
@@ -255,17 +253,19 @@
   var PEAK_Y      = 1.02;   /* 纵向同值，等比鼓一下 */
   var SQUASH_EASE = 'elastic.out(1.1, 0.8)';
 
-  /* 阴影通道：与栏体 pop() 同一组数值（柔光 16 → 32、透明度 .10 → .20），
-     时长也共用 UP_DUR / BACK_DUR，阴影和形变一起鼓、一起落 */
-  var SH_BASE   = '16px';   /* 常态柔光半径，与 CSS 的 --sh 初值一致 */
-  var SH_MAX    = '32px';   /* 撑开时的柔光半径：翻一倍，浮起感靠这一下 */
-  var SH_A_BASE = 0.1;      /* 常态透明度，与 CSS 的 --sh-a 初值一致 */
-  var SH_A_MAX  = 0.2;      /* 撑开时再加 0.1，阴影同时变宽变实 */
+  /* 阴影通道：值仍与栏体 pop() 一致（柔光 16 → 32、透明度 .10 → .20），
+     只是改成「展开态那层 0 → 1」，时长共用 UP_DUR / BACK_DUR */
   var SH_UP     = UP_DUR;   /* 冲到最鼓的时长 */
   var SH_BACK   = BACK_DUR; /* 落回常态的时长，与缩放同时结束 */
   var SH_CLOSE  = SH_CLOSE_DUR;   /* 收回时归位，与栏体同值 .2 */
 
   var tl = null, shown = false;
+
+  /* 柔光那两层（见 cards.css 的 .modal__glow）。
+     面板呼吸时阴影要从 16px/.1 变到 32px/.2，但不再补间 box-shadow ——
+     那条每帧都要重画一道大范围模糊，是弹出掉帧的主因。
+     现在只把「展开态」那层的 opacity 推上去：合成层做透明度，零重绘 */
+  var glow = panel.querySelector('.modal__glow--up');
 
   /* 弹窗胶囊的选中态只活到弹窗关掉为止。
      开窗前的 pointerdown 先记下那一组本来选中的是哪一枚（相机与 Modal 那组、
@@ -305,28 +305,44 @@
   /* 形变 + 阴影这一对通道，打开与「换胶囊重播」共用同一套节拍。
      调用前面板应已在挤窄态、阴影在常态；两段式与栏体 pop() 逐帧等价 */
   function squashChannel(t) {
-    return t
-      .to(panel, { scaleX: PEAK_X, scaleY: PEAK_Y, duration: UP_DUR, ease: 'power2.out' }, 0)
-      .to(panel, { scaleX: 1, scaleY: 1, duration: BACK_DUR, ease: SQUASH_EASE }, UP_DUR)
-      /* --sh / --sh-a 是 @property 注册过的 <length> / <number>，可以直接补间 */
-      .to(panel, { '--sh': SH_MAX, '--sh-a': SH_A_MAX, duration: SH_UP, ease: 'power2.out' }, 0)
-      .to(panel, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: SH_BACK, ease: SQUASH_EASE }, SH_UP);
+    t.to(panel, { scaleX: PEAK_X, scaleY: PEAK_Y, duration: UP_DUR, ease: 'power2.out' }, 0)
+     .to(panel, { scaleX: 1, scaleY: 1, duration: BACK_DUR, ease: SQUASH_EASE }, UP_DUR);
+    /* 阴影那一路：展开态那层 0 → 1，时长与缩放共用 UP_DUR / BACK_DUR，
+       阴影和形变一起鼓、一起落。改的只是 opacity */
+    if (glow) {
+      t.to(glow, { opacity: 1, duration: SH_UP, ease: 'power2.out' }, 0)
+       .to(glow, { opacity: 0, duration: SH_BACK, ease: SQUASH_EASE }, SH_UP);
+    }
+    return t;
+  }
+
+  /* 弹出这一段把机器人让出来：同一帧里既要缩放整块面板、又要重画阴影与文字，
+     再叠一次 17 万面的白壳就挤不出 16ms 了。3D 暂停 1.15 秒（盖住 0.4 的
+     内容通道到 1.0 的弹性落定），之后由 is-modal 这个标记把它按在低帧率上；
+     关窗时两道一起撤掉。body 上的 is-modal 同时让磁吸停手 ——
+     光标此刻正停在顶栏胶囊上，那层带 backdrop-filter 的托盘还在倾斜的话，
+     每帧都要重新模糊一次它背后的画布 */
+  function restRobot(ms) {
+    if (window.robot3d && window.robot3d.suspend) window.robot3d.suspend(ms);
   }
 
   function show() {
     shown = true;
     root.style.visibility = 'visible';
     root.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('is-modal');
     if (tl) tl.kill();
     gsap.killTweensOf(panel);
+    if (glow) gsap.killTweensOf(glow);
     /* 起手落在挤窄态：这一步不可见，面板此时 opacity 还是 0。
-       阴影一起回到常态，避免上一次收回被打断时带着 32px 的柔光起手 */
+       阴影一起回到常态，避免上一次收回被打断时还挂着展开态那一层 */
     gsap.set(panel, { opacity: 0, scaleX: SQUASH_X, scaleY: SQUASH_Y });
-    gsap.set(panel, { '--sh': SH_BASE, '--sh-a': SH_A_BASE });
+    if (glow) gsap.set(glow, { opacity: 0 });
     if (reduce.matches) {
       gsap.set(panel, { opacity: 1, scaleX: 1, scaleY: 1 });
       return;
     }
+    restRobot(1150);
     tl = gsap.timeline();
     tl.to(panel, { opacity: 1, duration: OPEN_DUR, ease: PANEL_OUT }, 0);
     squashChannel(tl);
@@ -340,10 +356,12 @@
     markPill(null);   /* 弹窗都收了，胶囊不再是激活态，压弹恢复 */
     if (tl) tl.kill();
     gsap.killTweensOf(panel);
+    if (glow) gsap.killTweensOf(glow);
     if (reduce.matches) {
       gsap.set(panel, { opacity: 0 });
-      gsap.set(panel, { '--sh': SH_BASE, '--sh-a': SH_A_BASE });
+      if (glow) gsap.set(glow, { opacity: 0 });
       root.style.visibility = 'hidden';
+      document.body.classList.remove('is-modal');
       resetDocks();
       return;
     }
@@ -352,6 +370,7 @@
         /* 期间又被点开就保持可见，也别归位：下次开窗还接着这次的姿态走 */
         if (shown) return;
         root.style.visibility = 'hidden';
+        document.body.classList.remove('is-modal');
         resetDocks();
       }
     });
@@ -362,7 +381,7 @@
     }, 0);
     /* 阴影归位和栏体收回一样是 .2 power2.out：套 panelIn（前段几乎不动）的话，
        阴影会是被裁掉而不是收回去的 */
-    tl.to(panel, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: SH_CLOSE, ease: 'power2.out' }, 0);
+    if (glow) tl.to(glow, { opacity: 0, duration: SH_CLOSE, ease: 'power2.out' }, 0);
   }
 
   /* 这几枚胶囊开弹窗；Camera / Modal 与账号菜单里其余两项保持原样。
@@ -385,8 +404,9 @@
          万一上一次被打断过，也不会带着半程的 0.97 或 32px 阴影挂着 */
       if (tl) tl.kill();
       gsap.killTweensOf(panel);
+      if (glow) gsap.killTweensOf(glow);
       gsap.set(panel, { opacity: 1, scaleX: 1, scaleY: 1 });
-      gsap.set(panel, { '--sh': SH_BASE, '--sh-a': SH_A_BASE });
+      if (glow) gsap.set(glow, { opacity: 0 });
     });
   });
 
@@ -483,7 +503,7 @@
 
   /* 背景样式：三选一，写进背景脚本（window.Bgfx）并记住选择。
      背景脚本自己也会读同一个键，所以刷新后一进页面就是上次那一种，不用等这里来对齐。
-     旧版存过 matrix 的，读进来一律当 plain（旧 plain 那种纯静态点阵已经删掉） */
+     旧版存过 matrix 的，读进来一律当 plain（plain 现在就是那层静态基础网格） */
   var BG_KEY = 'intellibot.bg';
   var segs = panel.querySelectorAll('.seg__opt[data-bg]');
   function pickBg(key) {

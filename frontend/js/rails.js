@@ -76,7 +76,7 @@
    列表，换掉 DOM 就得重扫一遍。
    手势页 8 张（两行）、表情页 16 张（四行），都是一行四张 */
 (function () {
-  var COUNTS = { gestures: 8, emotions: 16 };
+  var COUNTS = { gestures: 6, emotions: 16 };
   document.querySelectorAll('[data-rail-grid]').forEach(function (grid) {
     var total = COUNTS[grid.dataset.railGrid] || 8;
     var html = '';
@@ -417,4 +417,61 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') setOpen(false);
   });
+})();
+
+/* 快捷指令卡片触发主页动作：卡上带 data-motion 时，点一下就在主页模型上播放同名动作。
+   模型是 6.4MB 的 GLB，比这段脚本晚就绪，早到的点击先记下来，等 robot-ready 补播一次。
+   播放期间给卡挂 .is-on（配色与悬停同一套），按时长自己收掉；
+   时长读 getGestureInfo，读不到就按默认 4 秒兜底 */
+(function () {
+  var pending = null;
+
+  function play(id) {
+    var api = window.robot3d;
+    if (!api || typeof api.playGesture !== 'function') {
+      pending = id;
+      return false;
+    }
+    var ok = false;
+    try { ok = api.playGesture(id) === true; } catch (e) { ok = false; }
+    if (!ok) pending = id;
+    return ok;
+  }
+
+  window.addEventListener('robot-ready', function () {
+    if (!pending) return;
+    var id = pending;
+    pending = null;
+    play(id);
+  });
+
+  function bind(card) {
+    var id = card.dataset.motion;
+    if (!id) return;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    if (!card.getAttribute('aria-label')) card.setAttribute('aria-label', id);
+
+    function activate() {
+      if (!play(id)) return;
+      card.classList.add('is-on');
+      clearTimeout(card.__motionTimer);
+      var info = window.robot3d && window.robot3d.getGestureInfo
+        ? window.robot3d.getGestureInfo(id)
+        : null;
+      var ms = info && info.duration ? info.duration * 1000 + 240 : 4240;
+      card.__motionTimer = setTimeout(function () { card.classList.remove('is-on'); }, ms);
+    }
+
+    card.addEventListener('click', activate);
+    /* 卡里还嵌着图钉，键盘回车在按钮上不算触发卡片 */
+    card.addEventListener('keydown', function (e) {
+      if (e.target !== card) return;
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      activate();
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.sc[data-motion]'), bind);
 })();

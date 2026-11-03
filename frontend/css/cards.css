@@ -163,7 +163,11 @@
      折行会让展开动画里文字上下乱跳，和右栏输入框的单行裁切不是一种手感 */
   white-space:nowrap;
 }
-.sc:hover::before{opacity:1}
+/* .is-lit：这张卡正被指针拎着走、或被机器人托在手上（见 js/card_pickup.js）。
+   影子是克隆件、挂在 body 下，指针又没法真正悬停在它身上（pointer-events:none），
+   :hover 永远轮不到它；原卡在栏里是 visibility:hidden，同样不接悬停。
+   于是把 hover 这一整套效果挂到 is-lit 上，从按下到放手一直亮着 */
+.sc:is(:hover, .is-on, .is-lit)::before{opacity:1}
 /* 右下角箭头圆钮：hover 前整枚不存在，圆与箭头只在悬停时落色。
    常态不给底色也不给内容物颜色，避免淡入的那 0.1s 里透出系列色底 */
 .sc__go{
@@ -178,8 +182,9 @@
   width:20px; height:20px; display:block; fill:currentColor;
   transform:translateX(1px);   /* 尖头视觉重心偏左，右移一点才是圆内居中 */
 }
-/* 悬停才落色：底取反白（与卡片文字反白同一支），箭头回到该组的系列色 */
-.sc:hover .sc__go{opacity:1; background:var(--text-invert); color:var(--sc)}
+/* 悬停才落色：底取反白（与卡片文字反白同一支），箭头回到该组的系列色；
+   .is-on 是快捷指令正在播动作的那张卡，整套配色与悬停一致，播完撤掉 */
+.sc:is(:hover, .is-on, .is-lit) .sc__go{opacity:1; background:var(--text-invert); color:var(--sc)}
 .sc__id{
   margin-top:2px;                /* 文字块比卡片内边距再下移 2 */
   font-size:32px; line-height:1; letter-spacing:.2px;
@@ -198,9 +203,9 @@
   color:var(--text-reduced);
   transition:color .1s linear;
 }
-.sc:hover .sc__id,
-.sc:hover .sc__brief,
-.sc:hover .sc__time{color:var(--text-invert)}
+.sc:is(:hover, .is-on, .is-lit) .sc__id,
+.sc:is(:hover, .is-on, .is-lit) .sc__brief,
+.sc:is(:hover, .is-on, .is-lit) .sc__time{color:var(--text-invert)}
 
 /* 卡片左下角的图钉：24×24 触控区，图标 16（触控区不变，图标大小可单独调 .sc__pin svg）。
    和右下圆钮一样，静止态收起、hover 卡片才浮现；隐藏时不接收点击，
@@ -253,7 +258,7 @@
 .sc.is-confirm-unpin .sc__pin::after{opacity:0}
 /* 卡片 hover 时图钉一并浮现并反色，与编号 / 简介同一个 --text-invert；钉住态也一样反，
    写在 .sc.is-pinned 之后，同特异性靠顺序压过去 */
-.sc:hover .sc__pin{opacity:1; pointer-events:auto; color:var(--text-invert)}
+.sc:is(:hover, .is-on) .sc__pin{opacity:1; pointer-events:auto; color:var(--text-invert)}
 
 /* 深色下卡片把常态与 hover 这两套配色整组对掉。
    浅色是「浅卡面 + 系列色字」，hover 翻成「系列色实底 + 反白字」；
@@ -272,7 +277,7 @@
   background:var(--sc);
   transition:background-color .1s linear;
 }
-:root[data-theme="dark"] .sc:hover{
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit){
   background:color-mix(in srgb, rgb(from var(--panel) r g b / 1) 75%, var(--bg));
 }
 /* 覆盖层在深色下停用，避免它又以 opacity 淡入一层盖在卡面上 */
@@ -284,11 +289,11 @@
 :root[data-theme="dark"] .sc__time{color:var(--text-primary)}
 /* hover 态：系列色在暗底上直接当字色会太沉（蓝组尤其），往亮字方向提一档，
    仍是各组的色系，只是浓度降下来。右下圆钮与图钉跟着对调成系列色 */
-:root[data-theme="dark"] .sc:hover .sc__id,
-:root[data-theme="dark"] .sc:hover .sc__brief,
-:root[data-theme="dark"] .sc:hover .sc__pin{color:color-mix(in srgb, var(--sc) 62%, var(--text-primary))}
-:root[data-theme="dark"] .sc:hover .sc__time{color:var(--text-reduced)}
-:root[data-theme="dark"] .sc:hover .sc__go{background:var(--sc); color:var(--text-primary)}
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__id,
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__brief,
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__pin{color:color-mix(in srgb, var(--sc) 62%, var(--text-primary))}
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__time{color:var(--text-reduced)}
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__go{background:var(--sc); color:var(--text-primary)}
 
 /* Pinned 视图只留钉住的卡片：未钉的整张收起，一组里一张都没钉就连标题一起收，
    不留空壳。其余视图（Action / Dialog / Tendance）照旧全列 */
@@ -358,9 +363,10 @@
      一旦成了背板根，::before 的 backdrop-filter 只取样面板内部，页面就不糊了。
      顺带一提，底色与模糊挪到了 ::before，见下面那条。 */
   z-index:0;
-  /* 与栏体同一套柔光：--sh / --sh-a 是 @property 注册过的，取到的是初始值 16px / .1；
-     展开时脚本把它们补到 32px / .2 再弹回，收回时归位 */
-  box-shadow:0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k)));
+  /* 柔光不挂在这里了：弹窗弹开时阴影要从 16px/.1 涨到 32px/.2，
+     而那组补间原本直接改 box-shadow，等于每帧重画一道 32px 级别的模糊，
+     面板又大又在缩放，这一项就是弹出时掉帧的主因。改成下面两层 .modal__glow，
+     一层常态、一层展开态，呼吸只切 opacity，合成器全包，不重画 */
   transform-origin:50% 50%;            /* 从正中撑开，不是从某个角 */
   pointer-events:auto;                 /* 面板自己吃点击，用来判断「点里面」 */
 }
@@ -372,11 +378,65 @@
    浅色 250 / 深色 73 各自保持，主题切换照常跟随。
    底既然不透光，backdrop-filter 采不到任何内容、只会多一层合成开销，一并去掉；
    要改回半透明底时把 background 换回 var(--panel)、这两行加回来即可。
-   柔光仍留在 .modal__panel 上：--sh / --sh-a 注册成 inherits:false，
-   挪到伪元素就取不到展开时那组补间值，阴影不会跟着呼吸 */
+   柔光不在这一层：见下面 .modal__glow，它要独立成层才能只改 opacity */
 .modal__panel::before{
   content:''; position:absolute; inset:0; z-index:-1;
   border-radius:inherit; pointer-events:none;
   background:rgb(from var(--panel) r g b / 1);
 }
 
+/* 柔光两层（结构在 HTML 里，紧跟面板开头）。
+   两层的盒子都与面板同尺寸、同圆角，box-shadow 只往外投，
+   所以叠起来就是原来那道阴影加厚，几何不会跑偏。
+   展开那层平时 opacity 0，弹出时由 modal.js 淡到 1 —— 只改透明度，
+   模糊本身只栅格化一次。
+   浓度按 --sh-k 折算：常态 .1×k、展开再叠一层 .1×k，峰值正好是原来的 .2×k；
+   深色主题的 k 是 1.9，写法里不能写死 0.1 / 0.2。
+   z-index 取负：落到面板填充层（-1）之下，只留框外那一圈 */
+.modal__glow{
+  position:absolute; inset:0; z-index:-3;
+  border-radius:inherit; pointer-events:none;
+  box-shadow:0 0 16px rgba(var(--shadow), calc(.1 * var(--sh-k)));
+}
+.modal__glow--up{
+  box-shadow:0 0 32px rgba(var(--shadow), calc(.1 * var(--sh-k)));
+  opacity:0;
+  will-change:opacity;
+}
+
+
+/* —— 拖卡片到机器人身上 ——
+   影子是原卡的克隆，挂在 body 下靠 transform 跟指针（见 js/card_pickup.js）。
+   拖起来的这张一律不透明；原卡在栏里直接收起来（visibility 保留占位），
+   不是压半透明，所以同一张卡不会在栏里和手边各显一份。
+   投影分三档：常态、悬在机器人上方（更实，提示松手）、已接住（收一点） */
+.sc{cursor:grab}
+.sc:active{cursor:grabbing}
+.sc.is-dragging{visibility:hidden}
+
+/* 归位：卡片从机器人手里放回栏里那一拍，先压到 0.94 再越过 1 到 1.045，
+   最后收回 1 —— 读完是「被放进格子、轻轻碰到边上」，不是凭空显出来。
+   走独立的 scale 属性，不碰 transform：卡片自己的 transform 归磁吸脚本
+   （透视倾斜 + 沿 z 浮起），两条通道各走各的，动画期间动画优先级高于
+   内联 scale，收尾摘掉类就把 scale 交回磁吸，不必在这里存一个基准值。
+   .36s 比全站那条 --dur 略长：这是一次性的落定，慢半拍才看得见回弹 */
+@keyframes card-back-pop{
+  0%{scale:.94}
+  58%{scale:1.045}
+  100%{scale:1}
+}
+.sc.is-back{animation:card-back-pop .36s cubic-bezier(.22,.61,.36,1)}
+@media (prefers-reduced-motion: reduce){
+  .sc.is-back{animation:none}
+}
+body.is-card-drag{cursor:grabbing}
+body.is-card-drag .sc{cursor:grabbing}
+.card-ghost{
+  position:fixed; left:0; top:0; z-index:80;
+  pointer-events:none;
+  will-change:transform,opacity;
+  filter:drop-shadow(0 10px 24px rgba(20,26,22,.16));
+  transition:filter .12s linear;
+}
+.card-ghost.is-over{filter:drop-shadow(0 16px 32px rgba(20,26,22,.28))}
+.card-ghost.is-picked{filter:drop-shadow(0 4px 14px rgba(20,26,22,.2))}

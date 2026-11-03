@@ -8,6 +8,9 @@
    没有可滚的距离，它就只剩压在空白上的一块灰。data-scroll 由 sticky.js 量完写入
    （scrollHeight 与 clientHeight 比较），切视图、钉卡、面板开合都会重算 */
 #panel-shortcuts:has(> [data-panel-body][data-scroll="off"]) > .frost--top{display:none}
+/* 底部那条同理：滚不动的面板底下没有内容要化开，它只剩压在底沿的一块灰。
+   两栏共用这一条 —— 判定同样来自 body 的 data-scroll */
+.rail__panel:has(> [data-panel-body][data-scroll="off"]) > .frost--bottom{display:none}
 
 /* ── 左栏编辑页 ─────────────────────────────────────────────
    左栏 Edit 钮把本栏面板切到 data-view="edit" 时出现：先选类型，再填名字与简介。
@@ -134,8 +137,10 @@
 
 .edit__input{
   appearance:none; -webkit-appearance:none;
-  width:100%; height:40px; padding:0 12px;
-  border:0; border-radius:12px;
+  /* 胶囊形：40 高的两端是半圆，圆角给到 999 而不是 20 ——
+     后者在非整数缩放下偶尔会露出直边，整数半径永远贴不满两端 */
+  width:100%; height:40px; padding:0 16px;
+  border:0; border-radius:999px;
   background:var(--card); color:var(--text-primary);
   caret-color:var(--theme);
   font-family:inherit; font-weight:var(--fw); font-size:var(--fs-14); letter-spacing:.2px;
@@ -225,7 +230,8 @@
 
 /* ============================================================
    底部 AI 输入胶囊
-   悬浮在视口底边正中：距底 64；默认一行，高 48、宽占页面 1/4（25vw）。
+   悬浮在视口底边正中：距底 16（与左栏、右栏离边的那道 16 对齐）；
+   默认一行，高 48、宽占页面 1/4（25vw）。
    底片、投影、聚焦描边照搬左栏编辑表单的输入框（.edit__input）：
    同一层 --sh 柔光、同一道主题色 1px 内描边，底片换成不透明的
    --card-solid —— 这枚浮在舞台正中央，半透明的 --card 会让机器人和
@@ -237,7 +243,7 @@
    js/composer.js 只按这两个数写高度，行高改了它得跟着改
    ============================================================ */
 .composer{
-  position:fixed; left:50%; bottom:64px;
+  position:fixed; left:50%; bottom:16px;
   translate:-50% 0;
   z-index:25;                 /* 压过栏体(20)、垫在弹窗(50)之下 */
   /* fixed 元素的 width:auto 是 shrink-to-fit，上限只到 left 剩下的那半屏，
@@ -285,7 +291,9 @@
    一个管标准属性、一个管老实现，两条都写才在各家浏览器里都不出槽 */
 .composer__input::-webkit-scrollbar{width:0; height:0}
 .composer__input::placeholder{color:var(--text-muted)}
-.composer__input{padding-right:72px}
+/* 右内边距让出那枚 36 的圆：距右 6、直径 36，再留 10 的缝就是 52，
+   与 js/composer.js 里的 PAD_RIGHT 是同一个数 */
+.composer__input{padding-right:52px}
 .assistant-chat{
   position:absolute;
   left:calc(100% + 14px);
@@ -381,32 +389,112 @@
   text-align:center;
 }
 .composer[aria-busy="true"] .composer__input{opacity:.68;cursor:wait}
+/* 发送钮：36 见方的圆，里面只有一枚向上箭头 —— 图形是 icon/arrow.svg
+   里那条路径（只留填充、没有描边），颜色走 currentColor，两态换色不用换图。
+   描边去掉了，底色只有一层：主题色，有字时靠 scale 从圆心涨满 ——
+   与左栏那排圆钮（.item__btn::before）是同一套写法、同一对曲线：
+   进场 .1s (.16,.84,.3,1) 先快后慢地铺开，出场 .1s 走它的镜像
+   (.7,0,.84,.16)，色块沿原路缩回圆心；箭头换色跟底色同一拍，
+   所以看着是一起亮、一起退。
+   没字时按钮自己是全透明的，只剩一枚箭头浮在输入胶囊上 ——
+   底色在这里只表示「现在能不能发」，不能发的时候不该先占一块面板色。
+   （原来按钮本体铺的 --panel 其实一直只在这一态露得出来：涨满之后
+   主题色把那块圆完全盖住，所以直接把这一层去掉就行，不用另做显隐。）
+   没有 hover 一档：鼠标划过不该把「能不能发」这件事搅浑。
+   overflow:hidden 是给飞出的箭头用的：它得在圆的边缘被裁掉，
+   读起来才是「从按钮里飞出去」 */
 .composer__send{
   position:absolute;
   right:6px;
   bottom:6px;
-  height:36px;
-  padding:0 14px;
+  width:36px; height:36px;
+  display:grid; place-items:center;
+  padding:0;
   border:0;
-  border-radius:999px;
-  background:var(--theme);
-  color:#fff;
-  font-family:inherit;
-  font-weight:var(--fw);
+  border-radius:50%;
+  /* 未触发（输入框为空）时不铺底：只留箭头，底色的出现就代表「可以发了」 */
+  background:transparent;
+  color:var(--theme);
   cursor:pointer;
+  overflow:hidden;
+  /* 负层级的那层底色要停在按钮自己的层叠上下文里，才压得住 */
+  isolation:isolate;
+  /* 只补间字色：几何恒定，底色交给下面的 ::before */
+  transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
-.composer__send:hover,.composer__send:focus-visible{filter:brightness(.94);outline:none}
-.composer__send:disabled{opacity:.45;cursor:wait}
-/* 悬停：左栏输入框是表单字段、光标落在上面就是要打字，所以没做悬停；
-   这枚是页面上唯一常驻的对话入口，悬停得给出「可以点」的反馈，
-   于是把柔光提亮一档、同时浮出一道很淡的主题色描边，
-   与下面的选中态只差描边的浓淡 */
-.composer__input:hover{
-  box-shadow:
-    0 0 20px rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k) * 1.4)),
-    inset 0 0 0 1px rgb(from var(--theme) r g b / .22);
+.composer__send::before{
+  content:'';
+  position:absolute; inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  /* 颜色常驻、不参与过渡：可见性完全交给 scale，
+     否则出场那一帧颜色会先跳回透明，0.1s 的收缩就落在看不见的色块上 */
+  scale:0;
+  transition:scale .1s cubic-bezier(.7,0,.84,.16);
 }
-/* 选中（聚焦）：与左栏输入框完全一致的一组终值 —— 1px 主题色内描边 */
+.composer__send.is-filled{
+  color:var(--text-invert);
+  transition:color .1s cubic-bezier(.16,.84,.3,1);
+}
+.composer__send.is-filled::before{
+  scale:1;
+  transition:scale .1s cubic-bezier(.16,.84,.3,1);
+}
+/* 鼠标的反馈已经交给底色那一层，这里只留键盘可达性的那圈框 */
+.composer__send:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
+/* 等回复的这段时间按钮是禁用的：不换成别的形状，只压一档透明度，
+   同时把光标换成沙漏，避免「看得见点、点了没反应」 */
+.composer__send:disabled{opacity:.55;cursor:wait}
+
+/* 箭头画了两份、叠在同一格里：一份负责飞出去，一份在下方等着升回来。
+   两份静止时像素级重合，所以平时看到的仍是一枚箭头，不用额外做显隐。
+   图形是 icon/arrow.svg 里那条路径，只有填充、没有描边，颜色一律走
+   currentColor —— 外部文件用 mask 引用在 file:// 下取不到 alpha，
+   整枚图标会被当成空的抹掉，所以路径直接落在 html 里 */
+.composer__send-icon{display:grid; width:24px; height:24px}
+.composer__send-arrow{
+  grid-area:1/1;                 /* 同一格叠放，谁也不占第二行 */
+  display:block; width:100%; height:100%;
+  fill:currentColor;
+  /* arrow.svg 是一枚右指的箭头，放倒 90 度朝上。
+     旋转写成独立属性（不是 transform），下面飞行的位移就能继续用 translate，
+     两条各管各的坐标，不必在每个关键帧里重复写 rotate */
+  rotate:-90deg;
+  translate:0 0;
+}
+
+/* 发出的那一下：上面那枚急急冲出上沿（急出），下面那枚从底边缓缓升回原位（缓入）。
+   位移给的是像素：图标 24、墨迹约 18 高，半高 9 加按钮半高 18 是 27，
+   取 40 就足够整枚越出，多出来的一截反正被 overflow 裁掉。
+   两条动画同长同起跑点，用 32% 这个时刻对齐：出去的那段短而加速，
+   回来的那段长而强减速（(.16,.84,.3,1)，与页面其余进场动画同一条曲线）。
+   之所以用两枚而不是一枚越过上沿后再瞬移到下方：那样两段之间有一帧
+   会落在「换位」的窗口里，按得越频繁越可能被撞上，出现一帧箭头停在正中。
+   两条并存就没有这个窗口，出去的那枚停在上沿之外（本来就被裁掉），
+   下面那枚的 0 → 32% 是原地等，等到了才起步 */
+@keyframes composer-send-out{
+  0%  {translate:0 0;    animation-timing-function:cubic-bezier(.45,.02,.85,.4)}
+  32% {translate:0 -40px}
+  100%{translate:0 -40px}
+}
+@keyframes composer-send-in{
+  0%  {translate:0 40px}
+  32% {translate:0 40px; animation-timing-function:cubic-bezier(.16,.84,.3,1)}
+  100%{translate:0 0}
+}
+.composer__send-icon.is-flying > .composer__send-arrow:first-child{animation:composer-send-out .62s both}
+.composer__send-icon.is-flying > .composer__send-arrow:last-child{animation:composer-send-in .62s both}
+/* 关掉动效的人不该看到箭头凭空消失又出现 */
+@media (prefers-reduced-motion: reduce){
+  .composer__send-icon.is-flying > .composer__send-arrow{animation:none}
+}
+/* 悬停不做任何变化：这是常驻在页面底部的一格，光标扫过它就等于扫过
+   大片空白，回回亮一下反而吵；能输入这件事由光标（cursor:text）说明就够。
+   所以这里没有 :hover 规则，只有下面聚焦这一组 —— 真的点进去、光标落进来时，
+   柔光才提亮一档，并浮出与左栏输入框同一档的 1px 主题色内描边。
+   别把「悬停不变」写成 :hover 里重复常态的值：那会多出一条同等优先级的规则，
+   以后调常态的柔光就得两处一起改 */
 .composer__input:focus{
   box-shadow:
     0 0 20px rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k) * 1.4)),

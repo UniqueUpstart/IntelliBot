@@ -23,26 +23,37 @@
   var ZETA  = 0.4;
   var EPS   = 0.02;    // 角度收敛阈值（deg）；z 另有 0.05px 阈值
   var VEL   = 0.6;     // 角速度落定阈值（deg/s）；z 另有 3px/s 阈值
+  /* 吸住时整体放大到 1.02：卡片被吸起来的同时略略涨一圈，
+     进深与体积一起变，才像真的从屏里被拎出来。
+     只能给有明确边界的小块用；栏体那种贴边的长条一涨就会顶到视口边线，
+     看起来是整页在缩放，所以栏体下面单独写 grow: 1 关掉。
+     走独立的 scale 通道（与倾斜同一根弹簧），不和 transform 抢 */
+  var HOVER_SCALE = 1.02;
 
   /* 每块面板的磁吸强度：
      persp —— 透视距离 px，越小立体感越强
      tiltX —— 上下倾斜上限 deg（光标在上/下边缘时的最大翻角）
      tiltY —— 左右倾斜上限 deg，长条栏体比胶囊略收一档，两端才不摆
      lift  —— 沿 z 轴朝观众浮起的距离 px
+     grow  —— 吸住时的缩放倍数，写 1 就只翻不涨
      顶栏两块与左右栏体统一用 900 的透视，翻角按各自面积定：
      顶栏扁而宽，给 6；栏体高而窄，给 4
      栏体那条只在收起（图标列）时生效：展开后整块翻动会把卡片里的字整体
-     重新采样、抖得厉害，立体感改由卡片自己给，见下面 .sc 的判定 */
+     重新采样、抖得厉害，立体感改由卡片自己给，见下面 .sc 的判定
+     视角那枚眼睛与复位现在住进了一条 .group 托盘，就排在 Preference 左边，
+     于是自动吃到上面这条配置 —— 它们不再是单独的浮块，跟着顶栏一起翻 */
   var CONF = [
-    { sel: '.group',         persp: 900,  tiltX: 6, tiltY: 6, lift: 6 },
-    { sel: '.user__surface', persp: 900,  tiltX: 6, tiltY: 6, lift: 6 },
-    { sel: '.rail__surface', persp: 900,  tiltX: 4, tiltY: 4, lift: 4 },
+    { sel: '.group',         persp: 900,  tiltX: 6, tiltY: 6, lift: 6,  grow: HOVER_SCALE },
+    { sel: '.user__surface', persp: 900,  tiltX: 6, tiltY: 6, lift: 6,  grow: HOVER_SCALE },
+    /* 栏体贴视口左右边，涨 2% 就是整根柱子往外顶、图标整体位移，
+       像页面在缩放而不是那一列被吸住，所以只翻不涨 */
+    { sel: '.rail__surface', persp: 900,  tiltX: 4, tiltY: 4, lift: 4,  grow: 1 },
     /* 卡片小、每条边都短，透视得拉近才看得出一块板子朝光标翻；
        面积小也压得住，倾斜和浮起都可以比大面板放开一档。
        右栏手势 / 表情卡比指令卡再小一号，透视相应拉近，
        倾斜收一档、浮起保留，抬起来时不至于翻出面板边界 */
-    { sel: '.sc',            persp: 800,  tiltX: 6, tiltY: 6, lift: 10 },
-    { sel: '.rail__card',    persp: 700,  tiltX: 5, tiltY: 5, lift: 8 }
+    { sel: '.sc',            persp: 800,  tiltX: 6, tiltY: 6, lift: 10, grow: HOVER_SCALE },
+    { sel: '.rail__card',    persp: 700,  tiltX: 5, tiltY: 5, lift: 8,  grow: HOVER_SCALE }
   ];
 
   var items = [];
@@ -72,12 +83,18 @@
   }
 
   function aim(t) {
+    /* 弹窗开着时整片停手：光标刚刚就停在顶栏胶囊上，而 .group / .user__surface
+       背后挂着 backdrop-filter，那一层每倾斜一点，浏览器都要把它背后的画布
+       重新模糊一次 —— 弹窗弹出那几帧的卡顿基本来自这里。
+       弹窗盖在最上面，托盘也没必要继续跟着指针翻 */
+    if (document.body.classList.contains('is-modal')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
+
     var b = boxOf(t.el);
-    if (!b.width || !b.height) { t.RX = t.RY = t.Z = 0; return; }
+    if (!b.width || !b.height) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
 
     /* 栏体收进屏外时不该再被吸，否则贴边划一下也会让它翻 */
     if (t.el.closest('.rail.is-hidden')) {
-      t.RX = t.RY = t.Z = 0; return;
+      t.RX = t.RY = t.Z = 0; t.S = 1; return;
     }
 
     /* 展开与收起的归属：展开时吸的是卡片，收起时吸的才是栏体。
@@ -89,17 +106,17 @@
       var open = rail.classList.contains('is-open');
       /* 指令卡与右栏动作卡都算「卡片」：展开时吸它们、收起时吸栏体 */
       var isCard = t.el.classList.contains('sc') || t.el.classList.contains('rail__card');
-      if (isCard ? !open : open) { t.RX = t.RY = t.Z = 0; return; }
+      if (isCard ? !open : open) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
       /* 开合动画（scale 胀开 + elastic 回弹）没走完之前，卡片不参与：
          父级的缩放与卡片的透视叠在一起，两层每帧各自重投影，边线会跳。
          等 --sx/--sy 稳在 1，is-popping 摘掉再吸 */
-      if (isCard && rail.classList.contains('is-popping')) { t.RX = t.RY = t.Z = 0; return; }
+      if (isCard && rail.classList.contains('is-popping')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
     }
 
     /* 命中留 1px 余量，避免贴边时在矩形内外反复抖 */
     var inside = mx >= b.left - 1 && mx <= b.left + b.width  + 1 &&
                  my >= b.top  - 1 && my <= b.top  + b.height + 1;
-    if (!inside) { t.RX = t.RY = t.Z = 0; return; }
+    if (!inside) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
 
     var dx = ((mx - b.left) / b.width)  * 2 - 1;
     var dy = ((my - b.top)  / b.height) * 2 - 1;
@@ -113,9 +130,11 @@
     t.RY = -dx * t.cfg.tiltY;
     t.RX = -dy * t.cfg.tiltX;
     t.Z  =  t.cfg.lift;
+    t.S  =  t.cfg.grow;
   }
 
   function r2(v) { return Math.round(v * 100) / 100; }
+  function r3(v) { return Math.round(v * 1000) / 1000; }
 
   var last = 0;
 
@@ -146,18 +165,26 @@
       var rx = spring(t.rx, t.RX, t.vrx, dt); t.rx = rx[0]; t.vrx = rx[1];
       var ry = spring(t.ry, t.RY, t.vry, dt); t.ry = ry[0]; t.vry = ry[1];
       var z  = spring(t.z,  t.Z,  t.vz,  dt); t.z  = z[0];  t.vz  = z[1];
+      var s  = spring(t.s,  t.S,  t.vs,  dt); t.s  = s[0];  t.vs  = s[1];
 
       var settled =
         Math.abs(t.RX - t.rx) < EPS && Math.abs(t.RY - t.ry) < EPS &&
-        Math.abs(t.Z  - t.z)  < 0.05 &&
-        Math.abs(t.vrx) < VEL && Math.abs(t.vry) < VEL && Math.abs(t.vz) < 3;
+        Math.abs(t.Z  - t.z)  < 0.05 && Math.abs(t.S - t.s) < 0.0005 &&
+        Math.abs(t.vrx) < VEL && Math.abs(t.vry) < VEL && Math.abs(t.vz) < 3 &&
+        Math.abs(t.vs) < 0.003;
 
       if (settled) {   // 落定后贴住目标并清零速度，避免循环空转
-        t.rx = t.RX; t.ry = t.RY; t.z = t.Z;
-        t.vrx = t.vry = t.vz = 0;
+        t.rx = t.RX; t.ry = t.RY; t.z = t.Z; t.s = t.S;
+        t.vrx = t.vry = t.vz = t.vs = 0;
       } else {
         busy = true;
       }
+
+      /* 缩放走独立的 scale 属性，不并进下面那条 transform：
+         那串一写就是整块覆盖，元素自己留在 transform 上的位移会被一起抹掉。
+         两个通道浏览器最后再合成，互不干扰 */
+      var sc = t.s === 1 ? '' : '' + r3(t.s);
+      if (t.el.style.scale !== sc) t.el.style.scale = sc;
 
       if (!t.rx && !t.ry && !t.z) {
         if (t.el.style.transform) t.el.style.transform = '';
@@ -189,9 +216,9 @@
         el.__magnet = true;
         items.push({
           el: el, cfg: cfg,
-          rx: 0, ry: 0, z: 0,          // 当前值
-          RX: 0, RY: 0, Z: 0,          // 目标值
-          vrx: 0, vry: 0, vz: 0        // 弹簧速度
+          rx: 0, ry: 0, z: 0, s: 1,    // 当前值
+          RX: 0, RY: 0, Z: 0, S: 1,    // 目标值
+          vrx: 0, vry: 0, vz: 0, vs: 0 // 弹簧速度
         });
       });
     });
@@ -216,7 +243,7 @@
   /* 光标移出窗口 / 切标签页时 pointermove 断在半路，回来先全部归零 */
   function releaseAll() {
     mx = my = -1;
-    items.forEach(function (t) { t.RX = t.RY = t.Z = 0; });
+    items.forEach(function (t) { t.RX = t.RY = t.Z = 0; t.S = 1; });
     start();
   }
   document.addEventListener('pointerleave', releaseAll);
