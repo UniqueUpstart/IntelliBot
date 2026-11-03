@@ -143,7 +143,7 @@ struct WebSystem::Impl {
   }
   bool handle(const httplib::Request& req, httplib::Response& res) {
     const auto& p = req.path;
-    if (p == "/api/v1/health") return false;
+    if (p == "/api/v1/health" || p == "/api/v1/ai/config") return false;
     auto fail = [&](int status, const std::string& code, const std::string& message) {
       reply(res, status, nullptr, code, message);
     };

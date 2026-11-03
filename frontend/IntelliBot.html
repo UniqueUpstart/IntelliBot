@@ -19,13 +19,13 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=11"></script>
+<script src="js/i18n.js?v=13"></script>
   <link rel="stylesheet" href="css/base.css?v=8">
   <link rel="stylesheet" href="css/topbar.css?v=8">
-  <link rel="stylesheet" href="css/rail.css?v=24">
+  <link rel="stylesheet" href="css/rail.css?v=25">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=33">
+  <link rel="stylesheet" href="css/chat.css?v=35">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -116,32 +116,11 @@
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
-      <button class="item" type="button" data-panel="Pinned" aria-expanded="false" aria-controls="panel-shortcuts">
+      <button class="item" type="button" data-panel="Model" aria-expanded="false" aria-controls="panel-shortcuts">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 8h16M8 16h16M8 24h16"/><circle cx="12" cy="8" r="3"/><circle cx="21" cy="16" r="3"/><circle cx="14" cy="24" r="3"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.left.pinned">Pinned</span>
-      </button>
-
-      <button class="item" type="button" data-panel="Action" aria-expanded="false" aria-controls="panel-shortcuts">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
-        </span>
-        <span class="item__label" data-i18n="rail.left.action">Action</span>
-      </button>
-
-      <button class="item" type="button" data-panel="Dialog" aria-expanded="false" aria-controls="panel-shortcuts">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
-        </span>
-        <span class="item__label" data-i18n="rail.left.dialog">Dialog</span>
-      </button>
-
-      <button class="item" type="button" data-panel="Tendance" aria-expanded="false" aria-controls="panel-shortcuts">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24.5,13.17h-5.67s0-5.67,0-5.67c0-1.57-1.27-2.83-2.83-2.83h0c-1.57,0-2.83,1.27-2.83,2.83v5.67s-5.67,0-5.67,0c-1.57,0-2.83,1.27-2.83,2.83h0c0,1.57,1.27,2.83,2.83,2.83h5.67v5.67c0,1.57,1.27,2.83,2.83,2.83h0c1.57,0,2.83-1.27,2.83-2.83v-5.67s5.67,0,5.67,0c1.57,0,2.83-1.27,2.83-2.83h0c0-1.57-1.27-2.83-2.83-2.83Z"/></svg>
-        </span>
-        <span class="item__label" data-i18n="rail.left.tendance">Tendance</span>
+        <span class="item__label" data-i18n="rail.left.model">Models</span>
       </button>
 
       <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-shortcuts">
@@ -151,15 +130,6 @@
         <span class="item__label" data-i18n="rail.left.skin">Skins</span>
       </button>
 
-      <!-- 编辑入口：和上面四个一样是左栏自己的图标项，
-           点开就是本栏左侧那块面板，面板里切到 data-view="edit" 显示表单 -->
-      <button class="item item--edit" type="button" data-panel="Edit"
-              aria-expanded="false" aria-controls="panel-shortcuts">
-        <span class="item__btn">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-        </span>
-        <span class="item__label" data-i18n="rail.left.edit">Edit</span>
-      </button>
     </div>
   </div>
 
@@ -219,6 +189,46 @@
             <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
           </button>
         </div>
+      </div>
+
+      <!-- 模型配置页：配置保存在本机 AI 服务，聊天栏只同步展示当前模型。 -->
+      <div class="model-view" data-model-panel>
+        <div class="model-view__head">
+          <h3 class="model-view__title" data-i18n="rail.left.model">模型设置</h3>
+          <span class="model-view__status" data-model-status data-i18n="model.status.loading">正在读取</span>
+        </div>
+        <form class="model-form" data-model-form>
+          <label class="model-field">
+            <span data-i18n="model.provider">服务商</span>
+            <select data-model-provider>
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">OpenAI</option>
+              <option value="custom" data-i18n="model.provider.custom">自定义 / OpenAI 兼容</option>
+            </select>
+          </label>
+          <label class="model-field">
+            <span data-i18n="model.baseUrl">API 地址</span>
+            <input data-model-base-url type="url" spellcheck="false" autocomplete="url"
+                   placeholder="https://api.example.com/v1">
+          </label>
+          <label class="model-field">
+            <span data-i18n="model.model">模型</span>
+            <input data-model-name type="text" spellcheck="false" autocomplete="off"
+                   list="model-name-options" placeholder="deepseek-chat">
+            <datalist id="model-name-options"></datalist>
+          </label>
+          <label class="model-field">
+            <span data-i18n="model.apiKey">API Key</span>
+            <input data-model-key type="password" spellcheck="false" autocomplete="new-password"
+                   placeholder="sk-…">
+          </label>
+          <p class="model-view__note" data-model-note data-i18n="model.key.local">
+            API Key 只保存在本机，不会写入浏览器。
+          </p>
+          <button class="model-save" data-model-save type="submit">
+            <span data-i18n="model.save">保存并应用</span>
+          </button>
+        </form>
       </div>
 
       <!-- 换皮页：从原来浮在舞台上的独立小条收进左栏，外观选项与右侧手势卡同尺寸 -->
@@ -360,9 +370,6 @@
 </button>
 
 <script src="js/rails.js?v=14"></script>
-
-<!-- 把卡片拖到机器人身上：拾起 → 思考 → 点头 → 卡片消失 → 播动作 -->
-<script src="js/card_pickup.js?v=11"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
 <script src="js/avatar.js?v=3"></script>
@@ -642,6 +649,20 @@
      半页宽，再装不下纵向长到四行，超过四行转成滚动。
      底片与聚焦描边沿用左栏编辑表单的输入框，见 css/chat.css 末尾 -->
 <div class="composer">
+  <button class="composer__model" type="button" data-model-trigger
+          aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+    <span class="composer__model-dot" aria-hidden="true"></span>
+    <span class="composer__model-label" data-model-label>选择模型</span>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+  </button>
+  <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
+    <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
+    <div class="model-menu__list" data-model-menu-list></div>
+    <button class="model-menu__manage" type="button" data-model-manage>
+      <span data-i18n="model.manage">管理 API 与模型</span>
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+    </button>
+  </div>
   <section class="assistant-chat" data-assistant-chat hidden aria-label="IntelliBot conversation">
     <header class="assistant-chat__toolbar">
       <span class="assistant-chat__status" data-assistant-status>待命</span>
@@ -654,28 +675,20 @@
             maxlength="500" data-assistant-input
             data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
             placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
-  <!-- 发送钮：里面只有一枚向上箭头，路径取自 icon/arrow.svg（只保留填充，无描边），
-       颜色交给 currentColor，所以两态换色不用换图。
-       箭头画两遍、叠在同一格上：一枚负责飞出去，一枚在下方等着落回来
-       （见 chat.css 尾部的 composer-send-out / -in）。
-       两枚静止时完全重合，看不出是两个，所以不必另做显隐 -->
+  <!-- 发送钮：单一向上箭头，禁用、可发送两态由底色与文字色区分。 -->
   <button class="composer__send" type="button" data-assistant-send
           data-i18n-aria="chat.send" aria-label="发送">
-    <span class="composer__send-icon" aria-hidden="true">
-      <svg class="composer__send-arrow" viewBox="0 0 32 32">
-        <path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/>
-      </svg>
-      <svg class="composer__send-arrow" viewBox="0 0 32 32">
-        <path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/>
-      </svg>
-    </span>
+    <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 19V5M6 11l6-6 6 6"/>
+    </svg>
   </button>
 </div>
 
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
-<script src="js/composer.js?v=4"></script>
-<script src="js/assistant_chat.js?v=5"></script>
+<script src="js/composer.js?v=5"></script>
+<script src="js/model_config.js?v=4"></script>
+<script src="js/assistant_chat.js?v=6"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
@@ -693,7 +706,7 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=58"></script>
+<script type="module" src="js/robot3d.js?v=59"></script>
 <script type="module" src="js/view-control.js?v=41"></script>
 <script type="module" src="js/q1skin.js?v=22"></script>
 

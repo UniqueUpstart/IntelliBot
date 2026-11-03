@@ -21,10 +21,34 @@ def free_port() -> int:
 
 
 class FakeAiHandler(BaseHTTPRequestHandler):
+    model = "deepseek-flash"
+
+    def do_GET(self):
+        if self.path == "/config":
+            self.reply(200, {
+                "provider": "deepseek",
+                "base_url": "https://api.deepseek.com",
+                "model": self.model,
+                "configured": True,
+                "key_hint": "••••test",
+            })
+            return
+        self.reply(404, {"error": {"code": "NOT_FOUND", "message": "missing"}})
+
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
         body = json.loads(self.rfile.read(length))
         seen_keys.append(self.headers.get("Idempotency-Key"))
+        if self.path == "/config":
+            self.model = body.get("model", self.model)
+            self.reply(200, {
+                "provider": body.get("provider", "deepseek"),
+                "base_url": body.get("base_url", "https://api.deepseek.com"),
+                "model": self.model,
+                "configured": True,
+                "key_hint": "••••test",
+            })
+            return
         message = body.get("message", "")
         if message == "rate":
             self.reply(429, {"error": {"code": "AI_RATE_LIMITED", "message": "later"}})
@@ -98,7 +122,7 @@ ai = ThreadingHTTPServer(("127.0.0.1", ai_port), FakeAiHandler)
 ai_thread = threading.Thread(target=ai.serve_forever, daemon=True)
 ai_thread.start()
 authenticated = "--authenticated" in sys.argv
-tmp = tempfile.TemporaryDirectory()
+tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
 backend = subprocess.Popen(
     [
         sys.argv[1],
@@ -158,6 +182,16 @@ try:
     assert status == 502 and payload["error"]["code"] == "AI_INVALID_RESPONSE"
     if not authenticated:
         assert call(backend_port, "GET", "/capabilities")[1]["data"]["chat"] is True
+    status, payload = call(backend_port, "GET", "/ai/config")
+    assert status == 200 and "key_hint" in payload["data"] and "api_key" not in payload["data"]
+    status, payload = call(
+        backend_port,
+        "PUT",
+        "/ai/config",
+        {"model": "deepseek-reasoner"},
+        str(uuid4()),
+    )
+    assert status == 200 and payload["data"]["model"] == "deepseek-reasoner"
 
     slow_result = []
     thread = threading.Thread(

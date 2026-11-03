@@ -123,13 +123,13 @@ conda install -n base -c conda-forge sqlite libsodium -y
 | --- | --- | --- |
 | MuJoCo 仿真桥 | `127.0.0.1:8090` | 默认 `--headless` |
 | C++ 后端与网页 | `127.0.0.1:8080` | 自动连接仿真桥 |
-| DeepSeek 服务 | `127.0.0.1:8091` | 仅在 `.env` 配置完整时启动 |
+| 本地模型服务 | `127.0.0.1:8091` | 启动后可在网页左侧 Models 面板配置服务商、API 地址、模型与 Key |
 
 `run_sim_stack.cmd` 只负责启动，不会安装环境、下载模型或编译后端。
 
 ### 分开启动
 
-未使用 DeepSeek 时，跳过终端 2，并移除后端的 `--ai-url` 参数。
+使用模型配置功能时保留终端 2，并让后端带 `--ai-url` 参数。也可先用 `.env.example` 提供初始配置，再在网页中覆盖。
 
 终端 1，MuJoCo 仿真桥：
 
@@ -137,7 +137,7 @@ conda install -n base -c conda-forge sqlite libsodium -y
 .\.venv\Scripts\python.exe sim\mujoco_bridge.py --port 8090 --headless
 ```
 
-终端 2，DeepSeek 服务：
+终端 2，本地模型服务：
 
 ```powershell
 .\.venv\Scripts\python.exe ai\deepseek_bridge.py --port 8091
@@ -198,7 +198,7 @@ $env:AI_PORT = "8093"
 | 提示模型不存在 | 运行 `bash scripts/fetch_model.sh`，并确认模型路径为纯英文 |
 | 页面返回 `502 SIM_UNAVAILABLE` | 仿真桥没有启动；检查 `http://127.0.0.1:8090/health` |
 | 有数值但没有机器人画面 | 确认仿真桥使用 `--headless`，并查看启动窗口中的 GL 报错 |
-| DeepSeek 对话不可用 | 检查 `.env` 中的 `DEEPSEEK_API_KEY`，并确认 `http://127.0.0.1:8091/health` 可访问 |
+| 模型对话不可用 | 在左侧 Models 面板保存 API 配置，并确认 `http://127.0.0.1:8091/health` 可访问 |
 | 编译提示缺少 SQLite3 或 sodium | 只影响源码编译；安装 Miniconda 依赖后重新构建 |
 | 端口被占用 | `Get-NetTCPConnection -State Listen -LocalPort 8080,8090,8091` 查看占用进程 |
 | 直接双击 HTML 无法连接 | 网页必须通过 `http://127.0.0.1:8080` 打开 |

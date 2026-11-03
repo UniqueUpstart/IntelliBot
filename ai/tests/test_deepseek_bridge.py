@@ -11,7 +11,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from ai.deepseek_bridge import BridgeError, BridgeState, Config, chat, validate_chat_request
+from ai.deepseek_bridge import (
+    BridgeError,
+    BridgeState,
+    Config,
+    chat,
+    validate_ai_config,
+    validate_chat_request,
+)
 
 
 class FakeResponse:
@@ -153,6 +160,30 @@ class DeepSeekBridgeTest(unittest.TestCase):
         with self.assertRaises(BridgeError) as raised:
             state.run_chat("same-key", b'{"message":"two"}')
         self.assertEqual(raised.exception.status, 409)
+
+    def test_runtime_model_config_is_validated_and_keeps_hidden_key(self):
+        updated = validate_ai_config(
+            {
+                "provider": "openai",
+                "base_url": "https://api.openai.com/v1/",
+                "model": "gpt-4.1-mini",
+            },
+            self.config,
+        )
+        self.assertEqual(updated.provider, "openai")
+        self.assertEqual(updated.base_url, "https://api.openai.com/v1")
+        self.assertEqual(updated.model, "gpt-4.1-mini")
+        self.assertEqual(updated.api_key, "test-key")
+
+        with self.assertRaises(BridgeError):
+            validate_ai_config({"base_url": "file:///etc/passwd"}, self.config)
+
+    def test_unconfigured_chat_returns_actionable_error(self):
+        state = BridgeState(Config(api_key=""))
+        with self.assertRaises(BridgeError) as raised:
+            state.run_chat("missing-key", b'{"message":"hello"}')
+        self.assertEqual(raised.exception.status, 503)
+        self.assertEqual(raised.exception.code, "AI_NOT_CONFIGURED")
 
 if __name__ == "__main__":
     unittest.main()

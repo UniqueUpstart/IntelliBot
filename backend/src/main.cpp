@@ -173,6 +173,66 @@ int main(int argc, char** argv) {
       }
       return;
     }
+    /* 模型配置只允许本机页面读取和修改。API Key 写进本机 AI 服务，
+       不存进浏览器，也不通过 GET 返回给页面。 */
+    if ((req.method == "GET" || req.method == "PUT") &&
+        req.path == "/api/v1/ai/config") {
+      const auto request_id = "req-ai-config-" + std::to_string(ai_serial.fetch_add(1) + 1);
+      auto fail = [&](int status, const std::string& code, const std::string& message) {
+        response(res, status, request_id, nullptr, code, message);
+      };
+      if (!ai) {
+        fail(503, "AI_NOT_CONFIGURED", "本地 AI 服务尚未启动");
+        return;
+      }
+      if (req.method == "PUT") {
+        const auto peer = req.remote_addr;
+        const bool local_peer = peer.empty() || peer == "127.0.0.1" ||
+                                peer == "::1" || peer == "::ffff:127.0.0.1";
+        if (!local_peer) {
+          fail(403, "AI_CONFIG_LOCAL_ONLY", "模型配置只允许从本机修改");
+          return;
+        }
+        if (req.body.empty() || req.body.size() > 8192) {
+          fail(413, "BODY_TOO_LARGE", "配置请求需为1至8192字节");
+          return;
+        }
+        try {
+          const auto value = json::parse(req.body);
+          if (!value.is_object()) throw std::runtime_error("object required");
+        } catch (...) {
+          fail(400, "INVALID_JSON", "配置请求必须为JSON对象");
+          return;
+        }
+      }
+      const auto upstream = req.method == "GET" ? ai->get_config() : ai->configure(req.body);
+      if (!upstream.connected) {
+        fail(502, "AI_UNAVAILABLE", "本地 AI 服务未响应");
+        return;
+      }
+      if (upstream.status != 200) {
+        try {
+          const auto error = json::parse(upstream.body).at("error");
+          fail(upstream.status, error.value("code", "AI_UPSTREAM_ERROR"),
+               error.value("message", "模型配置失败"));
+        } catch (...) {
+          fail(502, "AI_UPSTREAM_ERROR", "模型配置服务返回异常");
+        }
+        return;
+      }
+      try {
+        const auto data = json::parse(upstream.body);
+        if (!data.is_object() || !data.contains("configured") ||
+            !data["configured"].is_boolean() || !data.contains("model") ||
+            !data["model"].is_string()) {
+          throw std::runtime_error("invalid ai config response");
+        }
+        response(res, 200, request_id, data);
+      } catch (...) {
+        fail(502, "AI_INVALID_RESPONSE", "模型配置服务返回了非法响应");
+      }
+      return;
+    }
     /* DeepSeek 可能等待数十秒，必须放在全局业务锁外；否则等待回复时，
        仿真控制、状态轮询和页面其他请求都会被同一把锁卡住。 */
     if (req.method == "POST" && req.path == "/api/v1/chat") {

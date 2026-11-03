@@ -14,7 +14,8 @@
   var field = wrap.querySelector('.composer__input');
   if (!field) return;
 
-  var PAD_LEFT = 16;
+  /* 左侧 7 + 模型按钮最大 138 + 9 的呼吸位，与 CSS 的 padding-left 同值 */
+  var PAD_LEFT = 154;
   /* 右边让出的位置：发送钮 36 + 距右 6 + 缝 10 = 52，与
      css/chat.css 里 .composer__input 的 padding-right 同值 */
   var PAD_RIGHT = 52;

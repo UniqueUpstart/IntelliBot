@@ -23,9 +23,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose, sampleDancePose } from './homepage_motions.js?v=16';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose } from './homepage_motions.js?v=16';
 import { Q1_REST_POSE, Q1_MOTIONS } from './q1_motion_data.js?v=2';
-import { STREET_DANCE } from './street_dance_data.js?v=2';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */
@@ -1102,94 +1101,6 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     setPointerAimPaused(id === 'street_dance', 'dance');
   };
 
-  /* —— 右栏手势卡的缩略图 ——
-     机器人只有一个，卡却要六张小图。拿主渲染器渲到一张离屏 target 上，
-     每张拍一次、读回像素转 PNG，之后直接吃缓存；姿势用动作库里同一份采样
-     （samplePose），拍完把骨骼与朝向原样放回，主画面不会留下一个歪着的定格。 */
-  const THUMB = 128;
-  let thumbTarget = null;
-  const thumbCache = Object.create(null);
-  /* 正交取景：正交相机的 top/bottom 是相对镜头中心的高度偏移，不是世界坐标，
-     所以先定中心 y，再给 ±0.65 —— 世界 y 落在 -0.10 ~ 1.20。
-     上沿多留一点是给「加油 / 伸懒腰」这类举手过顶的动作，别把手裁在边上 */
-  const THUMB_HALF = 0.65;
-  const thumbCam = new THREE.OrthographicCamera(-THUMB_HALF, THUMB_HALF, THUMB_HALF, -THUMB_HALF, 0.05, 12);
-  thumbCam.position.set(0, 0.55, 3);
-  thumbCam.lookAt(0, 0.55, 0);
-
-  /* 按关节角摆姿势：先把同一根骨骼上的关节归到一起，再在绑定四元数上
-     依次乘上各自的轴角（与 buildClip 里生成关键帧的算法一致），
-     否则同一根骨骼的第二个关节会把第一个覆盖掉 */
-  function setJointPose(pose) {
-    if (!joints) return;
-    const groups = new Map();
-    Object.keys(joints).forEach((joint) => {
-      const j = joints[joint];
-      if (!groups.has(j.bone)) groups.set(j.bone, {bone: j.bone, rest: j.rest, items: []});
-      groups.get(j.bone).items.push({joint, axis: j.axis});
-    });
-    const q = new THREE.Quaternion();
-    groups.forEach(({bone, rest, items}) => {
-      bone.quaternion.copy(rest);
-      items.forEach(({joint, axis}) => {
-        const base = Q1_REST_POSE[joint] ?? 0;
-        bone.quaternion.multiply(q.setFromAxisAngle(axis, (pose[joint] ?? base) - base));
-      });
-    });
-    if (model) model.updateMatrixWorld(true);
-  }
-
-  function motionThumb(id) {
-    if (!ready || !model || !joints || (!Q1_MOTIONS[id] && id !== STREET_DANCE.id)) return '';
-    if (thumbCache[id]) return thumbCache[id];
-
-    if (!thumbTarget) {
-      thumbTarget = new THREE.WebGLRenderTarget(THUMB, THUMB, {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-      });
-      thumbTarget.texture.colorSpace = THREE.SRGBColorSpace;
-    }
-
-    const savedPose = capturePose();
-    const savedRot = rig.rotation.clone();
-    const savedTarget = renderer.getRenderTarget();
-    /* 手里那张卡挂在 rig 下，别让它闯进缩略图里 */
-    const cardWas = cardMesh ? cardMesh.group.visible : false;
-    if (cardWas) cardMesh.group.visible = false;
-
-    /* 稍微侧一点：纯正面时前后摆臂会被压成一条竖线，看不出在做哪个动作 */
-    rig.rotation.set(0, 0.34, 0);
-    setJointPose(id === STREET_DANCE.id
-      ? sampleDancePose(STREET_DANCE.duration * 0.42, STREET_DANCE)
-      : samplePose(id, 0.42));
-
-    const pixels = new Uint8Array(THUMB * THUMB * 4);
-    renderer.setRenderTarget(thumbTarget);
-    renderer.clear();
-    renderer.render(scene, thumbCam);
-    renderer.readRenderTargetPixels(thumbTarget, 0, 0, THUMB, THUMB, pixels);
-    renderer.setRenderTarget(savedTarget);
-
-    rig.rotation.copy(savedRot);
-    if (cardWas) cardMesh.group.visible = true;
-    applyPose(savedPose);
-    if (REDUCED) renderer.render(scene, camera);
-
-    /* 读回来的像素是自下而上排的，翻一次再写进 canvas */
-    const out = document.createElement('canvas');
-    out.width = out.height = THUMB;
-    const ctx = out.getContext('2d');
-    const img = ctx.createImageData(THUMB, THUMB);
-    for (let y = 0; y < THUMB; y++) {
-      const src = (THUMB - 1 - y) * THUMB * 4;
-      img.data.set(pixels.subarray(src, src + THUMB * 4), y * THUMB * 4);
-    }
-    ctx.putImageData(img, 0, 0);
-    thumbCache[id] = out.toDataURL('image/png');
-    return thumbCache[id];
-  }
-
   window.robot3d = {
     scene, camera, renderer, rig,
     get model() { return model; },
@@ -1213,7 +1124,6 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     getMotionCatalog() { return motionController ? motionController.getCatalog() : []; },
     stopGesture() { if (motionController) motionController.stop(); },
     /* 右栏手势卡要的那张小图：第一次调用现拍一张 PNG，之后走缓存 */
-    motionThumb,
     /* 拖卡片那一套：命中判定、右手屏幕坐标、接住后走完仪式再播动作 */
     hitTest,
     handScreen,

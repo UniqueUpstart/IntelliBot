@@ -72,11 +72,9 @@ for /l %%i in (1,1,30) do if not defined READY call :probe
 if not defined READY goto :bridge_timeout
 
 set "AI_ARG="
-%PYQ% "%ROOT%\ai\deepseek_bridge.py" --check-config >nul 2>&1
-if errorlevel 1 goto :ai_skipped
 if "%AI_PORT%"=="%PORT%" goto :ai_port_conflict
 if "%AI_PORT%"=="%SIM_PORT%" goto :ai_port_conflict
-echo [ai] starting DeepSeek local service :%AI_PORT%
+echo [ai] starting local model service :%AI_PORT%
 start "IntelliBot AI bridge" /min %PYQ% "%ROOT%\ai\deepseek_bridge.py" --port %AI_PORT%
 set "AI_READY="
 for /l %%i in (1,1,20) do if not defined AI_READY call :probe_ai
@@ -84,10 +82,6 @@ if not defined AI_READY (
   echo [ai] service did not start, continuing without DeepSeek.
   "%SystemRoot%\System32\taskkill.exe" /FI "WINDOWTITLE eq IntelliBot AI bridge*" /T /F >nul 2>&1
 ) else set "AI_ARG=--ai-url http://127.0.0.1:%AI_PORT%"
-goto :ai_done
-
-:ai_skipped
-echo [ai] .env is not configured, DeepSeek chat stays disabled.
 goto :ai_done
 
 :ai_port_conflict

@@ -78,7 +78,7 @@ function sampleTrack(points, beat) {
   return last[1];
 }
 
-export function sampleDancePose(time, transform) {
+function sampleDancePose(time, transform) {
   const beat = time * transform.bpm / 60;
   const pose = {...STREET_DANCE_REST_POSE};
   Object.entries(transform.tracks).forEach(([joint, points]) => {
@@ -293,9 +293,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   };
 }
 
-/* 所有手势类动作都统一收进右栏，左栏 Action 只保留非手势卡片。
-   卡面也不再写名字：模型就绪后换成机器人做这个动作的缩略图，
-   模型没加载出来（或者没有 WebGL）时退回名字，卡片不至于空着 */
+/* 所有手势类动作都统一收进右栏，使用文字卡面，动作名称直接可读。 */
 const RAIL_MOTIONS = HOME_MOTIONS;
 
 export function mountHomeMotionControls(play) {
@@ -318,8 +316,7 @@ export function mountHomeMotionControls(play) {
     if (!card) return;
     card.classList.add('is-motion');
     card.dataset.motion = motion.id;
-    card.innerHTML = `<span class="motion__label">${motion.label}</span>`
-      + '<img class="motion__thumb" alt="" decoding="async" draggable="false" hidden>';
+    card.innerHTML = `<span class="motion__label">${motion.label}</span>`;
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `播放${motion.label}动作`);
@@ -339,8 +336,7 @@ export function mountHomeMotionControls(play) {
   if (danceCard) {
     danceCard.classList.add('is-motion');
     danceCard.dataset.motion = STREET_DANCE.id;
-    danceCard.innerHTML = `<span class="motion__label">${STREET_DANCE.label}</span>`
-      + '<img class="motion__thumb" alt="" decoding="async" draggable="false" hidden>';
+    danceCard.innerHTML = `<span class="motion__label">${STREET_DANCE.label}</span>`;
     danceCard.setAttribute('role', 'button');
     danceCard.setAttribute('tabindex', '0');
     danceCard.setAttribute('aria-label', '播放街舞动作');
@@ -354,43 +350,6 @@ export function mountHomeMotionControls(play) {
       activateDance();
     });
   }
-
-  /* 缩略图是 3D 那侧离屏渲染出来的（见 robot3d.js 的 motionThumb）。
-     模型 6.4MB，比这段脚本晚就绪：先留名字，robot-ready 再补一次 */
-  function fillThumbs() {
-    const api = window.robot3d;
-    if (!api || typeof api.motionThumb !== 'function') return false;
-    let filled = false;
-    RAIL_MOTIONS.forEach((motion, index) => {
-      const card = cards[index];
-      if (!card) return;
-      const img = card.querySelector('.motion__thumb');
-      if (!img || img.getAttribute('src')) return;
-      const url = api.motionThumb(motion.id);
-      if (!url) return;
-      img.src = url;
-      img.hidden = false;
-      const label = card.querySelector('.motion__label');
-      if (label) label.remove();
-      filled = true;
-    });
-    if (danceCard) {
-      const img = danceCard.querySelector('.motion__thumb');
-      if (img && !img.getAttribute('src')) {
-        const url = api.motionThumb(STREET_DANCE.id);
-        if (url) {
-          img.src = url;
-          img.hidden = false;
-          const label = danceCard.querySelector('.motion__label');
-          if (label) label.remove();
-          filled = true;
-        }
-      }
-    }
-    return filled;
-  }
-
-  if (!fillThumbs()) window.addEventListener('robot-ready', fillThumbs, { once: true });
 
   return (activeId) => {
     cards.forEach((card) => {

@@ -389,105 +389,148 @@
   text-align:center;
 }
 .composer[aria-busy="true"] .composer__input{opacity:.68;cursor:wait}
-/* 发送钮：36 见方的圆，里面只有一枚向上箭头 —— 图形是 icon/arrow.svg
-   里那条路径（只留填充、没有描边），颜色走 currentColor，两态换色不用换图。
-   描边去掉了，底色只有一层：主题色，有字时靠 scale 从圆心涨满 ——
-   与左栏那排圆钮（.item__btn::before）是同一套写法、同一对曲线：
-   进场 .1s (.16,.84,.3,1) 先快后慢地铺开，出场 .1s 走它的镜像
-   (.7,0,.84,.16)，色块沿原路缩回圆心；箭头换色跟底色同一拍，
-   所以看着是一起亮、一起退。
-   没字时按钮自己是全透明的，只剩一枚箭头浮在输入胶囊上 ——
-   底色在这里只表示「现在能不能发」，不能发的时候不该先占一块面板色。
-   （原来按钮本体铺的 --panel 其实一直只在这一态露得出来：涨满之后
-   主题色把那块圆完全盖住，所以直接把这一层去掉就行，不用另做显隐。）
-   没有 hover 一档：鼠标划过不该把「能不能发」这件事搅浑。
-   overflow:hidden 是给飞出的箭头用的：它得在圆的边缘被裁掉，
-   读起来才是「从按钮里飞出去」 */
+/* 发送钮：与主流聊天界面一致的紧凑圆形动作按钮；有内容时加深，空输入时收淡。 */
 .composer__send{
   position:absolute;
-  right:6px;
-  bottom:6px;
-  width:36px; height:36px;
+  right:7px;
+  bottom:7px;
+  width:34px; height:34px;
   display:grid; place-items:center;
   padding:0;
   border:0;
   border-radius:50%;
-  /* 未触发（输入框为空）时不铺底：只留箭头，底色的出现就代表「可以发了」 */
-  background:transparent;
-  color:var(--theme);
+  background:var(--bg);
+  color:var(--text-muted);
   cursor:pointer;
-  overflow:hidden;
-  /* 负层级的那层底色要停在按钮自己的层叠上下文里，才压得住 */
-  isolation:isolate;
-  /* 只补间字色：几何恒定，底色交给下面的 ::before */
-  transition:color .1s cubic-bezier(.7,0,.84,.16);
-}
-.composer__send::before{
-  content:'';
-  position:absolute; inset:0;
-  z-index:-1;
-  border-radius:inherit;
-  background:var(--theme);
-  /* 颜色常驻、不参与过渡：可见性完全交给 scale，
-     否则出场那一帧颜色会先跳回透明，0.1s 的收缩就落在看不见的色块上 */
-  scale:0;
-  transition:scale .1s cubic-bezier(.7,0,.84,.16);
+  transition:background-color .14s ease,color .14s ease,transform .1s ease;
 }
 .composer__send.is-filled{
-  color:var(--text-invert);
-  transition:color .1s cubic-bezier(.16,.84,.3,1);
+  background:var(--text-secondary);
+  color:var(--card-solid);
 }
-.composer__send.is-filled::before{
-  scale:1;
-  transition:scale .1s cubic-bezier(.16,.84,.3,1);
-}
-/* 鼠标的反馈已经交给底色那一层，这里只留键盘可达性的那圈框 */
+.composer__send:hover:not(:disabled){transform:scale(1.04)}
+.composer__send:active:not(:disabled){transform:scale(.96)}
 .composer__send:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
-/* 等回复的这段时间按钮是禁用的：不换成别的形状，只压一档透明度，
-   同时把光标换成沙漏，避免「看得见点、点了没反应」 */
-.composer__send:disabled{opacity:.55;cursor:wait}
+.composer__send:disabled{opacity:.45;cursor:wait}
 
-/* 箭头画了两份、叠在同一格里：一份负责飞出去，一份在下方等着升回来。
-   两份静止时像素级重合，所以平时看到的仍是一枚箭头，不用额外做显隐。
-   图形是 icon/arrow.svg 里那条路径，只有填充、没有描边，颜色一律走
-   currentColor —— 外部文件用 mask 引用在 file:// 下取不到 alpha，
-   整枚图标会被当成空的抹掉，所以路径直接落在 html 里 */
-.composer__send-icon{display:grid; width:24px; height:24px}
-.composer__send-arrow{
-  grid-area:1/1;                 /* 同一格叠放，谁也不占第二行 */
-  display:block; width:100%; height:100%;
-  fill:currentColor;
-  /* arrow.svg 是一枚右指的箭头，放倒 90 度朝上。
-     旋转写成独立属性（不是 transform），下面飞行的位移就能继续用 translate，
-     两条各管各的坐标，不必在每个关键帧里重复写 rotate */
-  rotate:-90deg;
-  translate:0 0;
+/* 聊天框内的模型选择与发送钮：采用现代聊天界面的紧凑工具条节奏。 */
+.composer__input{padding-left:154px}
+.composer__model{
+  position:absolute;
+  left:7px;
+  bottom:7px;
+  z-index:2;
+  height:34px;
+  max-width:138px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 10px;
+  border:0;
+  border-radius:17px;
+  background:var(--bg);
+  color:var(--text-secondary);
+  font:inherit;
+  font-size:var(--fs-12);
+  cursor:pointer;
 }
-
-/* 发出的那一下：上面那枚急急冲出上沿（急出），下面那枚从底边缓缓升回原位（缓入）。
-   位移给的是像素：图标 24、墨迹约 18 高，半高 9 加按钮半高 18 是 27，
-   取 40 就足够整枚越出，多出来的一截反正被 overflow 裁掉。
-   两条动画同长同起跑点，用 32% 这个时刻对齐：出去的那段短而加速，
-   回来的那段长而强减速（(.16,.84,.3,1)，与页面其余进场动画同一条曲线）。
-   之所以用两枚而不是一枚越过上沿后再瞬移到下方：那样两段之间有一帧
-   会落在「换位」的窗口里，按得越频繁越可能被撞上，出现一帧箭头停在正中。
-   两条并存就没有这个窗口，出去的那枚停在上沿之外（本来就被裁掉），
-   下面那枚的 0 → 32% 是原地等，等到了才起步 */
-@keyframes composer-send-out{
-  0%  {translate:0 0;    animation-timing-function:cubic-bezier(.45,.02,.85,.4)}
-  32% {translate:0 -40px}
-  100%{translate:0 -40px}
+.composer__model:hover,
+.composer__model[aria-expanded="true"]{background:color-mix(in srgb,var(--theme) 22%,var(--bg))}
+.composer__model:focus-visible{outline:2px solid var(--theme);outline-offset:2px}
+.composer__model-dot{
+  flex:0 0 auto;
+  width:7px; height:7px;
+  border-radius:50%;
+  background:var(--text-muted);
 }
-@keyframes composer-send-in{
-  0%  {translate:0 40px}
-  32% {translate:0 40px; animation-timing-function:cubic-bezier(.16,.84,.3,1)}
-  100%{translate:0 0}
+.composer__model.is-ready .composer__model-dot{background:var(--hint)}
+.composer__model-label{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-.composer__send-icon.is-flying > .composer__send-arrow:first-child{animation:composer-send-out .62s both}
-.composer__send-icon.is-flying > .composer__send-arrow:last-child{animation:composer-send-in .62s both}
-/* 关掉动效的人不该看到箭头凭空消失又出现 */
-@media (prefers-reduced-motion: reduce){
-  .composer__send-icon.is-flying > .composer__send-arrow{animation:none}
+.composer__model > svg{
+  flex:0 0 auto;
+  width:12px; height:12px;
+  fill:none; stroke:currentColor; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.model-menu{
+  position:absolute;
+  left:0;
+  bottom:calc(100% + 10px);
+  z-index:30;
+  width:min(300px,calc(100vw - 32px));
+  padding:10px;
+  border-radius:18px;
+  background:var(--card-solid);
+  box-shadow:0 16px 42px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 2));
+}
+.model-menu[hidden]{display:none}
+.model-menu__title{
+  padding:3px 8px 9px;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+}
+.model-menu__list{display:grid;gap:4px;max-height:220px;overflow-y:auto}
+.model-menu__item,
+.model-menu__manage{
+  appearance:none;-webkit-appearance:none;
+  width:100%;
+  border:0;
+  background:transparent;
+  color:var(--text-secondary);
+  font:inherit;
+  cursor:pointer;
+  text-align:left;
+}
+.model-menu__item{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  min-height:42px;
+  padding:7px 10px;
+  border-radius:12px;
+}
+.model-menu__item:hover,
+.model-menu__item.is-on{background:var(--bg)}
+.model-menu__item.is-on{color:var(--text-primary)}
+.model-menu__name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:var(--fs-14);
+}
+.model-menu__provider{color:var(--text-muted);font-size:var(--fs-12)}
+.model-menu__item.is-on .model-menu__provider::after{content:' · ✓'}
+.model-menu__manage{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:40px;
+  margin-top:6px;
+  padding:0 10px;
+  border-top:1px solid var(--border);
+  font-size:var(--fs-14);
+}
+.model-menu__manage:hover{color:var(--theme-dark)}
+.model-menu__manage svg{
+  width:16px;height:16px;fill:currentColor;
+  transform:rotate(180deg);
+}
+.composer__send-icon{
+  display:block;
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
 }
 /* 悬停不做任何变化：这是常驻在页面底部的一格，光标扫过它就等于扫过
    大片空白，回回亮一下反而吵；能输入这件事由光标（cursor:text）说明就够。

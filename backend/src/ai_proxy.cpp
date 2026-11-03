@@ -32,12 +32,27 @@ AiProxy::AiProxy(const std::string& url) {
 }
 
 AiResponse AiProxy::chat(const std::string& body, const std::string& idempotency_key) const {
+  return request("POST", "/chat", body, {{"Idempotency-Key", idempotency_key}});
+}
+
+AiResponse AiProxy::get_config() const {
+  return request("GET", "/config", "");
+}
+
+AiResponse AiProxy::configure(const std::string& body) const {
+  return request("POST", "/config", body);
+}
+
+AiResponse AiProxy::request(const std::string& method, const std::string& path,
+                            const std::string& body,
+                            const httplib::Headers& headers) const {
   httplib::Client client(host_, port_);
   client.set_connection_timeout(0, 500000);
   client.set_read_timeout(35, 0);
   client.set_write_timeout(2, 0);
-  httplib::Headers headers{{"Idempotency-Key", idempotency_key}};
-  auto result = client.Post("/chat", headers, body, "application/json");
+  auto result = method == "GET"
+      ? client.Get(path.c_str(), headers)
+      : client.Post(path.c_str(), headers, body, "application/json");
   if (!result) return {};
   return {true, result->status, result->body};
 }

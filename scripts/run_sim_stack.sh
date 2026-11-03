@@ -63,30 +63,26 @@ if [ "${READY:-0}" != "1" ]; then
   exit 1
 fi
 AI_ARGS=()
-if "$PYTHON" "$ROOT/ai/deepseek_bridge.py" --check-config >/dev/null 2>&1; then
-  if [ "$AI_PORT" = "$SIM_PORT" ] || [ "$AI_PORT" = "$PORT" ]; then
-    echo "AI_PORT 不能与 PORT 或 SIM_PORT 相同" >&2
-    exit 2
+if [ "$AI_PORT" = "$SIM_PORT" ] || [ "$AI_PORT" = "$PORT" ]; then
+  echo "AI_PORT 不能与 PORT 或 SIM_PORT 相同" >&2
+  exit 2
+fi
+echo "== 启动本地模型服务 :$AI_PORT"
+"$PYTHON" "$ROOT/ai/deepseek_bridge.py" --port "$AI_PORT" &
+AI_PID=$!
+for _ in $(seq 1 20); do
+  if curl -fsS --max-time 1 "http://127.0.0.1:$AI_PORT/health" >/dev/null 2>&1; then
+    AI_READY=1; break
   fi
-  echo "== 启动 DeepSeek 本地服务 :$AI_PORT"
-  "$PYTHON" "$ROOT/ai/deepseek_bridge.py" --port "$AI_PORT" &
-  AI_PID=$!
-  for _ in $(seq 1 20); do
-    if curl -fsS --max-time 1 "http://127.0.0.1:$AI_PORT/health" >/dev/null 2>&1; then
-      AI_READY=1; break
-    fi
-    if ! kill -0 "$AI_PID" 2>/dev/null; then break; fi
-    sleep 0.25
-  done
-  if [ "${AI_READY:-0}" = "1" ]; then
-    AI_ARGS=(--ai-url "http://127.0.0.1:$AI_PORT")
-  else
-    echo "== AI 服务启动失败，本次仅启动仿真与网页" >&2
-    kill "$AI_PID" 2>/dev/null || true
-    AI_PID=""
-  fi
+  if ! kill -0 "$AI_PID" 2>/dev/null; then break; fi
+  sleep 0.25
+done
+if [ "${AI_READY:-0}" = "1" ]; then
+  AI_ARGS=(--ai-url "http://127.0.0.1:$AI_PORT")
 else
-  echo "== 未配置 .env，DeepSeek 对话保持关闭"
+  echo "== 模型服务启动失败，本次仅启动仿真与网页" >&2
+  kill "$AI_PID" 2>/dev/null || true
+  AI_PID=""
 fi
 
 echo "== 仿真桥就绪，启动后端 :$PORT"
