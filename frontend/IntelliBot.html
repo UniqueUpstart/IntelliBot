@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="css/workspace.css?v=3">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=39">
+  <link rel="stylesheet" href="css/chat.css?v=40">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -345,12 +345,35 @@
             <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
             <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
           </div>
-          <button class="composer__model" type="button" data-model-trigger
-                  aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
-            <span class="composer__model-dot" aria-hidden="true"></span>
-            <span class="composer__model-label" data-model-label>选择模型</span>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-          </button>
+          <div class="composer__surface">
+            <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
+                      maxlength="500" data-assistant-input
+                      data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
+                      placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
+            <div class="composer__footer">
+              <button class="composer__history" type="button" data-chat-history
+                      data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录"
+                      aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+              <div class="composer__trail">
+                <button class="composer__model" type="button" data-model-trigger
+                        aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+                  <span class="composer__model-dot" aria-hidden="true"></span>
+                  <span class="composer__model-label" data-model-label>选择模型</span>
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+                </button>
+                <button class="composer__send" type="button" data-assistant-send
+                        data-i18n-aria="chat.send" aria-label="发送">
+                  <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 19V5M6 11l6-6 6 6"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
             <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
             <div class="model-menu__list" data-model-menu-list></div>
@@ -359,19 +382,6 @@
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
             </button>
           </div>
-          <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
-                    maxlength="500" data-assistant-input
-                    data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
-                    placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
-          <button class="composer__send" type="button" data-assistant-send
-                  data-i18n-aria="chat.send" aria-label="发送">
-            <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 19V5M6 11l6-6 6 6"/>
-            </svg>
-          </button>
-          <button class="composer__history" type="button" data-chat-history
-                  data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录"
-                  aria-expanded="false">+</button>
         </div>
       </div>
       <section class="sc-group sc-group--action">
@@ -844,10 +854,10 @@
 
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
-<script src="js/composer.js?v=6"></script>
-<script src="js/model_config.js?v=6"></script>
+<script src="js/composer.js?v=7"></script>
+<script src="js/model_config.js?v=7"></script>
 <script src="js/persona.js?v=1"></script>
-<script src="js/assistant_chat.js?v=10"></script>
+<script src="js/assistant_chat.js?v=11"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->

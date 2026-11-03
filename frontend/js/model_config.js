@@ -186,7 +186,7 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = current.configured
-      ? modelLabel(current.model)
+      ? current.model
       : t('model.choose', '选择模型');
     trigger.classList.toggle('is-ready', current.configured);
     trigger.setAttribute('aria-label', current.configured

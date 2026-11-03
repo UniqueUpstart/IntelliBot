@@ -1,58 +1,17 @@
-/* 底部 AI 输入胶囊的自适应尺寸：一行装不下先横向长到半页宽，
-   再装不下才纵向长到四行，四行以上转成滚动。
-
-   这里的 14 / 20 / 48 与 css/chat.css 里的盒模型一一对应 ——
-   上下内边距各 14、行高 20，一行的高度就是 14×2 + 20 = 48，
-   四行是 14×2 + 20×4 = 108。CSS 那边改行高或内边距，这两个数要跟着改。
-
-   宽度没有用 CSS 的 ch 或 auto —— 输入框要按「最长那一行」长，
-   而 textarea 的 scrollWidth 不会超出自身宽度（会自动折行），
-   于是另挂一枚不可见的镜子元素量文字宽度 */
+/* Codex 式输入卡片：宽度由外层固定，文本区只随内容在 1–6 行之间长高。
+   输入区与底部工具条分开排，模型选择和发送键固定在右下角。 */
 (function () {
   var wrap = document.querySelector('.composer');
   if (!wrap) return;
   var field = wrap.querySelector('.composer__input');
   if (!field) return;
 
-  /* 左侧 7 + 模型按钮最大 138 + 9 的呼吸位，与 CSS 的 padding-left 同值 */
-  var PAD_LEFT = 154;
-  /* 右边让出的位置：发送钮 36 + 距右 6 + 缝 10 = 52，与
-     css/chat.css 里 .composer__input 的 padding-right 同值 */
-  var PAD_RIGHT = 52;
-  var PAD_Y = 14;
-  var LINE = 20;
-  var MIN_H = PAD_Y * 2 + LINE;
-  var MAX_H = PAD_Y * 2 + LINE * 4;
-
-  var mirror = document.createElement('span');
-  mirror.className = 'composer__measure';
-  mirror.setAttribute('aria-hidden', 'true');
-  wrap.appendChild(mirror);
-
-  /* 默认 1/4 页宽，最多长到 1/2；中等宽度保留一条能正常输入的最小长度，
-     否则左侧模型按钮会吃掉内容区。窄屏那一档两栏已经横过来贴底，
-     横向没有余量可长，固定成铺满可用宽度、只长高 */
-  function limits() {
-    var vw = document.documentElement.clientWidth;
-    if (window.matchMedia('(max-width: 640px)').matches) {
-      var full = vw - 78;
-      return { base: full, max: full };
-    }
-    var available = vw - 40;
-    var base = Math.min(available, Math.max(vw * 0.25, 420));
-    return { base: base, max: Math.min(available, Math.max(base, vw * 0.5)) };
-  }
+  var MIN_H = 54;
+  var MAX_H = 150;
 
   function layout() {
-    var lim = limits();
-
-    /* 空值时镜子没有内容，宽度自然落在 base，不会因为 placeholder 长而提前撑开 */
-    mirror.textContent = field.value;
-    var need = mirror.getBoundingClientRect().width + PAD_LEFT + PAD_RIGHT + 1;
-    field.style.width = Math.min(Math.max(need, lim.base), lim.max) + 'px';
-
-    /* 高度先放回 auto 量内容高度，再夹在 1–4 行之间；
-       量出来超过四行就把纵向滚动放开，光标在末行时浏览器自己会跟 */
+    /* 高度先放回 auto 量内容高度，再夹在 1–6 行之间；
+       量出来超过六行就把纵向滚动放开，光标在末行时浏览器自己会跟 */
     field.style.height = 'auto';
     var content = field.scrollHeight;
     field.style.height = Math.min(Math.max(content, MIN_H), MAX_H) + 'px';
@@ -72,7 +31,7 @@
   document.addEventListener('pointerdown', function (event) {
     if (document.activeElement !== field) return;
     var target = event.target;
-    if (target && target.closest && target.closest('.composer__input, .composer__send')) return;
+    if (target && target.closest && target.closest('.composer')) return;
     field.blur();
   }, true);
 

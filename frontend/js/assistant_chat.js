@@ -252,7 +252,7 @@
     var expanded = !!tab && tab.getAttribute('aria-expanded') === 'true';
     var key = expanded ? 'chat.closeHistory' : 'chat.openHistory';
     var fallback = expanded ? '关闭完整聊天记录' : '打开完整聊天记录';
-    historyButton.textContent = expanded ? '×' : '+';
+    historyButton.classList.toggle('is-open', expanded);
     historyButton.setAttribute('aria-expanded', String(expanded));
     historyButton.setAttribute('data-i18n-aria', key);
     historyButton.setAttribute('aria-label', tr(key, fallback));
