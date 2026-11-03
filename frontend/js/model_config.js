@@ -34,11 +34,6 @@
       baseUrl: 'https://api.deepseek.com',
       models: ['deepseek-flash', 'deepseek-v4-pro'],
     },
-    openai: {
-      label: 'OpenAI',
-      baseUrl: 'https://api.openai.com/v1',
-      models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini'],
-    },
     custom: {
       label: 'OpenAI Compatible',
       baseUrl: '',
@@ -60,6 +55,10 @@
 
   function providerName(provider) {
     return (PRESETS[provider] && PRESETS[provider].label) || provider || 'AI';
+  }
+
+  function normalizeProvider(provider) {
+    return provider === 'openai' ? 'custom' : (PRESETS[provider] ? provider : 'custom');
   }
 
   function normalizeModel(provider, model) {
@@ -164,14 +163,15 @@
   }
 
   function paint(config) {
+    var provider = normalizeProvider(config.provider || 'custom');
     current = {
-      provider: config.provider || 'custom',
+      provider: provider,
       base_url: config.base_url || '',
-      model: normalizeModel(config.provider || 'custom', config.model || ''),
+      model: normalizeModel(provider, config.model || ''),
       configured: !!config.configured,
       key_hint: config.key_hint || '',
     };
-    providerInput.value = PRESETS[current.provider] ? current.provider : 'custom';
+    providerInput.value = current.provider;
     baseInput.value = current.base_url;
     modelInput.value = current.model;
     keyInput.value = '';
@@ -261,8 +261,8 @@
   providerInput.addEventListener('change', function () {
     var provider = providerInput.value;
     var preset = PRESETS[provider] || PRESETS.custom;
-    if (preset.baseUrl) baseInput.value = preset.baseUrl;
-    if (preset.models.length) modelInput.value = preset.models[0];
+    baseInput.value = preset.baseUrl;
+    modelInput.value = preset.models[0] || '';
     renderDatalist(provider);
   });
 

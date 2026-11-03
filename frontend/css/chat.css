@@ -999,32 +999,32 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
    model + send on the right. No floating toolbar pieces.
    ============================================================ */
 .composer{
-  width:min(900px,calc(100vw - 220px));
+  width:min(720px,calc(100vw - 220px));
 }
 .composer__surface{
   position:relative;
   z-index:2;
   overflow:visible;
   border:1px solid color-mix(in srgb,#e8e8e8 88%,var(--border));
-  border-radius:30px;
+  border-radius:26px;
   background:var(--card-solid);
   box-shadow:
-    0 14px 36px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .42)),
-    0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .2));
+    0 12px 32px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .38)),
+    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .18));
   transition:border-color .16s ease,box-shadow .16s ease;
 }
 .composer__surface:focus-within{
   border-color:color-mix(in srgb,#d8d8d8 82%,var(--border));
   box-shadow:
-    0 16px 40px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .5)),
-    0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .24));
+    0 14px 34px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .46)),
+    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .22));
 }
 .composer__input{
   display:block;
   width:100%;
-  height:66px;
-  min-height:66px;
-  padding:17px 22px 4px;
+  height:60px;
+  min-height:60px;
+  padding:15px 21px 3px;
   border:0;
   border-radius:0;
   background:transparent;
@@ -1052,8 +1052,8 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   display:flex;
   align-items:center;
   gap:10px;
-  min-height:50px;
-  padding:0 11px 12px 18px;
+  min-height:46px;
+  padding:0 10px 10px 16px;
 }
 .composer__trail{
   min-width:0;
@@ -1065,8 +1065,8 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
 .composer__history{
   position:static;
   flex:0 0 auto;
-  width:36px;
-  height:36px;
+  width:34px;
+  height:34px;
   display:grid;
   place-items:center;
   padding:0;
@@ -1080,8 +1080,8 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   transition:background-color .16s ease,border-color .16s ease,color .16s ease;
 }
 .composer__history svg{
-  width:20px;
-  height:20px;
+  width:19px;
+  height:19px;
   fill:none;
   stroke:currentColor;
   stroke-width:1.8;
@@ -1105,15 +1105,15 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   position:static;
   z-index:auto;
   width:auto;
-  height:34px;
+  height:32px;
   max-width:min(280px,38vw);
   display:flex;
   align-items:center;
   gap:5px;
-  padding:0 7px;
-  border:0;
-  border-radius:10px;
-  background:transparent;
+  padding:0 9px;
+  border:1px solid color-mix(in srgb,#e8e8e8 84%,var(--border));
+  border-radius:11px;
+  background:color-mix(in srgb,var(--bg) 72%,var(--card-solid));
   color:var(--text-primary);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-size:13px;
@@ -1123,6 +1123,7 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
 }
 .composer__model:hover,
 .composer__model[aria-expanded="true"]{
+  border-color:color-mix(in srgb,var(--text-primary) 14%,var(--border));
   background:color-mix(in srgb,var(--text-primary) 5%,transparent);
   color:var(--text-primary);
 }
@@ -1157,8 +1158,8 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
 .composer__send{
   position:static;
   flex:0 0 auto;
-  width:39px;
-  height:39px;
+  width:38px;
+  height:38px;
   display:grid;
   place-items:center;
   padding:0;
@@ -1194,10 +1195,10 @@ body:has(.rail.is-open) .stage-chat,body:has(.modal[aria-hidden="false"]) .stage
   left:auto;
   bottom:calc(100% + 10px);
   z-index:40;
-  width:min(324px,calc(100vw - 24px));
+  width:min(312px,calc(100vw - 24px));
   padding:10px;
   border:1px solid color-mix(in srgb,#ececec 90%,var(--border));
-  border-radius:16px;
+  border-radius:15px;
   background:var(--card-solid);
   box-shadow:
     0 12px 30px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .82)),
