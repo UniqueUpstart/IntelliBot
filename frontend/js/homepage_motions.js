@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {moodId, setMood, onMood} from './faces.js?v=15';
 import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=3';
-import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=2';
+import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=3';
 
 const MOTION_BY_ID = Object.fromEntries([
   ...HOME_MOTIONS.map((motion) => [motion.id, motion]),

@@ -4,7 +4,7 @@
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
-import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=2';
+import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=3';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
 
 const skinStyle = document.createElement('style');
