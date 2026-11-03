@@ -248,11 +248,11 @@
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .persona-style{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 96px;
-  gap:12px;
+  display:flex;
+  align-items:flex-end;
+  gap:14px;
 }
-.persona-color{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
+.persona-color{flex:0 0 52px;display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
 .persona-color input{
   width:52px;height:42px;
   padding:4px;
@@ -261,6 +261,9 @@
   cursor:pointer;
   justify-self:start;
 }
+.persona-field--initials{flex:0 0 96px}
+.persona-view .view-badge,
+.persona-preview__dot{display:none}
 .persona-color input::-webkit-color-swatch-wrapper{padding:0}
 .persona-color input::-webkit-color-swatch{border:0;border-radius:10px}
 .persona-note{

@@ -75,6 +75,7 @@ class Config:
     timeout_s: float = 30.0
     provider: str = "deepseek"
     base_url: str = DEFAULT_BASE_URL
+    api_format: str = "openai"
 
 
 @dataclass
@@ -127,9 +128,18 @@ def load_config() -> Config:
     provider = pick("provider", "AI_PROVIDER", "deepseek")
     base_url = pick("base_url", "AI_BASE_URL", DEFAULT_BASE_URL)
     model = pick("model", "AI_MODEL", DEFAULT_MODEL)
+    api_format = pick("api_format", "AI_API_FORMAT", "openai").lower()
+    if api_format not in {"openai", "anthropic"}:
+        api_format = "openai"
     if provider.lower() == "deepseek":
         model = LEGACY_DEEPSEEK_MODELS.get(model, model)
-    return Config(api_key=api_key, model=model, provider=provider, base_url=base_url)
+    return Config(
+        api_key=api_key,
+        model=model,
+        provider=provider,
+        base_url=base_url,
+        api_format=api_format,
+    )
 
 
 def public_config(config: Config) -> dict:
@@ -137,6 +147,7 @@ def public_config(config: Config) -> dict:
         "provider": config.provider,
         "base_url": config.base_url,
         "model": config.model,
+        "api_format": config.api_format,
         "configured": bool(config.api_key),
         "key_hint": "••••" + config.api_key[-4:] if config.api_key else "",
     }
@@ -161,6 +172,11 @@ def validate_ai_config(value: object, current: Config) -> Config:
     provider = _validate_text(value.get("provider", current.provider), "provider", 48)
     base_url = _validate_text(value.get("base_url", current.base_url), "base_url", 300)
     model = _validate_text(value.get("model", current.model), "model", 120)
+    api_format = _validate_text(
+        value.get("api_format", current.api_format), "api_format", 24
+    ).lower()
+    if api_format not in {"openai", "anthropic"}:
+        raise BridgeError(400, "INVALID_AI_CONFIG", "模型格式必须是 openai 或 anthropic")
     if provider.lower() == "deepseek":
         model = LEGACY_DEEPSEEK_MODELS.get(model, model)
     parsed = urllib.parse.urlparse(base_url)
@@ -176,6 +192,7 @@ def validate_ai_config(value: object, current: Config) -> Config:
         base_url=base_url.rstrip("/"),
         model=model,
         api_key=api_key,
+        api_format=api_format,
     )
 
 
@@ -189,6 +206,7 @@ def save_config(config: Config) -> None:
                 "base_url": config.base_url,
                 "model": config.model,
                 "api_key": config.api_key,
+                "api_format": config.api_format,
             },
             ensure_ascii=False,
             indent=2,
@@ -466,18 +484,109 @@ def _default_open(request: urllib.request.Request, timeout: float):
     return urllib.request.urlopen(request, timeout=timeout)
 
 
+def _anthropic_payload(
+    config: Config,
+    message: str,
+    history: list[dict[str, str]],
+    persona: str = "",
+    *,
+    recovery: bool = False,
+    repair_content: str = "",
+) -> dict:
+    prepared = _request_payload(
+        config,
+        message,
+        history,
+        persona,
+        json_mode=False,
+        recovery=recovery,
+        repair_content=repair_content,
+    )
+    messages = prepared["messages"]
+    return {
+        "model": config.model,
+        "system": messages[0]["content"],
+        "messages": messages[1:],
+        "temperature": 0.2,
+        "max_tokens": 900,
+    }
+
+
+def _call_anthropic(
+    config: Config,
+    message: str,
+    history: list[dict[str, str]],
+    opener: Callable,
+    persona: str = "",
+    *,
+    recovery: bool = False,
+    repair_content: str = "",
+) -> tuple[str, str]:
+    payload = _anthropic_payload(
+        config,
+        message,
+        history,
+        persona,
+        recovery=recovery,
+        repair_content=repair_content,
+    )
+    endpoint = config.base_url.rstrip("/")
+    if not endpoint.endswith("/messages"):
+        endpoint += "/messages"
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        method="POST",
+        headers={
+            "x-api-key": config.api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+            "User-Agent": "IntelliBot/0.1",
+        },
+    )
+    try:
+        with opener(request, timeout=config.timeout_s) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        if error.code == 429:
+            raise BridgeError(429, "AI_RATE_LIMITED", "Anthropic 请求过于频繁，请稍后重试") from error
+        if error.code in {401, 403}:
+            raise BridgeError(502, "AI_AUTH_FAILED", "Anthropic API Key 无效或无权访问该模型") from error
+        raise BridgeError(502, "AI_UPSTREAM_ERROR", f"Anthropic 返回 HTTP {error.code}") from error
+    except (TimeoutError, urllib.error.URLError) as error:
+        raise BridgeError(502, "AI_UNAVAILABLE", "无法连接 Anthropic，请检查接口网址与网络") from error
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise BridgeError(502, "AI_INVALID_RESPONSE", "Anthropic 返回了无法解析的响应") from error
+
+    blocks = result.get("content") if isinstance(result, dict) else None
+    texts = [
+        block.get("text", "")
+        for block in blocks or []
+        if isinstance(block, dict) and block.get("type") == "text"
+    ]
+    content = "\n".join(texts).strip()
+    if not content:
+        raise BridgeError(502, "AI_INVALID_RESPONSE", "Anthropic 响应缺少文本内容")
+    return content, str(result.get("model") or config.model)
+
+
 def fetch_models(config: Config, opener: Callable = _default_open) -> list[str]:
     if not config.api_key:
         raise BridgeError(503, "AI_NOT_CONFIGURED", "请先填写 API Key")
     endpoint = config.base_url.rstrip("/") + "/models"
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "IntelliBot/0.1",
+    }
+    if config.api_format == "anthropic":
+        headers["x-api-key"] = config.api_key
+        headers["anthropic-version"] = "2023-06-01"
+    else:
+        headers["Authorization"] = f"Bearer {config.api_key}"
     request = urllib.request.Request(
         endpoint,
         method="GET",
-        headers={
-            "Authorization": f"Bearer {config.api_key}",
-            "Accept": "application/json",
-            "User-Agent": "IntelliBot/0.1",
-        },
+        headers=headers,
     )
     try:
         with opener(request, timeout=config.timeout_s) as response:
@@ -513,6 +622,16 @@ def _call_once(
     recovery: bool = False,
     repair_content: str = "",
 ) -> tuple[str, str]:
+    if config.api_format == "anthropic":
+        return _call_anthropic(
+            config,
+            message,
+            history,
+            opener,
+            persona,
+            recovery=recovery,
+            repair_content=repair_content,
+        )
     endpoint = config.base_url.rstrip("/")
     if not endpoint.endswith("/chat/completions"):
         endpoint += "/chat/completions"

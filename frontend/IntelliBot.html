@@ -19,14 +19,14 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=21"></script>
+<script src="js/i18n.js?v=24"></script>
   <link rel="stylesheet" href="css/base.css?v=11">
   <link rel="stylesheet" href="css/topbar.css?v=12">
   <link rel="stylesheet" href="css/rail.css?v=29">
-  <link rel="stylesheet" href="css/workspace.css?v=5">
+  <link rel="stylesheet" href="css/workspace.css?v=6">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=46">
+  <link rel="stylesheet" href="css/chat.css?v=48">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -209,24 +209,25 @@
           <div class="model-presets" role="group" data-i18n-aria="model.presets">
             <button class="model-preset is-on" type="button" data-model-preset
                     data-provider="deepseek" data-base-url="https://api.deepseek.com"
-                    data-prefill-model="deepseek-flash">
+                    data-api-format="openai" data-prefill-model="deepseek-flash">
               <strong>DeepSeek Flash</strong><span>deepseek-flash</span>
             </button>
             <button class="model-preset" type="button" data-model-preset
                     data-provider="deepseek" data-base-url="https://api.deepseek.com"
-                    data-prefill-model="deepseek-v4-pro">
+                    data-api-format="openai" data-prefill-model="deepseek-v4-pro">
               <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
             </button>
             <button class="model-preset" type="button" data-model-preset
-                    data-provider="custom" data-base-url="" data-prefill-model="">
+                    data-provider="custom" data-base-url="" data-api-format="openai"
+                    data-prefill-model="">
               <strong data-i18n="model.preset.custom">自定义模型</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
             </button>
           </div>
           <label class="model-field">
             <span data-i18n="model.provider">模型格式</span>
-            <select data-model-provider>
-              <option value="deepseek">DeepSeek</option>
-              <option value="custom" data-i18n="model.provider.custom">OpenAI 兼容</option>
+            <select data-model-format>
+              <option value="openai" data-i18n="model.format.openai">OpenAI</option>
+              <option value="anthropic" data-i18n="model.format.anthropic">Anthropic</option>
             </select>
           </label>
           <label class="model-field">
@@ -332,19 +333,26 @@
               <p class="view-sub" data-i18n="chatFlow.sub">慢慢说，我会把每一次对话都留在这里。</p>
             </div>
           </div>
-        </div>
-        <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
-          <header class="assistant-chat__toolbar">
-            <button class="assistant-chat__tool" type="button" data-assistant-stop data-i18n="chat.stop" hidden>停止动作</button>
-            <button class="assistant-chat__tool assistant-chat__settings" type="button"
-                    data-chat-settings data-i18n="chat.settings" aria-label="设置">
+          <div class="chat-view__actions">
+            <button class="assistant-chat__tool" type="button" data-assistant-stop
+                    data-i18n="chat.stop" hidden>停止动作</button>
+            <button class="chat-history-settings" id="chat-history-settings" type="button" data-chat-settings
+                    data-i18n-title="chat.manageHistory" data-i18n-aria="chat.manageHistory"
+                    title="管理聊天记录" aria-label="管理聊天记录" aria-expanded="false"
+                    aria-controls="chat-history-menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
                 <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>
               </svg>
-              <span data-i18n="chat.settings">设置</span>
             </button>
-          </header>
+            <div class="chat-history-menu" id="chat-history-menu" data-chat-history-menu
+                 role="menu" aria-labelledby="chat-history-settings" hidden>
+              <button type="button" role="menuitem" data-chat-export data-i18n="chat.export">导出记录</button>
+              <button type="button" role="menuitem" data-chat-clear data-i18n="chat.clear">清空记录</button>
+            </div>
+          </div>
+        </div>
+        <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
         </section>
         <div class="composer">
@@ -358,7 +366,7 @@
             <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
                       maxlength="500" data-assistant-input
                       data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
-                      placeholder="提出后续变更要求" aria-label="Ask IntelliBot"></textarea>
+                      placeholder="问问 IntelliBot…" aria-label="Ask IntelliBot"></textarea>
             <div class="composer__footer">
               <button class="composer__history" type="button" data-chat-history
                       data-i18n-aria="chat.openHistory" data-i18n-title="chat.openHistory"
@@ -876,7 +884,7 @@
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=12"></script>
 <script src="js/persona.js?v=1"></script>
-<script src="js/assistant_chat.js?v=13"></script>
+<script src="js/assistant_chat.js?v=15"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->

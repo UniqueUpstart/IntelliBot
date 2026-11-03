@@ -57,15 +57,12 @@ const log = new Node();
 const input = new Node();
 const sendButton = new Node();
 const settingsButton = new Node();
+const historyMenu = new Node();
+const exportButton = new Node();
+const clearButton = new Node();
 const stopButton = new Node();
 const status = new Node();
-const modelTab = new Node();
-let settingsOpened = 0;
-modelTab.setAttribute('aria-expanded', 'false');
-modelTab.addEventListener('click', () => {
-  modelTab.setAttribute('aria-expanded', 'true');
-  settingsOpened += 1;
-});
+historyMenu.hidden = true;
 panel.querySelector = selector => ({
   '[data-assistant-log]': log,
   '[data-chat-settings]': settingsButton,
@@ -84,9 +81,17 @@ composer.querySelector = selector => ({
 })[selector];
 
 globalThis.document = {
+  listeners: {},
   querySelector: selector => selector === '.composer' ? composer :
     (selector === '[data-assistant-chat]' ? panel :
-      (selector === '.rail--left .item[data-panel="Model"]' ? modelTab : null)),
+      ({
+        '[data-chat-settings]': settingsButton,
+        '[data-chat-history-menu]': historyMenu,
+        '[data-chat-export]': exportButton,
+        '[data-chat-clear]': clearButton,
+        '[data-assistant-stop]': stopButton,
+      }[selector] || null)),
+  addEventListener(name, callback) { this.listeners[name] = callback; },
   createElement: () => new Node(),
 };
 globalThis.location = {search: ''};
@@ -242,11 +247,13 @@ for (let index = 0; index < 6; index += 1) {
 assert.equal(window.intellibotChat.history.length, 10, 'history should retain at most ten messages');
 
 settingsButton.dispatchEvent(new Event('click'));
-assert.equal(settingsOpened, 1, 'settings should open the model configuration panel');
+assert.equal(historyMenu.hidden, false, 'settings should open the chat history menu');
+assert.equal(settingsButton.getAttribute('aria-expanded'), 'true');
 assert.equal(window.intellibotChat.history.length, 10, 'settings should not clear chat history');
 
-window.intellibotChat.clear();
+clearButton.dispatchEvent(new Event('click'));
 assert.equal(window.intellibotChat.history.length, 0);
 assert.equal(log.children.length, 0);
+assert.equal(historyMenu.hidden, true, 'clearing should close the history menu');
 
-console.log('PASS: chat controls, action sequence, stop command, validation, history limit, settings');
+console.log('PASS: chat controls, action sequence, stop command, validation, history limit, history menu');
