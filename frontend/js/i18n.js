@@ -125,6 +125,8 @@ const I18N = {
     "chat.clear": "Clear",
     "chat.starters": "Try asking",
     "chat.you": "You",
+    "idle.look.prompt": "I'm taking a look around. What would you like me to do?",
+    "idle.settle.prompt": "I've been standing for a while. Want to see a motion?",
 
     "dock.motions": "Motions",
     "dock.poses": "Poses",
@@ -327,6 +329,8 @@ const I18N = {
     "chat.clear": "清空",
     "chat.starters": "试试这样问",
     "chat.you": "你",
+    "idle.look.prompt": "我在看看周围。你想让我做点什么？",
+    "idle.settle.prompt": "站久了，活动一下。要不要看个动作？",
 
     "dock.motions": "动作",
     "dock.poses": "姿态",
