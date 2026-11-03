@@ -19,7 +19,7 @@
   var clearButton = findInPanel('[data-assistant-clear]');
   var stopButton = findInPanel('[data-assistant-stop]');
   var status = findInPanel('[data-assistant-status]');
-  var suggestions = findInPanel('[data-chat-suggestions]');
+  var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
   if (!log || !input || !sendButton || !clearButton || !stopButton || !status) return;
@@ -49,10 +49,21 @@
     return stage && stage.querySelector('[data-stage-message="' + role + '"]');
   }
 
+  function decorateBubble(node, role, recordId) {
+    if (!node || !node.dataset) return;
+    var salt = role === 'user' ? 1 : 0;
+    var variant = (Number(recordId || 0) + salt) % 4;
+    node.dataset.bubbleVariant = String(variant);
+    node.dataset.author = role === 'user' ? tr('chat.you', '你') : 'IntelliBot';
+  }
+
   function showStage(role, text, recordId) {
     var node = stageBubble(role);
     if (!node) return;
-    node.textContent = text;
+    decorateBubble(node, role, recordId);
+    var textNode = node.querySelector('[data-stage-text]');
+    if (textNode) textNode.textContent = text;
+    else node.textContent = text;
     node.dataset.recordId = String(recordId || '');
     node.hidden = false;
     node.classList.remove('is-leaving');
@@ -78,6 +89,7 @@
     var node = document.createElement('div');
     node.className = 'assistant-chat__message assistant-chat__message--' + role;
     if (modifier) node.classList.add('assistant-chat__message--' + modifier);
+    decorateBubble(node, role, record.id);
     node.dataset.recordId = String(record.id);
     node.textContent = text;
     log.appendChild(node);
@@ -112,7 +124,7 @@
     if (!suggestions) return;
     var started = false;
     try { started = sessionStorage.getItem(STARTED_KEY) === '1'; } catch (_error) {}
-    suggestions.hidden = started;
+    suggestions.hidden = started && records.length > 0;
   }
 
   function paintSend() {
@@ -259,6 +271,8 @@
     log.replaceChildren();
     hideStage();
     status.textContent = tr('chat.status.ready', '待命');
+    try { sessionStorage.removeItem(STARTED_KEY); } catch (_error) {}
+    if (suggestions) suggestions.hidden = false;
     input.focus();
   }
 
@@ -285,7 +299,7 @@
   clearButton.addEventListener('click', clear);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
-    if (button) send(button.textContent.trim());
+    if (button) send(button.dataset.chatPrompt || button.textContent.trim());
   });
   if (stage) stage.addEventListener('click', function (event) {
     var bubble = event.target.closest('[data-stage-message]');

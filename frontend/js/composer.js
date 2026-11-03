@@ -29,15 +29,18 @@
   mirror.setAttribute('aria-hidden', 'true');
   wrap.appendChild(mirror);
 
-  /* 默认 1/4 页宽，最多长到 1/2；窄屏那一档两栏已经横过来贴底，
+  /* 默认 1/4 页宽，最多长到 1/2；中等宽度保留一条能正常输入的最小长度，
+     否则左侧模型按钮会吃掉内容区。窄屏那一档两栏已经横过来贴底，
      横向没有余量可长，固定成铺满可用宽度、只长高 */
   function limits() {
     var vw = document.documentElement.clientWidth;
     if (window.matchMedia('(max-width: 640px)').matches) {
-      var full = vw - 24;
+      var full = vw - 78;
       return { base: full, max: full };
     }
-    return { base: vw * 0.25, max: vw * 0.5 };
+    var available = vw - 40;
+    var base = Math.min(available, Math.max(vw * 0.25, 420));
+    return { base: base, max: Math.min(available, Math.max(base, vw * 0.5)) };
   }
 
   function layout() {

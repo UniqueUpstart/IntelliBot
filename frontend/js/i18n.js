@@ -96,7 +96,7 @@ const I18N = {
     "persona.fields.prompt": "Persona instructions",
 
     "chatFlow.title": "Chat Flow",
-    "chatFlow.sub": "Read the current conversation here while the composer stays available.",
+    "chatFlow.sub": "A calm place for the thread. Take your time, and I will keep it here.",
     "chatFlow.emptyLabel": "No messages",
     "chatFlow.count": "{n} messages",
     "chatFlow.ask": "Ask",
@@ -122,6 +122,8 @@ const I18N = {
     "chat.status.failed": "Request failed",
     "chat.stop": "Stop motion",
     "chat.clear": "Clear",
+    "chat.starters": "Try asking",
+    "chat.you": "You",
 
     "dock.motions": "Motions",
     "dock.poses": "Poses",
@@ -295,7 +297,7 @@ const I18N = {
     "persona.fields.prompt": "角色设定",
 
     "chatFlow.title": "对话流",
-    "chatFlow.sub": "在这里完整查看本轮对话，底部输入框仍然随时可用。",
+    "chatFlow.sub": "慢慢说，我会把每一次对话都留在这里。",
     "chatFlow.emptyLabel": "尚无消息",
     "chatFlow.count": "{n} 条消息",
     "chatFlow.ask": "去提问",
@@ -321,6 +323,8 @@ const I18N = {
     "chat.status.failed": "请求失败",
     "chat.stop": "停止动作",
     "chat.clear": "清空",
+    "chat.starters": "试试这样问",
+    "chat.you": "你",
 
     "dock.motions": "动作",
     "dock.poses": "姿态",

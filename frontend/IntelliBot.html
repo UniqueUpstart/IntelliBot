@@ -23,10 +23,10 @@
   <link rel="stylesheet" href="css/base.css?v=8">
   <link rel="stylesheet" href="css/topbar.css?v=9">
   <link rel="stylesheet" href="css/rail.css?v=28">
-  <link rel="stylesheet" href="css/workspace.css?v=2">
+  <link rel="stylesheet" href="css/workspace.css?v=3">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
-  <link rel="stylesheet" href="css/chat.css?v=38">
+  <link rel="stylesheet" href="css/chat.css?v=39">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -319,9 +319,14 @@
       <!-- 对话流只显示完整消息；输入胶囊由聊天脚本移到页面主体，常驻机器人下方。 -->
       <div class="rail__view rail__view--chat" data-rail-view="chat">
         <div class="view-head chat-view__head">
-          <div>
-            <h3 class="view-title" data-i18n="rail.left.chatFlow">对话流</h3>
-            <p class="view-sub" data-i18n="chatFlow.sub">在这里查看完整对话，随时继续提问。</p>
+          <div class="chat-view__identity">
+            <span class="chat-view__mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 2.8c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7Z"/><path d="M18.7 16.3c.2 1.8 1 2.6 2.8 2.8-1.8.2-2.6 1-2.8 2.8-.2-1.8-1-2.6-2.8-2.8 1.8-.2 2.6-1 2.8-2.8Z"/></svg>
+            </span>
+            <div>
+              <h3 class="view-title">IntelliBot</h3>
+              <p class="view-sub" data-i18n="chatFlow.sub">慢慢说，我会把每一次对话都留在这里。</p>
+            </div>
           </div>
           <span class="view-badge" data-chat-persona>IntelliBot</span>
         </div>
@@ -332,12 +337,14 @@
             <button class="assistant-chat__tool" type="button" data-assistant-clear data-i18n="chat.clear">清空</button>
           </header>
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
-          <div class="assistant-chat__suggestions" data-chat-suggestions>
-            <button type="button" data-chat-example="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-          </div>
         </section>
         <div class="composer">
+          <div class="composer__starters" data-chat-suggestions role="group"
+               data-i18n-aria="chat.starters" aria-label="试试这样问">
+            <span class="composer__starters-label"><i aria-hidden="true"></i><span data-i18n="chat.starters">试试这样问</span></span>
+            <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+          </div>
           <button class="composer__model" type="button" data-model-trigger
                   aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
             <span class="composer__model-dot" aria-hidden="true"></span>
@@ -421,6 +428,13 @@
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
+      <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11.4 4.2 7.1 6.8c-1 .6-1.5 1.7-1.3 2.8l.9 5.1c.1.8.8 1.3 1.5 1.4l2.1.2v8.8c0 1.6 1.3 2.9 2.9 2.9h5.6c1.6 0 2.9-1.3 2.9-2.9v-8.8l2.1-.2c.8-.1 1.4-.6 1.5-1.4l.9-5.1c.2-1.2-.3-2.3-1.3-2.8l-4.3-2.6c-.7-.4-1.6-.4-2.3 0l-1.4.8c-.7.4-1.6.4-2.3 0l-1.4-.8c-.7-.4-1.6-.4-2.3 0Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="dock.robotStyle">Robot</span>
+      </button>
+
       <button class="item" type="button" data-panel="Poses" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
           <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="6.5" r="3.5"/><path d="M11.4 12h9.2c1.5 0 2.7 1.2 2.7 2.7v6.2h-2.8v7.3h-2.2v-7.3h-4.6v7.3h-2.2v-7.3H8.7v-6.2c0-1.5 1.2-2.7 2.7-2.7Z"/></svg>
@@ -442,12 +456,6 @@
         <span class="item__label" data-i18n="dock.emotions">Emotions</span>
       </button>
 
-      <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-tools">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11.4 4.2 7.1 6.8c-1 .6-1.5 1.7-1.3 2.8l.9 5.1c.1.8.8 1.3 1.5 1.4l2.1.2v8.8c0 1.6 1.3 2.9 2.9 2.9h5.6c1.6 0 2.9-1.3 2.9-2.9v-8.8l2.1-.2c.8-.1 1.4-.6 1.5-1.4l.9-5.1c.2-1.2-.3-2.3-1.3-2.8l-4.3-2.6c-.7-.4-1.6-.4-2.3 0l-1.4.8c-.7.4-1.6.4-2.3 0l-1.4-.8c-.7-.4-1.6-.4-2.3 0Z"/></svg>
-        </span>
-        <span class="item__label" data-i18n="dock.robotStyle">Robot</span>
-      </button>
     </div>
   </div>
 
@@ -836,10 +844,10 @@
 
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
-<script src="js/composer.js?v=5"></script>
+<script src="js/composer.js?v=6"></script>
 <script src="js/model_config.js?v=6"></script>
 <script src="js/persona.js?v=1"></script>
-<script src="js/assistant_chat.js?v=9"></script>
+<script src="js/assistant_chat.js?v=10"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
