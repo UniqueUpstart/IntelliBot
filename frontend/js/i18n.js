@@ -21,7 +21,7 @@ const I18N = {
     "auth.display": "Display name",
     "auth.display.ph": "Optional, defaults to username",
     "auth.password": "Password",
-    "auth.password.ph": "8-64 characters",
+    "auth.password.ph": "8-16 characters",
     "auth.skip": "Look around",
     "auth.guest": "Guest",
     "auth.entry": "Sign in / Register",
@@ -29,7 +29,7 @@ const I18N = {
     "auth.logout.confirm": "Confirm",
     "auth.register.ok": "Account created. Sign in to continue.",
     "auth.error.username": "Username needs 3-24 letters, digits or underscore.",
-    "auth.error.password": "Password needs 8-64 visible characters.",
+    "auth.error.password": "Password needs 8-16 visible characters.",
     "auth.error.display": "Display name is up to 32 characters.",
     "auth.error.network": "Network error. Try again.",
 
@@ -237,6 +237,9 @@ const I18N = {
     "settings.defaultView": "Default view",
     "settings.defaultView.front": "Front",
     "settings.defaultView.current": "Use current",
+    "settings.idle": "Idle motion",
+    "settings.idle.on": "On",
+    "settings.idle.off": "Off",
   },
 
   zh: {
@@ -257,7 +260,7 @@ const I18N = {
     "auth.display": "昵称",
     "auth.display.ph": "可留空，默认与用户名一致",
     "auth.password": "密码",
-    "auth.password.ph": "8–64 位字符",
+    "auth.password.ph": "8–16 位字符",
     "auth.skip": "先逛逛",
     "auth.guest": "未登录",
     "auth.entry": "注册/登录",
@@ -265,7 +268,7 @@ const I18N = {
     "auth.logout.confirm": "确认",
     "auth.register.ok": "注册成功，请登录。",
     "auth.error.username": "用户名需 3–24 位字母、数字或下划线。",
-    "auth.error.password": "密码需 8–64 位可见字符。",
+    "auth.error.password": "密码需 8–16 位可见字符。",
     "auth.error.display": "昵称最多 32 个字符。",
     "auth.error.network": "网络异常，请重试。",
 
@@ -473,6 +476,9 @@ const I18N = {
     "settings.defaultView": "默认视角",
     "settings.defaultView.front": "正面",
     "settings.defaultView.current": "使用当前视角",
+    "settings.idle": "待机动态",
+    "settings.idle.on": "开启",
+    "settings.idle.off": "关闭",
   },
 };
 

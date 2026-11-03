@@ -111,7 +111,11 @@
     var cut = connected && (armed || hoverCut);
     connectBtn.disabled = busy;
     var label = !connected ? t('sim.connect_btn') : (cut ? t('sim.disconnect') : t('sim.connected'));
-    connectBtn.textContent = label;
+    /* 文案写在里层那颗 span 上：按钮里还叠着悬停才浮现的箭头，
+       整块 textContent 会把箭头一起抹掉 */
+    var labelEl = connectBtn.querySelector('.modal__act-label');
+    if (labelEl) labelEl.textContent = label;
+    else connectBtn.textContent = label;
     /* 底片颜色只由状态决定：hover 那一档也归进 cut，不再另做提亮 */
     connectBtn.classList.toggle('is-on', connected && !cut);
     connectBtn.classList.toggle('is-cut', connected && hoverCut && !armed);

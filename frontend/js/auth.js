@@ -24,7 +24,6 @@
 
   const form = document.getElementById('auth-panel');
   const panel = root.querySelector('.auth__panel');
-  const scrim = root.querySelector('.auth__scrim');
   const msgEl = document.getElementById('auth-msg');
   const usernameEl = document.getElementById('auth-username');
   const displayEl = document.getElementById('auth-display');
@@ -176,55 +175,69 @@
   }
 
   /* 起手先落在挤窄态再撑开：卡片是「被挤出来」的，
-     不是从下往上浮出来的 —— 与弹窗弹开的说法一致 */
+     不是从下往上浮出来的 —— 与弹窗弹开的说法一致。
+     遮罩现在是一整片纯色，淡入交给根节点统一做：卡片缩放的同一拍里
+     纯色从 0 提到 1，不会出现「卡片悬在一块半透明膜上」那种分离感 */
   function popIn() {
     if (!window.gsap || !panel) return;
     const t = pop();
     if (timeline) timeline.kill();
     gsap.killTweensOf(panel);
-    if (scrim) gsap.killTweensOf(scrim);
+    gsap.killTweensOf(root);
+    /* 上一次收回可能停在 is-closing（磨砂那一层）上，重开时先摘掉 */
+    root.classList.remove('is-closing');
     if (reduceMotion.matches) {
       gsap.set(panel, { opacity: 1, scaleX: 1, scaleY: 1 });
-      if (scrim) gsap.set(scrim, { opacity: 1 });
+      gsap.set(root, { opacity: 1 });
       return;
     }
+    gsap.set(root, { opacity: 0 });
     gsap.set(panel, { opacity: 0, scaleX: t.squashX, scaleY: t.squashY });
-    if (scrim) gsap.set(scrim, { opacity: 0 });
     timeline = gsap.timeline({
       onComplete: function () {
-        /* 遮罩的透明度只是这次开合的事，交还给 CSS，
-           免得留一个行内 opacity:1 把主题切换时的层级变化挡住 */
-        if (scrim) gsap.set(scrim, { clearProps: 'opacity' });
+        /* 根节点的透明度只服务这次开合，交还给 CSS，
+           免得留一行 inline opacity 把下次收回的起点钉死 */
+        gsap.set(root, { clearProps: 'opacity' });
       }
     });
-    timeline.to(panel, { opacity: 1, duration: t.open, ease: t.out }, 0)
+    timeline.to(root, { opacity: 1, duration: t.open * 0.7, ease: 'power1.out' }, 0)
+            .to(panel, { opacity: 1, duration: t.open, ease: t.out }, 0)
             .to(panel, { scaleX: t.peakX, scaleY: t.peakY, duration: t.up, ease: 'power2.out' }, 0)
             .to(panel, { scaleX: 1, scaleY: 1, duration: t.back, ease: t.squashEase }, t.up);
-    /* 遮罩跟着内容一起亮，但先到：它是背景，晚到会让人觉得卡片浮在半透明膜上 */
-    if (scrim) timeline.to(scrim, { opacity: 1, duration: t.open * 0.7, ease: 'power1.out' }, 0);
   }
 
   /* 收回比弹出短得多：两轴压得比起手更扁，像被抽走。
      done 在动画走完时才执行 —— 面板要在收的过程里继续可见，
-     提前摘掉 is-open 会让它当场消失，动画等于没做 */
+     提前摘掉 is-open 会让它当场消失，动画等于没做。
+     渐隐压在根节点上，遮罩的纯色跟着一起退；is-closing 期间根节点补了磨砂，
+     纯色退掉之后露出来的是模糊的舞台，再由根节点整片淡掉，不是硬切 */
   function popOut(done) {
     if (!window.gsap || !panel) { done(); return; }
     const t = pop();
     if (timeline) timeline.kill();
     gsap.killTweensOf(panel);
-    if (scrim) gsap.killTweensOf(scrim);
+    gsap.killTweensOf(root);
     if (reduceMotion.matches) {
       gsap.set(panel, { opacity: 0 });
-      if (scrim) gsap.set(scrim, { opacity: 0 });
+      gsap.set(root, { opacity: 0 });
       done();
       return;
     }
-    timeline = gsap.timeline({ onComplete: done });
+    root.classList.add('is-closing');
+    timeline = gsap.timeline({
+      onComplete: function () {
+        root.classList.remove('is-closing');
+        gsap.set(root, { clearProps: 'opacity' });
+        done();
+      }
+    });
     timeline.to(panel, {
       opacity: 0, scaleX: t.closeX, scaleY: t.closeY,
       duration: t.close, ease: t.in
-    }, 0);
-    if (scrim) timeline.to(scrim, { opacity: 0, duration: 0.2, ease: 'power2.out' }, 0);
+    }, 0)
+    /* 比卡片慢一倍半：卡片先收掉，剩下的纯色与磨砂再慢慢退，
+       两个动作错开，收回才像一层幕落下，而不是东西被同时抽走 */
+    .to(root, { opacity: 0, duration: 0.3, ease: 'power2.out' }, 0);
   }
 
   function openPanel() {
@@ -379,7 +392,7 @@
       usernameEl.focus();
       return;
     }
-    if (password.length < 8 || password.length > 64) {
+    if (password.length < 8 || password.length > 16) {
       setMessage(t('auth.error.password'), 'error');
       passwordEl.focus();
       return;

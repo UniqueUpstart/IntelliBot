@@ -161,11 +161,11 @@ struct WebSystem::Impl {
         std::transform(username.begin(), username.end(), username.begin(),
                        [](unsigned char c) { return c >= 'A' && c <= 'Z' ? c + 32 : c; });
         if (!std::regex_match(username, std::regex("[a-z0-9_]{3,24}")) || password.size() < 8 ||
-            password.size() > 64 ||
+            password.size() > 16 ||
             std::any_of(password.begin(), password.end(),
                         [](unsigned char c) { return c < 32 || c > 126; })) {
           fail(400, "INVALID_PARAMETERS",
-               "用户名需3至24位字母数字下划线；密码需8至64位可见ASCII字符");
+               "用户名需3至24位字母数字下划线；密码需8至16位可见ASCII字符");
           return true;
         }
         std::string name = input.value("display_name", username);

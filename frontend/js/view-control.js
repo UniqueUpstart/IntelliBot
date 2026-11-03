@@ -270,7 +270,10 @@ function step(camY, camD) {
   const heading = robo.viewHeading || 0;
   const azimuth = heading + THREE.MathUtils.degToRad(view.azimuth);
   const elevation = THREE.MathUtils.degToRad(view.elevation);
-  const distance = camD * view.distance;
+  /* head 档整帧按纯取景走：倍数与缩放锚点都不参与，一颗头正好占满画面。
+     view.distance 本身不动 —— body 档存下的远近留着，切回去原样接上 */
+  const headLock = zoomLocked();
+  const distance = camD * (headLock ? 1 : view.distance);
   const horizontal = Math.cos(elevation) * distance;
 
   /* 缩放中：注视点由「头部在画面里的固定偏移」反推，相机绕它转，
@@ -278,7 +281,7 @@ function step(camY, camD) {
      分母里那项 x·sinE 是俯仰带来的深度变化，扣掉之后抬头、低头时也能钉住 */
   const sinE = Math.sin(elevation);
   const denom = zoomAnchorS === null ? 0 : 1 - zoomAnchorS * sinE;
-  const lookY = zoomAnchorS === null || Math.abs(denom) < 0.2
+  const lookY = headLock || zoomAnchorS === null || Math.abs(denom) < 0.2
     ? camY
     : headAnchorY() - (zoomAnchorS * distance) / denom;
   lastLookY = lookY;
@@ -892,8 +895,15 @@ function resetAll() {
   clearLimbHighlight();
 }
 
+/* head 档是定点构图：镜头距离由取景按「一颗头正好占满画面」解出来，
+   再乘缩放倍数那颗头就会顶出画框。这一档把缩放整个锁掉，滚轮只当没发生。
+   现问 3D 模块要档位，不另存一份状态 —— 在 Settings 里切完档立刻生效 */
+function zoomLocked() {
+  return !!(robo && robo.framing === 'head');
+}
+
 function zoom(factor) {
-  if (!ready) return;
+  if (!ready || zoomLocked()) return;
   const before = view.distance;
   const after = clamp(before * factor, DISTANCE_MIN, DISTANCE_MAX);
   if (after === before) return;

@@ -19,19 +19,19 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=29"></script>
-  <link rel="stylesheet" href="css/base.css?v=13">
-  <link rel="stylesheet" href="css/topbar.css?v=18">
+<script src="js/i18n.js?v=31"></script>
+  <link rel="stylesheet" href="css/base.css?v=14">
+  <link rel="stylesheet" href="css/topbar.css?v=19">
   <link rel="stylesheet" href="css/rail.css?v=37">
   <link rel="stylesheet" href="css/workspace.css?v=9">
   <link rel="stylesheet" href="css/cards.css?v=25">
-  <link rel="stylesheet" href="css/modal.css?v=32">
-  <link rel="stylesheet" href="css/chat.css?v=51">
+  <link rel="stylesheet" href="css/modal.css?v=34">
+  <link rel="stylesheet" href="css/chat.css?v=52">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=33">
-<link rel="stylesheet" href="css/auth.css?v=11">
+<link rel="stylesheet" href="css/auth.css?v=12">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -217,9 +217,11 @@
           <div class="chat-view__actions">
             <button class="assistant-chat__tool" type="button" data-assistant-stop
                     data-i18n="chat.stop" hidden>停止动作</button>
+            <!-- 齿轮只留 aria-label：写上 title 会在悬停时弹一个黑底小框，
+                 和这块极简的对话框不搭（同 js/faces.js、js/view-control.js 的做法） -->
             <button class="chat-history-settings" id="chat-history-settings" type="button" data-chat-settings
-                    data-i18n-title="chat.manageHistory" data-i18n-aria="chat.manageHistory"
-                    title="管理聊天记录" aria-label="管理聊天记录" aria-expanded="false"
+                    data-i18n-aria="chat.manageHistory"
+                    aria-label="管理聊天记录" aria-expanded="false"
                     aria-controls="chat-history-menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/>
@@ -252,8 +254,8 @@
             <div class="composer__footer">
               <!-- 打开完整对话流的入口：三横一组的菜单图标，打开后两条斜合成叉 -->
               <button class="composer__history" type="button" data-chat-history
-                      data-i18n-aria="chat.openHistory" data-i18n-title="chat.openHistory"
-                      aria-label="打开完整聊天记录" title="打开完整聊天记录"
+                      data-i18n-aria="chat.openHistory"
+                      aria-label="打开完整聊天记录"
                       aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path class="composer__menu-line" d="M4 7h16"/>
@@ -489,7 +491,7 @@
      后端点：POST /api/v1/auth/login 与 /register，登录后拿 Bearer token，
      见 js/auth.js -->
 <div class="auth" id="auth" aria-hidden="true">
-  <div class="auth__scrim" data-auth-skip></div>
+  <div class="auth__scrim" aria-hidden="true"></div>
   <form class="auth__panel" id="auth-panel" role="dialog" aria-modal="true"
         data-i18n-aria="auth.dialog" aria-label="Sign in or register" novalidate>
 
@@ -533,7 +535,7 @@
             <span class="auth__label" data-i18n="auth.password">Password</span>
             <input class="auth__input" id="auth-password" name="password" type="password"
                    autocomplete="current-password"
-                   data-i18n-placeholder="auth.password.ph" placeholder="8–64 characters">
+                   data-i18n-placeholder="auth.password.ph" placeholder="8–16 characters">
           </label>
         </div>
       </div>
@@ -552,7 +554,7 @@
 </div>
 
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
-<script src="js/auth.js?v=9"></script>
+<script src="js/auth.js?v=11"></script>
 
 <!-- 居中弹窗：Preference / Advance / Settings / Privacy 四枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
@@ -575,14 +577,18 @@
       <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义。
            其余弹窗由脚本按 data-advance-only 收掉 -->
       <div class="modal__act" data-advance-only hidden>
-        <button class="modal__act-btn" type="button" data-sim-connect>连接</button>
+        <button class="modal__act-btn" type="button" data-sim-connect>
+          <span class="modal__act-label">连接</span>
+          <svg class="modal__act-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+        </button>
       </div>
       <!-- Preference 的主动作也挂在这一列：导入模型。壳与左边那颗同一套
-           （胶囊、悬停涨满主题色、按住回弹），但它没有连接仿真那套
-           「点一下换一句话」的状态 —— 按下去只唤起文件选择，文案定死，宽度交给内容 -->
+           （胶囊、主题色底常驻、悬停文字滑出让箭头、按住回弹），但它没有
+           连接仿真那套「点一下换一句话」的状态，文案定死 -->
       <div class="modal__act" data-preference-only hidden>
         <label class="modal__act-btn pref__import" role="button" tabindex="0" data-skin-import>
-          <span data-i18n="rail.left.skin.import">Import</span>
+          <span class="modal__act-label" data-i18n="rail.left.skin.import">Import</span>
+          <svg class="modal__act-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
           <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
         </label>
       </div>
@@ -831,11 +837,12 @@
             </div>
           </div>
           <div class="set__item">
-            <div class="set__name">待机动态</div>
+            <div class="set__name" data-i18n="settings.idle">待机动态</div>
             <div class="set__body">
-              <div class="seg" role="group" aria-label="待机动态">
-                <button class="seg__opt is-sel" type="button" data-idle-enabled="true" aria-pressed="true"><span class="seg__lab">开启</span></button>
-                <button class="seg__opt" type="button" data-idle-enabled="false" aria-pressed="false"><span class="seg__lab">关闭</span></button>
+              <div class="seg" role="group" aria-label="待机动态"
+                   data-i18n-aria="settings.idle">
+                <button class="seg__opt is-sel" type="button" data-idle-enabled="true" aria-pressed="true"><span class="seg__lab" data-i18n="settings.idle.on">开启</span></button>
+                <button class="seg__opt" type="button" data-idle-enabled="false" aria-pressed="false"><span class="seg__lab" data-i18n="settings.idle.off">关闭</span></button>
               </div>
             </div>
           </div>
@@ -974,7 +981,7 @@
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
 <!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
-<script src="js/sim.js?v=25"></script>
+<script src="js/sim.js?v=26"></script>
 
 <!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
      three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；
@@ -988,7 +995,7 @@
 }
 </script>
 <script type="module" src="js/robot3d.js?v=68"></script>
-<script type="module" src="js/view-control.js?v=47"></script>
+<script type="module" src="js/view-control.js?v=48"></script>
 <script type="module" src="js/q1skin.js?v=34"></script>
 
 </body>

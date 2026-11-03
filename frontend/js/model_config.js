@@ -215,10 +215,11 @@
     effort.hidden = current.configured;
     effort.removeAttribute('data-i18n');
     effort.textContent = t('model.status.unconfigured', '未配置');
-    trigger.title = formatLabel(current.api_format) + ' · ' + current.model +
-      (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置'));
+    /* 模型胶囊只挂 aria-label：原生 title 悬停会弹黑底小框，输入框尾部不要这个 */
+    trigger.removeAttribute('title');
+    trigger.setAttribute('aria-label', formatLabel(current.api_format) + ' · ' + current.model +
+      (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置')));
     trigger.classList.toggle('is-ready', current.configured);
-    trigger.setAttribute('aria-label', trigger.title);
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
       current.configured ? 'ready' : 'idle',
@@ -254,7 +255,8 @@
     } catch (error) {
       loadError = error.message;
       label.textContent = t('model.status.offline', '服务未启动');
-      trigger.title = error.message;
+      trigger.removeAttribute('title');
+      trigger.setAttribute('aria-label', error.message);
       setStatus('error', t('model.status.offline', '服务未启动'));
       setNote(error.message, true);
     }
@@ -278,7 +280,8 @@
       paint(current);
       effort.hidden = false;
       effort.textContent = t('model.status.error', '保存失败');
-      trigger.title = error.message;
+      trigger.removeAttribute('title');
+      trigger.setAttribute('aria-label', error.message);
       setStatus('error', t('model.status.error', '保存失败'));
       setNote(error.message, true);
       // Keep the menu open so a failed switch is visible next to the composer.

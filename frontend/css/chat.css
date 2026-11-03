@@ -612,25 +612,17 @@
   -webkit-appearance:none;
   min-width:0;
   padding:7px 11px;
-  border:1px solid color-mix(in srgb,var(--theme) 44%,var(--border));
   border-radius:999px;
-  background:color-mix(in srgb,var(--theme) 13%,var(--card-solid));
-  color:var(--text-secondary);
   font:inherit;
   font-size:var(--fs-12);
   line-height:1.2;
   white-space:nowrap;
   cursor:pointer;
+  /* 盒形与节奏留在这儿，颜色和底片在文件后段统一给（词条要跟左右边栏
+     同一层玻璃），一处写一半会看不出哪边在生效 */
   transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .18s var(--ease);
 }
-.composer__starters button:hover,
-.composer__starters button:focus-visible{
-  border-color:var(--theme);
-  background:var(--theme);
-  color:#17332e;
-  outline:none;
-  transform:translateY(-2px);
-}
+.composer__starters button:focus-visible{outline:none}
 .chat-view__head{
   flex:0 0 auto;
   align-items:center;
@@ -1210,20 +1202,28 @@ body:has(.rail.is-open) .composer{
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
 }
+/* 词条的皮肤：跟左右边栏同一层玻璃 —— 半透明的 --panel 加背后的高斯模糊，
+   浮在舞台上时背后有什么就透出一点被磨开的颜色，静止时描边与字都取 muted，
+   安静地停在输入框上方 */
 .composer__starters button{
   padding:6px 10px;
-  border:1px solid color-mix(in srgb,#d9d9d9 72%,var(--border));
-  background:var(--card-solid);
+  border:1px solid var(--text-muted);
+  background:var(--panel);
   color:var(--text-muted);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-weight:400;
   box-shadow:none;
+  -webkit-backdrop-filter:blur(var(--blur));
+  backdrop-filter:blur(var(--blur));
 }
+/* 指针压上来：描边与字一起转主题色，底片收成不透明的一层，和输入框同一种实底。
+   描边始终 1px（与输入框那条同宽），换色不加粗，胶囊的轮廓和这一行的排布都不跳 */
 .composer__starters button:hover,
 .composer__starters button:focus-visible{
-  border-color:color-mix(in srgb,var(--text-primary) 22%,var(--border));
+  border-color:var(--theme);
   background:var(--card-solid);
-  color:var(--text-primary);
+  color:var(--theme);
+  outline:none;
   transform:none;
 }
 
