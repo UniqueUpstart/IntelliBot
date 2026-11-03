@@ -96,7 +96,7 @@ goto :fail
 
 :ai_done
 echo [sim] backend :%PORT%
-echo [sim] open http://127.0.0.1:%PORT%/ui/IntelliBot.html and press "连接仿真" in the Advance dialog
+echo [sim] open http://127.0.0.1:%PORT%/ui/IntelliBot.html and press "Connect Simulation" in the Advance dialog
 echo.
 "%BIN%" --legacy-dev --port %PORT% --web-root "%ROOT%\frontend" --sim-url "http://127.0.0.1:%SIM_PORT%" %AI_ARG%
 rem backend stopped: take the bridge window down with it
