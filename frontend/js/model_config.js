@@ -17,6 +17,7 @@
   var note = panel.querySelector('[data-model-note]');
   var saveButton = form.querySelector('[data-model-save]');
   var options = document.querySelector('#model-name-options');
+  var presetButtons = Array.prototype.slice.call(form.querySelectorAll('[data-model-preset]'));
   var queryApi = new URLSearchParams(location.search).get('api');
   var API = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var HISTORY_KEY = 'intellibot.modelHistory';
@@ -133,6 +134,16 @@
     });
   }
 
+  function paintPreset(provider, baseUrl, model) {
+    presetButtons.forEach(function (button) {
+      var on = button.dataset.provider === provider &&
+        button.dataset.baseUrl === baseUrl &&
+        button.dataset.prefillModel === model;
+      button.classList.toggle('is-on', on);
+      button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
   function renderMenu() {
     menuList.replaceChildren();
     var models = modelsFor(current.provider);
@@ -181,6 +192,7 @@
     trigger.setAttribute('aria-label', current.configured
       ? providerName(current.provider) + ' · ' + current.model
       : t('model.choose', '选择模型'));
+    paintPreset(current.provider, current.base_url, current.model);
     setStatus(
       current.configured ? 'ready' : 'idle',
       current.configured ? t('model.status.ready', '已连接') : t('model.status.unconfigured', '未配置')
@@ -256,6 +268,21 @@
     if (preset.baseUrl) baseInput.value = preset.baseUrl;
     if (preset.models.length) modelInput.value = preset.models[0];
     renderDatalist(provider);
+  });
+
+  presetButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      providerInput.value = button.dataset.provider || 'custom';
+      baseInput.value = button.dataset.baseUrl || '';
+      modelInput.value = button.dataset.prefillModel || '';
+      renderDatalist(providerInput.value);
+      paintPreset(providerInput.value, baseInput.value, modelInput.value);
+      setStatus('idle', t('model.status.preset', '待保存'));
+      setNote(t('model.preset.filled', '已填入预设，补全 API Key 后保存即可。'));
+      if (!baseInput.value) baseInput.focus();
+      else if (!modelInput.value) modelInput.focus();
+      else keyInput.focus();
+    });
   });
 
   form.addEventListener('submit', async function (event) {

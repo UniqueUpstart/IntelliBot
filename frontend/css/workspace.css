@@ -1,0 +1,492 @@
+/* ============================================================
+   AI workspace additions
+   Left: model presets / persona / chat flow
+   Right: pose / expressions / robot style
+   ============================================================ */
+
+[data-panel="Persona"], [data-panel="Chat"],
+[data-panel="Poses"], [data-panel="RobotStyle"]{
+  --itc:var(--theme);
+}
+
+.view-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.chat-view__head{flex:0 0 auto}
+.view-head > div{min-width:0}
+.view-title{
+  margin:0;
+  font-size:24px;
+  line-height:1;
+  letter-spacing:.3px;
+  color:var(--text-secondary);
+}
+.view-sub{
+  max-width:420px;
+  margin:8px 0 0;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  line-height:1.45;
+}
+.view-badge{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:28px;
+  padding:0 11px;
+  border-radius:999px;
+  background:var(--card);
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  white-space:nowrap;
+}
+.view-badge::before{
+  content:'';
+  width:7px; height:7px;
+  border-radius:50%;
+  background:var(--persona-color, var(--hint));
+}
+
+/* 左侧新视图一次只显示一个，旧卡片区在这些页面里会完整让位。 */
+.persona-view,
+.chat-flow-view{
+  display:none;
+  min-height:100%;
+  flex-direction:column;
+  gap:16px;
+}
+[data-panel-body][data-view="persona"] .persona-view,
+[data-panel-body][data-view="chat"] .chat-flow-view{
+  display:flex;
+}
+[data-panel-body][data-view="persona"] .model-view,
+[data-panel-body][data-view="persona"] .chat-flow-view,
+[data-panel-body][data-view="persona"] .sc-group,
+[data-panel-body][data-view="chat"] .model-view,
+[data-panel-body][data-view="chat"] .persona-view,
+[data-panel-body][data-view="chat"] .sc-group,
+[data-panel-body][data-view="model"] .persona-view,
+[data-panel-body][data-view="model"] .chat-flow-view{
+  display:none;
+}
+
+/* 模型设置：预设先行，表单保持宽松的两列节奏。 */
+.model-form{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:16px;
+}
+.model-presets{
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+}
+.model-preset{
+  appearance:none; -webkit-appearance:none;
+  min-width:0;
+  min-height:66px;
+  padding:10px 12px;
+  border:0;
+  border-radius:14px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:background-color .14s ease, box-shadow .14s ease, color .14s ease;
+}
+.model-preset strong,
+.model-preset span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-preset strong{font-size:var(--fs-14)}
+.model-preset span{margin-top:6px;color:var(--text-muted);font-size:var(--fs-12)}
+.model-preset:hover,
+.model-preset:focus-visible{box-shadow:inset 0 0 0 1.5px var(--theme);outline:none}
+.model-preset.is-on{background:color-mix(in srgb,var(--theme) 34%,var(--card-solid));color:var(--text-primary)}
+.model-view__note,
+.model-save{grid-column:1 / -1}
+
+/* AI 角色预设 */
+.persona-list{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+}
+.persona-card{
+  appearance:none; -webkit-appearance:none;
+  min-width:0;
+  min-height:76px;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:10px 12px;
+  border:0;
+  border-radius:16px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:box-shadow .14s ease, background-color .14s ease;
+}
+.persona-card:hover,
+.persona-card:focus-visible{
+  box-shadow:inset 0 0 0 1.5px var(--persona-color,var(--theme));
+  outline:none;
+}
+.persona-card.is-on{
+  background:color-mix(in srgb,var(--persona-color,var(--theme)) 24%,var(--card-solid));
+  box-shadow:inset 0 0 0 1.5px var(--persona-color,var(--theme));
+}
+.persona-card__avatar{
+  position:relative;
+  flex:0 0 auto;
+  width:38px;height:38px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--persona-color,var(--theme));
+  color:var(--text-invert);
+  font-size:var(--fs-14);
+}
+.persona-card.is-custom .persona-card__avatar::after{
+  content:'';
+  position:absolute;
+  width:8px;height:8px;
+  margin:29px 0 0 29px;
+  border-radius:50%;
+  background:var(--card-solid);
+  box-shadow:0 0 0 2px var(--persona-color,var(--theme));
+}
+.persona-card__copy{min-width:0;display:grid;gap:5px}
+.persona-card__copy strong,
+.persona-card__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.persona-card__copy strong{font-size:var(--fs-14);font-weight:var(--fw)}
+.persona-card__copy span{color:var(--text-muted);font-size:var(--fs-12)}
+.persona-new{
+  appearance:none;-webkit-appearance:none;
+  align-self:flex-start;
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:0 14px;
+  border:0;
+  border-radius:999px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font:inherit;
+  font-size:var(--fs-14);
+  cursor:pointer;
+}
+.persona-new:hover,
+.persona-new:focus-visible{background:var(--theme);color:var(--text-invert);outline:none}
+.persona-new span:first-child{font-size:20px;line-height:1}
+
+.persona-form{
+  display:grid;
+  gap:14px;
+  padding-top:16px;
+  border-top:1px solid color-mix(in srgb,var(--border) 72%,transparent);
+}
+.persona-preview{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:9px 12px;
+  border-radius:16px;
+  background:var(--card);
+}
+.persona-preview__avatar{
+  flex:0 0 auto;
+  width:40px;height:40px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--theme);
+  color:var(--text-invert);
+  font-size:var(--fs-14);
+}
+.persona-preview__copy{min-width:0;display:grid;gap:5px}
+.persona-preview__copy strong,
+.persona-preview__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.persona-preview__copy strong{font-size:var(--fs-16)}
+.persona-preview__copy span{color:var(--text-muted);font-size:var(--fs-12)}
+.persona-preview__dot{
+  flex:0 0 auto;
+  width:8px;height:8px;
+  margin-left:auto;
+  border-radius:50%;
+}
+.persona-form__row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.persona-field{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
+.persona-field input,
+.persona-field textarea{
+  appearance:none;-webkit-appearance:none;
+  width:100%;
+  border:0;
+  border-radius:14px;
+  background:var(--card);
+  color:var(--text-primary);
+  caret-color:var(--theme);
+  font:inherit;
+  font-size:var(--fs-14);
+  outline:none;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:box-shadow .12s linear;
+}
+.persona-field input{height:42px;padding:0 13px}
+.persona-field textarea{min-height:118px;padding:12px 13px;line-height:1.5;resize:vertical}
+.persona-field input:focus,
+.persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
+.persona-style{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 96px;
+  gap:12px;
+}
+.persona-color{display:grid;gap:8px;color:var(--text-secondary);font-size:var(--fs-14)}
+.persona-color input{
+  width:100%;height:42px;
+  padding:4px;
+  border:0;border-radius:14px;
+  background:var(--card);
+  cursor:pointer;
+}
+.persona-color input::-webkit-color-swatch-wrapper{padding:0}
+.persona-color input::-webkit-color-swatch{border:0;border-radius:10px}
+.persona-note{
+  margin:-2px 0 0;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  line-height:1.45;
+}
+.persona-note.is-error{color:var(--warning)}
+.persona-actions{display:flex;justify-content:flex-end;gap:8px}
+.persona-delete,
+.persona-save{
+  appearance:none;-webkit-appearance:none;
+  min-height:40px;
+  padding:0 18px;
+  border:0;
+  border-radius:999px;
+  font:inherit;
+  font-size:var(--fs-14);
+  cursor:pointer;
+}
+.persona-delete{background:var(--card);color:var(--warning)}
+.persona-save{background:var(--theme);color:var(--text-invert)}
+.persona-delete:hover{background:var(--warning);color:var(--text-invert)}
+.persona-save:hover{filter:brightness(.96)}
+.persona-delete:focus-visible,
+.persona-save:focus-visible{outline:2px solid var(--theme-dark);outline-offset:2px}
+
+/* 左栏对话流 */
+.chat-flow-view{min-height:calc(var(--rail-h) - 64px)}
+.chat-flow__toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+}
+.chat-flow__toolbar > div{display:flex;gap:6px}
+.chat-flow__toolbar button{
+  appearance:none;-webkit-appearance:none;
+  min-height:32px;
+  padding:0 12px;
+  border:0;
+  border-radius:999px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font:inherit;
+  cursor:pointer;
+}
+.chat-flow__toolbar button:hover,
+.chat-flow__toolbar button:focus-visible{background:var(--theme);color:var(--text-invert);outline:none}
+.chat-flow__log{
+  flex:1 1 auto;
+  min-height:280px;
+  max-height:calc(var(--rail-h) - 180px);
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:2px 2px 12px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgb(from var(--theme) r g b / .45) transparent;
+}
+.chat-flow__empty{
+  flex:1 1 auto;
+  min-height:250px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:28px;
+  border-radius:20px;
+  background:var(--card);
+  color:var(--text-muted);
+  text-align:center;
+}
+.chat-flow__empty[hidden]{display:none}
+.chat-flow__empty strong{color:var(--text-secondary);font-size:var(--fs-18)}
+.chat-flow__empty > span:last-child{max-width:280px;font-size:var(--fs-12);line-height:1.5}
+.chat-flow__mark{
+  width:48px;height:48px;
+  display:grid;place-items:center;
+  margin-bottom:6px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--theme) 32%,var(--card));
+  color:var(--text-secondary);
+}
+.chat-flow__mark svg{
+  width:25px;height:25px;
+  fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round;
+}
+.chat-flow__message{
+  max-width:88%;
+  padding:10px 13px;
+  border-radius:15px 15px 15px 4px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font-size:var(--fs-14);
+  line-height:1.5;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.chat-flow__message--user{
+  align-self:flex-end;
+  border-radius:15px 15px 4px 15px;
+  background:var(--theme);
+  color:var(--text-invert);
+}
+.chat-flow__message--pending{color:var(--text-muted)}
+.chat-flow__message--error{color:var(--warning)}
+.chat-flow__note{
+  align-self:center;
+  padding:5px 10px;
+  border-radius:999px;
+  background:var(--card);
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  text-align:center;
+}
+
+/* 右栏视图映射：Poses / Emotions / Robot style */
+[data-panel-body][data-view="poses"] [data-rail-view="poses"],
+[data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
+[data-panel-body][data-view="robotstyle"] [data-rail-view="skin"],
+[data-panel-body][data-view="skin"] [data-rail-view="skin"],
+[data-panel-body]:not([data-view]) [data-rail-view="poses"]{
+  display:block;
+}
+.rail__intro{
+  margin:-2px 0 12px;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  line-height:1.45;
+}
+.pose-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:10px;
+}
+.pose-card{
+  appearance:none;-webkit-appearance:none;
+  min-width:0;
+  aspect-ratio:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px;
+  border:0;
+  border-radius:16px;
+  background:var(--card);
+  color:var(--text-secondary);
+  font:inherit;
+  font-size:var(--fs-12);
+  text-align:center;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:box-shadow .14s ease, background-color .14s ease, color .14s ease;
+}
+.pose-card:hover,
+.pose-card:focus-visible{box-shadow:inset 0 0 0 1.5px var(--theme);outline:none}
+.pose-card.is-on{background:var(--theme);color:var(--text-invert);box-shadow:inset 0 0 0 1.5px var(--theme)}
+.pose-card:disabled,
+.pose-card.is-unavailable{opacity:.42;cursor:not-allowed}
+.pose-card__figure{
+  position:relative;
+  width:42px;height:49px;
+  display:block;
+}
+.pose-card__figure i{
+  position:absolute;
+  top:0;left:50%;
+  width:13px;height:13px;
+  border:1.8px solid currentColor;
+  border-radius:50%;
+  transform:translateX(-50%);
+}
+.pose-card__figure b{
+  position:absolute;
+  top:15px;left:50%;
+  width:2px;height:21px;
+  background:currentColor;
+  transform:translateX(-50%);
+}
+.pose-card__figure b::before,
+.pose-card__figure b::after{
+  content:'';
+  position:absolute;
+  top:1px;left:50%;
+  width:2px;height:19px;
+  border-radius:2px;
+  background:currentColor;
+  transform-origin:50% 0;
+}
+.pose-card__figure b::before{transform:translateX(-50%) rotate(28deg)}
+.pose-card__figure b::after{transform:translateX(-50%) rotate(-28deg)}
+.pose-card__figure--ready b::before{transform:translateX(-50%) rotate(82deg)}
+.pose-card__figure--ready b::after{transform:translateX(-50%) rotate(-82deg)}
+.pose-card__figure--hand b::before{transform:translateX(-50%) rotate(15deg)}
+.pose-card__figure--hand b::after{transform:translateX(-50%) rotate(145deg)}
+.pose-card__figure--apose b::before{transform:translateX(-50%) rotate(88deg)}
+.pose-card__figure--apose b::after{transform:translateX(-50%) rotate(-88deg)}
+.pose-note{
+  margin:0 0 10px;
+  color:var(--text-muted);
+  font-size:var(--fs-12);
+  line-height:1.45;
+}
+.pose-note.is-error{color:var(--warning)}
+.rail__title--section{margin-top:16px}
+
+/* 换皮页移到右栏后沿用原有卡片，不改它的选择与 IndexedDB 逻辑 */
+.rail__view--skin{padding-bottom:8px}
+.rail__view--skin .skin-view{display:flex}
+.rail__view--skin .skin-view__title{
+  font-size:24px;
+  letter-spacing:.3px;
+}
+
+/* The panel body owns its visible content; stray decorative SVGs stay hidden. */
+#panel-tools .panel__body > svg{display:none}
+
+@media (max-width:1100px){
+  .persona-form__row{grid-template-columns:1fr}
+}

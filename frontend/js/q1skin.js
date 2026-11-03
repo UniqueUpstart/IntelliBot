@@ -624,6 +624,20 @@ function init() {
     });
   }
 
+  /* 右栏姿态卡对原模型直接播放 GLB 片段；换成导入模型后，
+     用同一套关节角保持姿态，避免姿态按钮只对原模型生效。 */
+  function applyPosePreset(clip) {
+    if (clip === 'standby') poseHold = { ...Q1_REST_POSE };
+    else if (clip === 'raisehand') poseHold = { ...Q1_REST_POSE, ...Q1_MOTIONS.wave.pose };
+    else if (clip === 'apose') poseHold = { ...Q1_REST_POSE, ...TPOSE };
+    else poseHold = null;
+  }
+  window.addEventListener('robot-pose-change', (event) => {
+    applyPosePreset(event.detail && event.detail.clip);
+  });
+  const selectedPose = document.querySelector('[data-pose-clip].is-on');
+  if (selectedPose) applyPosePreset(selectedPose.dataset.poseClip);
+
   function applyJoints(angles) {
     for (const [name, id, axis] of HINGES) {
       const node = bones[id];

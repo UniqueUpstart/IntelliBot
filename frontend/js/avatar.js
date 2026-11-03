@@ -11,6 +11,7 @@
   var up = user.querySelector('.avatar__up');
   var file = user.querySelector('.avatar__file');
   var opts = Array.prototype.slice.call(user.querySelectorAll('.avatar__opt'));
+  var nameNode = user.querySelector('.user__name');
   if (!avatar || !up || !file) return;
 
   var KEY = 'intellibot:avatar';
@@ -41,6 +42,21 @@
     up.classList.toggle('has-img', custom);
     up.classList.toggle('is-sel', custom);
     up.setAttribute('aria-pressed', custom ? 'true' : 'false');
+  }
+
+  /* 账号胶囊的宽度跟着名字走，但保留头像、间距和右侧留白。
+     用 Canvas 量的是最终字体下的自然宽度，不受当前 max-width 与省略号影响。 */
+  function fitName() {
+    if (!nameNode) return;
+    var text = nameNode.textContent.trim();
+    if (!text) return;
+    var style = window.getComputedStyle(nameNode);
+    var canvas = fitName.canvas || (fitName.canvas = document.createElement('canvas'));
+    var context = canvas.getContext('2d');
+    if (!context) return;
+    context.font = style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+    var width = Math.ceil(context.measureText(text).width) + 2;
+    user.style.setProperty('--user-name-width', width + 'px');
   }
 
   function save(v) {
@@ -119,4 +135,13 @@
   });
 
   paint(saved);
+  requestAnimationFrame(fitName);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fitName).catch(function () {});
+  }
+  var fitTimer = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitName, 80);
+  });
 })();

@@ -138,10 +138,11 @@
    表面拆成 .user__surface 承担底色与圆角，外层保持 48 高，顶栏不重排。 */
 .user{
   position:relative;
-  /* 托盘宽 = 两枚胶囊 + 组内间距 8 + 托盘 padding 4×2（描边已去掉），与 .group 逐项对齐，
-     --pill-w 是 clamp 出来的，这里跟着流体缩放，窄屏也不会错位 */
-  --user-w: calc(var(--pill-w) * 2 + 16px);
-  --user-half: calc(var(--pill-w) + 8px);   /* 半宽：头像收起态的横向位移要用 */
+  /* 收起态由名字的自然宽度决定：左右各留出一段可呼吸的留白，
+     但仍设上下限，避免长名字撑满顶栏或短名字缩成一小团。 */
+  --user-name-width: 92px;
+  --user-w: clamp(176px, calc(82px + var(--user-name-width)), 320px);
+  --user-half: calc(var(--user-w) / 2);   /* 半宽：头像收起态的横向位移要用 */
   width:var(--user-w); height:var(--top-h);
   flex:0 0 var(--user-w);
   z-index:31;
@@ -154,8 +155,10 @@
   --tray: 0px;
   scale: var(--sx) var(--sy);
   transform-origin:50% 0%;
+  transition:width .3s var(--ease), flex-basis .3s var(--ease);
 }
 .user.is-picking{--tray:60px;}
+.user.is-open{--user-w:clamp(288px, calc(120px + var(--user-name-width) * 1.25), 380px);}
 .user__surface{
   position:absolute; top:0; left:0;
   width:100%; height:var(--top-h);

@@ -108,10 +108,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    ============================================================ */
 /* 三页共用一块内容区，只显示 data-view 对应的那一页。 */
 .rail__view{display:none}
-[data-panel-body][data-view="motions"] [data-rail-view="motions"],
+[data-panel-body][data-view="poses"] [data-rail-view="poses"],
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
 [data-panel-body][data-view="chat"] [data-rail-view="chat"],
-[data-panel-body]:not([data-view]) [data-rail-view="motions"]{display:block}
+[data-panel-body]:not([data-view]) [data-rail-view="poses"]{display:block}
 
 /* 聊天页从右栏移入左栏后，与原有快捷卡片共用同一个 panel__body。
    进入 chat 视图时只保留聊天页，避免旧卡片把历史记录挤到滚动区下方。 */
@@ -517,11 +517,12 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item[data-panel="Tendance"]{--itc:var(--series-pink-light)}
 /* 右栏两枚不与左栏的指令分组色走：那一列是「看机器人」的入口，
    与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
-.item[data-panel="Motions"]{--itc:var(--theme)}
+.item[data-panel="Poses"]{--itc:var(--theme)}
 .item[data-panel="Emotions"]{--itc:var(--theme)}
 .item[data-panel="Chat"]{--itc:var(--theme)}
 .item[data-panel="Model"]{--itc:var(--theme)}
 .item[data-panel="Skin"]{--itc:var(--theme)}
+.item[data-panel="Persona"]{--itc:var(--theme)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），
    同样不带边；进场这条曲线先快后慢，尾巴慢慢贴住圆周。
    出场不在这里写，回到基态时用镜像曲线，等于原路缩回 */

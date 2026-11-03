@@ -46,7 +46,7 @@ ctest --test-dir backend-build --output-on-failure
 
 `--legacy-dev` 保留原共享 mock / MuJoCo 接口，关闭认证，业务写请求仍需 Idempotency-Key。仿真启动脚本已使用该参数，仅供本机开发；普通网页模式禁止调用共享控制接口。
 
-开发模式提供 `POST /api/v1/chat`：请求包含 `message` 和最多 10 条 `history`，返回 `reply`、兼容单动作的 `action_id`、最多四项的 `actions`、`stop` 与模型名。模型配置通过 `GET/PUT /api/v1/ai/config` 同步到本机 AI 服务；API Key 不会通过 GET 返回，也不保存在浏览器。
+开发模式提供 `POST /api/v1/chat`：请求包含 `message`、最多 10 条 `history`，以及可选的 `persona` 角色设定（最多 1200 字），返回 `reply`、兼容单动作的 `action_id`、最多四项的 `actions`、`stop` 与模型名。`persona` 由浏览器本地保存并随当前请求转发，不会写入模型配置。模型配置通过 `GET/PUT /api/v1/ai/config` 同步到本机 AI 服务；API Key 不会通过 GET 返回，也不保存在浏览器。
 
 当前无找回密码、邮箱验证或私人动作库。公网部署需HTTPS及部署配置。
 

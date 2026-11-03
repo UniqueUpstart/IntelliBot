@@ -8,8 +8,9 @@ class ClassList {
   add(...values) { values.forEach(value => this.values.add(value)); }
   remove(...values) { values.forEach(value => this.values.delete(value)); }
   toggle(value, force) {
-    const on = force === undefined ? !this.values.has(value) : force;
+    const on = force === undefined ? !this.values.has(value) : !!force;
     if (on) this.values.add(value); else this.values.delete(value);
+    return on;
   }
 }
 
@@ -85,6 +86,7 @@ globalThis.Event = class { constructor(type) { this.type = type; } };
 globalThis.window = {
   addEventListener() {},
   matchMedia: () => ({matches: false}),
+  intellibotPersona: {active: {prompt: '温柔知性的测试角色'}},
   robot3d: {
     ready: true,
     played: [],
@@ -103,8 +105,10 @@ globalThis.window = {
 
 let fetchCalls = 0;
 let releaseFetch;
-globalThis.fetch = () => {
+let lastRequestBody = null;
+globalThis.fetch = (_url, options) => {
   fetchCalls += 1;
+  lastRequestBody = JSON.parse(options.body);
   return new Promise(resolve => {
     releaseFetch = () => resolve({
       ok: true,
@@ -138,6 +142,7 @@ const first = window.intellibotChat.submit();
 input.value = '重复提交';
 const duplicate = window.intellibotChat.submit();
 assert.equal(fetchCalls, 1, 'pending requests should block duplicate submits');
+assert.equal(lastRequestBody.persona, '温柔知性的测试角色');
 releaseFetch();
 await Promise.all([first, duplicate]);
 assert.deepEqual(window.robot3d.played, ['salute']);

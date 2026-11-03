@@ -133,9 +133,13 @@
       var headers = {'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()};
       var token = sessionStorage.getItem('intellibot.auth.token');
       if (token) headers.Authorization = 'Bearer ' + token;
+      var body = {message: text, history: previous};
+      var persona = window.intellibotPersona && window.intellibotPersona.active;
+      if (persona && persona.prompt) body.persona = persona.prompt;
       var response = await fetch(api + '/chat', {
         method: 'POST', headers: headers,
-        body: JSON.stringify({message: text, history: previous}), signal: controller.signal,
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
       var payload = await response.json().catch(function () { throw new Error('AI 服务返回了无法解析的响应'); });
       if (response.status === 401) {

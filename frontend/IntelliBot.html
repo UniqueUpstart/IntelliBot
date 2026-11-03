@@ -19,10 +19,11 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=14"></script>
+<script src="js/i18n.js?v=15"></script>
   <link rel="stylesheet" href="css/base.css?v=8">
-  <link rel="stylesheet" href="css/topbar.css?v=8">
+  <link rel="stylesheet" href="css/topbar.css?v=9">
   <link rel="stylesheet" href="css/rail.css?v=27">
+  <link rel="stylesheet" href="css/workspace.css?v=2">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
   <link rel="stylesheet" href="css/chat.css?v=36">
@@ -120,14 +121,21 @@
         <span class="item__btn">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 8h16M8 16h16M8 24h16"/><circle cx="12" cy="8" r="3"/><circle cx="21" cy="16" r="3"/><circle cx="14" cy="24" r="3"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.left.model">Models</span>
+        <span class="item__label" data-i18n="rail.left.model">AI Models</span>
       </button>
 
-      <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-shortcuts">
+      <button class="item" type="button" data-panel="Persona" aria-expanded="false" aria-controls="panel-shortcuts">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11.4 4.2 7.1 6.8c-1 .6-1.5 1.7-1.3 2.8l.9 5.1c.1.8.8 1.3 1.5 1.4l2.1.2v8.8c0 1.6 1.3 2.9 2.9 2.9h5.6c1.6 0 2.9-1.3 2.9-2.9v-8.8l2.1-.2c.8-.1 1.4-.6 1.5-1.4l.9-5.1c.2-1.2-.3-2.3-1.3-2.8l-4.3-2.6c-.7-.4-1.6-.4-2.3 0l-1.4.8c-.7.4-1.6.4-2.3 0l-1.4-.8c-.7-.4-1.6-.4-2.3 0Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="13" cy="11" r="4.5"/><path d="M5 26c.5-5 3.2-8 8-8s7.5 3 8 8M23 8l1.3 2.7L27.5 12l-2.6 2 .6 3.1-2.5-1.5-2.5 1.5.6-3.1-2.6-2 3.2-1.3Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.left.skin">Skins</span>
+        <span class="item__label" data-i18n="rail.left.persona">AI Persona</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Chat" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 7h20v14H15l-6 4v-4H6Z"/><path d="M11 12h10M11 16h7"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.chatFlow">Chat Flow</span>
       </button>
 
     </div>
@@ -198,6 +206,27 @@
           <span class="model-view__status" data-model-status data-i18n="model.status.loading">正在读取</span>
         </div>
         <form class="model-form" data-model-form>
+          <div class="model-presets" role="group" data-i18n-aria="model.presets">
+            <button class="model-preset is-on" type="button" data-model-preset
+                    data-provider="deepseek" data-base-url="https://api.deepseek.com"
+                    data-prefill-model="deepseek-flash">
+              <strong>DeepSeek Flash</strong><span>deepseek-flash</span>
+            </button>
+            <button class="model-preset" type="button" data-model-preset
+                    data-provider="deepseek" data-base-url="https://api.deepseek.com"
+                    data-prefill-model="deepseek-v4-pro">
+              <strong>DeepSeek V4 Pro</strong><span>deepseek-v4-pro</span>
+            </button>
+            <button class="model-preset" type="button" data-model-preset
+                    data-provider="openai" data-base-url="https://api.openai.com/v1"
+                    data-prefill-model="gpt-4.1-mini">
+              <strong>GPT-4.1 mini</strong><span>快速均衡</span>
+            </button>
+            <button class="model-preset" type="button" data-model-preset
+                    data-provider="custom" data-base-url="" data-prefill-model="">
+              <strong data-i18n="model.preset.custom">自定义</strong><span data-i18n="model.preset.custom.hint">OpenAI 兼容</span>
+            </button>
+          </div>
           <label class="model-field">
             <span data-i18n="model.provider">服务商</span>
             <select data-model-provider>
@@ -231,43 +260,111 @@
         </form>
       </div>
 
-      <!-- 换皮页：从原来浮在舞台上的独立小条收进左栏，外观选项与右侧手势卡同尺寸 -->
-      <div class="skin-view" data-skin-panel data-skin-view>
-        <h3 class="skin-view__title" data-i18n="rail.left.skin">换皮</h3>
-        <p class="skin-view__hint" data-i18n="rail.left.skin.hint">选择一个机器人外观，或导入自己的模型。</p>
-        <div class="skin-grid" data-skin-pick role="group"
-             aria-label="机器人外观" data-i18n-aria="rail.left.skin">
-          <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
-            <span class="skin-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M9 8.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Zm3 4.5a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 13Zm8 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-6.7 5.2h5.4M16 8.5V5m-4 18v4m8-4v4"/></svg>
-            </span>
-            <span class="skin-card__name" data-i18n="rail.left.skin.q1">原模型</span>
-          </button>
-          <button class="skin-card" type="button" data-skin-id="builtin:xbot" aria-pressed="false">
-            <span class="skin-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.5"/><path d="M10 24.5v-5.6c0-3.3 2.7-6 6-6s6 2.7 6 6v5.6M7 25h18M12 13.8l-4 4m12-4 4 4m-9 6.2v5m4-5v5"/></svg>
-            </span>
-            <span class="skin-card__name">X Bot</span>
-          </button>
-          <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
-            <span class="skin-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
-            </span>
-            <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
-          </button>
-          <label class="skin-card skin-card--import" role="button" tabindex="0"
-                 aria-label="导入模型" data-i18n-aria="rail.left.skin.import">
-            <span class="skin-card__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M16 7v18M7 16h18"/></svg>
-            </span>
-            <span class="skin-card__name" data-i18n="rail.left.skin.import">导入</span>
-            <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
-          </label>
+      <!-- AI 角色：内置角色负责开局，用户可调整姓名、语气与视觉标记，并保存到本机 -->
+      <div class="persona-view" data-persona-view>
+        <div class="view-head">
+          <div>
+            <h3 class="view-title" data-i18n="persona.title">AI Persona</h3>
+            <p class="view-sub" data-i18n="persona.sub">让回答的语气、视角和表达方式更像你期待的角色。</p>
+          </div>
+          <span class="view-badge" data-persona-status>默认角色</span>
         </div>
-        <button class="skin-delete" type="button" data-skin-delete hidden>
-          <span data-i18n="rail.left.skin.delete">删除当前导入</span>
+        <div class="persona-list" data-persona-list role="listbox" data-i18n-aria="persona.title"></div>
+        <button class="persona-new" type="button" data-persona-new>
+          <span aria-hidden="true">+</span><span data-i18n="persona.new">新建自定义角色</span>
         </button>
-        <p class="skin-note" data-skin-note hidden></p>
+        <form class="persona-form" data-persona-form>
+          <div class="persona-preview">
+            <span class="persona-preview__avatar" data-persona-preview-avatar>IB</span>
+            <span class="persona-preview__copy">
+              <strong data-persona-preview-name>IntelliBot</strong>
+              <span data-persona-preview-style>温柔知性</span>
+            </span>
+            <span class="persona-preview__dot" data-persona-preview-dot aria-hidden="true"></span>
+          </div>
+          <div class="persona-form__row">
+            <label class="persona-field">
+              <span data-i18n="persona.fields.name">角色名称</span>
+              <input data-persona-name type="text" maxlength="32" autocomplete="off">
+            </label>
+            <label class="persona-field">
+              <span data-i18n="persona.fields.style">表达风格</span>
+              <input data-persona-style type="text" maxlength="64" autocomplete="off">
+            </label>
+          </div>
+          <div class="persona-style">
+            <label class="persona-color">
+              <span data-i18n="persona.fields.color">标记色</span>
+              <input data-persona-color type="color" value="#91d2c3">
+            </label>
+            <label class="persona-field persona-field--initials">
+              <span data-i18n="persona.fields.initials">缩写</span>
+              <input data-persona-initials type="text" maxlength="3" autocomplete="off">
+            </label>
+          </div>
+          <label class="persona-field persona-field--prompt">
+            <span data-i18n="persona.fields.prompt">角色设定</span>
+            <textarea data-persona-prompt rows="5" maxlength="1200"></textarea>
+          </label>
+          <p class="persona-note" data-persona-note data-i18n="persona.localNote">
+            角色样式和设定只保存在本机浏览器，发送消息时会作为语气设定交给当前模型。
+          </p>
+          <div class="persona-actions">
+            <button class="persona-delete" type="button" data-persona-delete hidden data-i18n="persona.delete">删除</button>
+            <button class="persona-save" type="submit" data-i18n="persona.save">保存并使用</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 对话流：完整消息、输入框和模型切换都在左栏完成，舞台只保留最新一轮气泡。 -->
+      <div class="rail__view rail__view--chat" data-rail-view="chat">
+        <div class="view-head chat-view__head">
+          <div>
+            <h3 class="view-title" data-i18n="rail.left.chatFlow">对话流</h3>
+            <p class="view-sub" data-i18n="chatFlow.sub">在这里查看完整对话，随时继续提问。</p>
+          </div>
+          <span class="view-badge" data-chat-persona>IntelliBot</span>
+        </div>
+        <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
+          <header class="assistant-chat__toolbar">
+            <span class="assistant-chat__status" data-assistant-status data-i18n="chat.status.ready">待命</span>
+            <button class="assistant-chat__tool" type="button" data-assistant-stop data-i18n="chat.stop" hidden>停止动作</button>
+            <button class="assistant-chat__tool" type="button" data-assistant-clear data-i18n="chat.clear">清空</button>
+          </header>
+          <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
+          <div class="assistant-chat__suggestions" data-chat-suggestions>
+            <button type="button" data-chat-example="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+          </div>
+        </section>
+        <div class="composer">
+          <button class="composer__model" type="button" data-model-trigger
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+            <span class="composer__model-dot" aria-hidden="true"></span>
+            <span class="composer__model-label" data-model-label>选择模型</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+          </button>
+          <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
+            <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
+            <div class="model-menu__list" data-model-menu-list></div>
+            <button class="model-menu__manage" type="button" data-model-manage>
+              <span data-i18n="model.manage">管理 API 与模型</span>
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+            </button>
+          </div>
+          <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
+                    maxlength="500" data-assistant-input
+                    data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
+                    placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
+          <button class="composer__send" type="button" data-assistant-send
+                  data-i18n-aria="chat.send" aria-label="发送">
+            <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 19V5M6 11l6-6 6 6"/>
+            </svg>
+          </button>
+          <button class="composer__history" type="button" data-chat-history
+                  data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录">+</button>
+        </div>
       </div>
       <section class="sc-group sc-group--action">
         <h3 class="sc-group__title" data-i18n="rail.left.group.action">Action</h3>
@@ -318,16 +415,16 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<!-- ===================== 右侧：动作 / 表情 / 聊天 ===================== -->
+<!-- ===================== 右侧：Pose / Expressions / Robot Style ===================== -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
-      <button class="item" type="button" data-panel="Motions" aria-expanded="false" aria-controls="panel-tools">
+      <button class="item" type="button" data-panel="Poses" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="18.5" cy="5.5" r="2.7"/><path d="m15.2 10.1 4.2-1.3 4 4.1 4.1 1.2-.8 2.6-5-1.5-2.1-2.1-1.5 5.2 4 3.2-1.7 6.8-2.8-.7 1.3-5-3.7-2.8-2.1 3.4-5.4 2.2-1.1-2.6 4.4-1.8 2.6-4.4Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="6.5" r="3.5"/><path d="M11.4 12h9.2c1.5 0 2.7 1.2 2.7 2.7v6.2h-2.8v7.3h-2.2v-7.3h-4.6v7.3h-2.2v-7.3H8.7v-6.2c0-1.5 1.2-2.7 2.7-2.7Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="dock.motions">Motions</span>
+        <span class="item__label" data-i18n="dock.poses">Poses</span>
       </button>
 
       <button class="item" type="button" data-panel="Emotions" aria-expanded="false" aria-controls="panel-tools">
@@ -337,11 +434,11 @@
         <span class="item__label" data-i18n="dock.emotions">Emotions</span>
       </button>
 
-      <button class="item" type="button" data-panel="Chat" aria-expanded="false" aria-controls="panel-tools">
+      <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 5h22v16H14l-7 6v-6H5V5Zm4 5v2h14v-2H9Zm0 5v2h10v-2H9Z"/></svg>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11.4 4.2 7.1 6.8c-1 .6-1.5 1.7-1.3 2.8l.9 5.1c.1.8.8 1.3 1.5 1.4l2.1.2v8.8c0 1.6 1.3 2.9 2.9 2.9h5.6c1.6 0 2.9-1.3 2.9-2.9v-8.8l2.1-.2c.8-.1 1.4-.6 1.5-1.4l.9-5.1c.2-1.2-.3-2.3-1.3-2.8l-4.3-2.6c-.7-.4-1.6-.4-2.3 0l-1.4.8c-.7.4-1.6.4-2.3 0l-1.4-.8c-.7-.4-1.6-.4-2.3 0Z"/></svg>
         </span>
-        <span class="item__label" data-i18n="rail.right.chat">Chat</span>
+        <span class="item__label" data-i18n="dock.robotStyle">Robot</span>
       </button>
     </div>
   </div>
@@ -352,56 +449,75 @@
          卡片从遮罩下面滚过去时被糊开、标题始终清楚 -->
     <span class="frost frost--top" aria-hidden="true"></span>
     <span class="frost frost--bottom" aria-hidden="true"></span>
-    <div class="panel__body" data-panel-body data-view="motions">
-      <div class="rail__view" data-rail-view="motions">
-        <div class="rail__title" data-i18n="dock.motions">Motions</div>
+    <div class="panel__body" data-panel-body data-view="poses">
+      <!-- 三页共用这一块滚动区，按 data-view 显隐 -->
+      <div class="rail__view" data-rail-view="poses">
+        <div class="rail__title" data-i18n="dock.poses">Poses</div>
+        <p class="rail__intro" data-i18n="dock.poses.intro">先定姿态，再选择一个动作，让机器人在当前姿态上继续表演。</p>
+        <div class="pose-grid" role="group" data-i18n-aria="dock.poses">
+          <button class="pose-card is-on" type="button" data-pose-clip="idle" data-pose-loop="true" aria-pressed="true">
+            <span class="pose-card__figure" aria-hidden="true"><i></i><b></b></span>
+            <span data-i18n="dock.pose.natural">自然站立</span>
+          </button>
+          <button class="pose-card" type="button" data-pose-clip="standby" data-pose-loop="true" aria-pressed="false">
+            <span class="pose-card__figure pose-card__figure--ready" aria-hidden="true"><i></i><b></b></span>
+            <span data-i18n="dock.pose.standby">待机姿态</span>
+          </button>
+          <button class="pose-card" type="button" data-pose-clip="raisehand" data-pose-loop="false" aria-pressed="false">
+            <span class="pose-card__figure pose-card__figure--hand" aria-hidden="true"><i></i><b></b></span>
+            <span data-i18n="dock.pose.hand">举手姿态</span>
+          </button>
+          <button class="pose-card" type="button" data-pose-clip="apose" data-pose-loop="false" aria-pressed="false">
+            <span class="pose-card__figure pose-card__figure--apose" aria-hidden="true"><i></i><b></b></span>
+            <span data-i18n="dock.pose.apose">A-Pose</span>
+          </button>
+        </div>
+        <p class="pose-note" data-pose-note data-i18n="dock.pose.note">姿态会直接改变舞台中的机器人。</p>
+        <div class="rail__title rail__title--section" data-i18n="dock.actions">Actions</div>
         <div class="rail__grid" data-rail-grid="motions"></div>
       </div>
       <div class="rail__view" data-rail-view="emotions">
         <div class="rail__title" data-i18n="dock.emotions">Emotions</div>
         <div class="rail__grid" data-rail-grid="emotions"></div>
       </div>
-      <div class="rail__view rail__view--chat" data-rail-view="chat">
-        <div class="rail__title" data-i18n="rail.right.chat">Chat</div>
-        <section class="assistant-chat" data-assistant-chat aria-label="IntelliBot conversation">
-          <header class="assistant-chat__toolbar">
-            <span class="assistant-chat__status" data-assistant-status data-i18n="chat.status.ready">待命</span>
-            <button class="assistant-chat__tool" type="button" data-assistant-stop data-i18n="chat.stop" hidden>停止动作</button>
-            <button class="assistant-chat__tool" type="button" data-assistant-clear data-i18n="chat.clear">清空</button>
-          </header>
-          <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
-          <div class="assistant-chat__suggestions" data-chat-suggestions>
-            <button type="button" data-chat-example="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-          </div>
-        </section>
-        <div class="composer">
-          <button class="composer__model" type="button" data-model-trigger
-                  aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
-            <span class="composer__model-dot" aria-hidden="true"></span>
-            <span class="composer__model-label" data-model-label>选择模型</span>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-          </button>
-          <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
-            <div class="model-menu__title" data-i18n="model.switch">切换模型</div>
-            <div class="model-menu__list" data-model-menu-list></div>
-            <button class="model-menu__manage" type="button" data-model-manage>
-              <span data-i18n="model.manage">管理 API 与模型</span>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
+      <div class="rail__view rail__view--skin" data-rail-view="skin">
+        <div class="skin-view" data-skin-panel data-skin-view>
+          <h3 class="skin-view__title" data-i18n="rail.left.skin">机器人外观</h3>
+          <p class="skin-view__hint" data-i18n="rail.left.skin.hint">选择一个机器人外观，或导入自己的模型。</p>
+          <div class="skin-grid" data-skin-pick role="group"
+               aria-label="机器人外观" data-i18n-aria="rail.left.skin">
+            <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
+              <span class="skin-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><path d="M9 8.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Zm3 4.5a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 13Zm8 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-6.7 5.2h5.4M16 8.5V5m-4 18v4m8-4v4"/></svg>
+              </span>
+              <span class="skin-card__name" data-i18n="rail.left.skin.q1">原模型</span>
             </button>
+            <button class="skin-card" type="button" data-skin-id="builtin:xbot" aria-pressed="false">
+              <span class="skin-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.5"/><path d="M10 24.5v-5.6c0-3.3 2.7-6 6-6s6 2.7 6 6v5.6M7 25h18M12 13.8l-4 4m12-4 4 4m-9 6.2v5m4-5v5"/></svg>
+              </span>
+              <span class="skin-card__name">X Bot</span>
+            </button>
+            <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
+              <span class="skin-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
+              </span>
+              <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
+            </button>
+            <label class="skin-card skin-card--import" role="button" tabindex="0"
+                   aria-label="导入模型" data-i18n-aria="rail.left.skin.import">
+              <span class="skin-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32"><path d="M16 7v18M7 16h18"/></svg>
+              </span>
+              <span class="skin-card__name" data-i18n="rail.left.skin.import">导入</span>
+              <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
+            </label>
           </div>
-          <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
-                    maxlength="500" data-assistant-input
-                    data-i18n-placeholder="chat.placeholder" data-i18n-aria="chat.ask"
-                    placeholder="Ask IntelliBot…" aria-label="Ask IntelliBot"></textarea>
-          <button class="composer__send" type="button" data-assistant-send
-                  data-i18n-aria="chat.send" aria-label="发送">
-            <svg class="composer__send-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 19V5M6 11l6-6 6 6"/>
-            </svg>
+          <button class="skin-delete" type="button" data-skin-delete hidden>
+            <span data-i18n="rail.left.skin.delete">删除当前导入</span>
           </button>
-          <button class="composer__history" type="button" data-chat-history
-                  data-i18n-aria="chat.openHistory" aria-label="打开完整聊天记录">+</button>
+          <p class="skin-note" data-skin-note hidden></p>
         </div>
       </div>
     </div>
@@ -414,11 +530,10 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<script src="js/rail_layout.js?v=1"></script>
 <script src="js/rails.js?v=15"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
-<script src="js/avatar.js?v=3"></script>
+<script src="js/avatar.js?v=4"></script>
 
 <!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
 <script src="lib/gsap.min.js"></script>
@@ -557,11 +672,11 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
-          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入三项界面偏好：<span class="doc__code">intellibot.mode</span>（显示模式）、<span class="doc__code">intellibot.bg</span>（背景样式）、<span class="doc__code">intellibot:avatar</span>（所选头像）。</p>
+          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入界面偏好：<span class="doc__code">intellibot.mode</span>（显示模式）、<span class="doc__code">intellibot.bg</span>（背景样式）、<span class="doc__code">intellibot:avatar</span>（所选头像）、<span class="doc__code">intellibot:personas</span> 与 <span class="doc__code">intellibot:persona</span>（自定义 AI 角色及其样式），以及模型历史和机器人外观选择。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
-          <p class="doc__text">上述偏好的唯一用途是在你下次访问时还原界面状态，处理依据为你对相应设置的主动选择。本服务不基于上述信息开展用户画像、个性化推荐、广告投放或自动化决策，也不将其用于模型训练或与服务无关的任何用途。</p>
+          <p class="doc__text">上述本地信息的用途是在你下次访问时还原界面、角色和机器人外观，处理依据为你对相应设置的主动选择。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务，以生成回复；本服务不会基于这些信息开展用户画像、个性化推荐、广告投放或自动化决策，也不会将其用于模型训练。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">05</span>头像信息的处理</div>
@@ -688,7 +803,7 @@
   </div>
 </div>
 
-<!-- 舞台只展示最新一轮问答；完整历史位于右栏聊天页。 -->
+<!-- 舞台只展示最新一轮问答；完整历史位于左栏对话流。 -->
 <div class="stage-chat" data-stage-chat>
   <button class="stage-chat__bubble stage-chat__bubble--assistant" type="button"
           data-stage-message="assistant" data-chat-open hidden
@@ -705,8 +820,10 @@
 <script src="js/modal.js?v=28"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=5"></script>
-<script src="js/model_config.js?v=5"></script>
-<script src="js/assistant_chat.js?v=7"></script>
+<script src="js/model_config.js?v=6"></script>
+<script src="js/persona.js?v=1"></script>
+<script src="js/assistant_chat.js?v=8"></script>
+<script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
