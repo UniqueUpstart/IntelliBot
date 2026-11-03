@@ -93,6 +93,7 @@ let markerBone = null;
 let limbBone = null;
 let limbMeshes = [];
 let ready = false;
+const viewAdapters = new Set();
 
 const raycaster = new THREE.Raycaster();
 const ndcPoint = new THREE.Vector2();
@@ -305,6 +306,45 @@ function step(camY, camD) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     robo.renderer.render(robo.scene, camera);
   }
+  publishView();
+}
+
+function currentViewState() {
+  return {
+    azimuth: view.azimuth,
+    elevation: view.elevation,
+    distance: view.distance,
+    azimuthPreset: nearestAzimuth(view.azimuth).key,
+    tiltPreset: nearestTilt(view.elevation).key,
+  };
+}
+
+/* 皮肤可以拥有自己的场景与相机。它们注册一个适配器后，
+   顶栏方向、缩放和复位按钮都作用于当前显示的皮肤。 */
+function publishView(source = 'view-control') {
+  refreshViewButtons();
+  const snapshot = currentViewState();
+  viewAdapters.forEach((adapter) => {
+    if (typeof adapter.isActive === 'function' && !adapter.isActive()) return;
+    try {
+      adapter.setView({...snapshot}, {source});
+    } catch (error) {
+      console.error('[view-control] view adapter failed:', error);
+    }
+  });
+}
+
+function registerViewAdapter(adapter) {
+  if (!adapter || typeof adapter.setView !== 'function') return () => {};
+  viewAdapters.add(adapter);
+  if (typeof adapter.isActive !== 'function' || adapter.isActive()) {
+    try {
+      adapter.setView(currentViewState(), {source: 'register'});
+    } catch (error) {
+      console.error('[view-control] view adapter failed:', error);
+    }
+  }
+  return () => viewAdapters.delete(adapter);
 }
 
 /* 关节标记与肢体高亮都取 --hint：模型颜色虽然写在 three 里，
@@ -859,6 +899,23 @@ function zoom(factor) {
   step(lastCamY, lastCamD);
 }
 
+function setView(next, options = {}) {
+  if (!ready || !next) return false;
+  const azimuth = Number(next.azimuth);
+  const elevation = Number(next.elevation);
+  const distance = Number(next.distance);
+  if (!Number.isFinite(azimuth) || !Number.isFinite(elevation) || !Number.isFinite(distance)) {
+    return false;
+  }
+  view.azimuth = normalizeAngle(azimuth);
+  view.elevation = clamp(elevation, -ELEVATION_LIMIT, ELEVATION_LIMIT);
+  view.distance = clamp(distance, DISTANCE_MIN, DISTANCE_MAX);
+  zoomAnchorS = null;
+  if (options.pauseFollow !== false) robo.setPointerAimPaused(true);
+  step(lastCamY, lastCamD);
+  return true;
+}
+
 function bindInteractions() {
   wrap.addEventListener('pointerdown', onPointerDown);
   wrap.addEventListener('pointermove', onPointerMove);
@@ -1212,6 +1269,8 @@ window.viewControl = {
   get azimuth() { return nearestAzimuth(view.azimuth).key; },
   get tilt() { return nearestTilt(view.elevation).key; },
   get dragging() { return drag ? drag.kind : null; },
+  registerViewAdapter,
+  setView,
   openPanel,
   closePanel,
   resetView,

@@ -264,8 +264,46 @@ function init() {
     else camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, baseEye);
   }
+
+  function applyViewState(next) {
+    if (!next) return false;
+    const azimuth = Number(next.azimuth);
+    const elevation = Number(next.elevation);
+    const distance = Number(next.distance);
+    if (!Number.isFinite(azimuth) || !Number.isFinite(elevation) || !Number.isFinite(distance)) {
+      return false;
+    }
+    view.azimuth = ((azimuth + 180) % 360 + 360) % 360 - 180;
+    view.elevation = Math.min(89, Math.max(-89, elevation));
+    view.distance = Math.min(3.2, Math.max(0.5, distance));
+    applyView();
+    return true;
+  }
+
+  function syncViewFromController() {
+    const controller = window.viewControl;
+    return !!(controller && controller.view && applyViewState(controller.view));
+  }
+
+  function publishView() {
+    const controller = window.viewControl;
+    if (!controller || typeof controller.setView !== 'function'
+        || !controller.setView({...view}, {source: 'q1skin', pauseFollow: false})) {
+      applyView();
+    }
+  }
+
   resize();
   window.addEventListener('resize', resize);
+
+  if (window.viewControl && typeof window.viewControl.registerViewAdapter === 'function') {
+    window.viewControl.registerViewAdapter({
+      isActive: () => shown,
+      setView(next) {
+        if (shown) applyViewState(next);
+      },
+    });
+  }
 
   function originalNode() {
     return document.querySelector('.robofx');
@@ -284,6 +322,7 @@ function init() {
     if (rob) rob.classList.toggle('is-skinned', on);
     if (on) {
       resize();
+      syncViewFromController();
       applyPose(poseNow());
       renderer.setAnimationLoop(draw);
     } else {
@@ -581,7 +620,7 @@ function init() {
       view.elevation = Math.min(89, Math.max(-89, view.elevation - dy * 0.3));
       pointerDrag.x = event.clientX;
       pointerDrag.y = event.clientY;
-      applyView();
+      publishView();
       return;
     }
     if (pointerDrag.kind === 'joint') {
@@ -610,7 +649,7 @@ function init() {
     if (!shown) return;
     event.preventDefault();
     view.distance = Math.min(3.2, Math.max(0.5, view.distance * Math.exp(event.deltaY * 0.0012)));
-    applyView();
+    publishView();
   }, { passive: false });
   const poseReset = document.querySelector('.pose-reset-trigger');
   if (poseReset) {
@@ -619,7 +658,7 @@ function init() {
       view.azimuth = 0;
       view.elevation = 0;
       view.distance = 1;
-      applyView();
+      publishView();
       showMarker(null);
     });
   }
