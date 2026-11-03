@@ -5,7 +5,17 @@
 import * as THREE from 'three';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
 import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=3';
+import { BELLY_LAUGH, BELLY_LAUGH_REST_POSE } from './belly_laugh_data.js?v=3';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
+
+const TIMELINE_MOTIONS = new Map([
+  [STREET_DANCE.id, STREET_DANCE],
+  [BELLY_LAUGH.id, BELLY_LAUGH],
+]);
+const TIMELINE_REST_POSES = new Map([
+  [STREET_DANCE.id, STREET_DANCE_REST_POSE],
+  [BELLY_LAUGH.id, BELLY_LAUGH_REST_POSE],
+]);
 
 const skinStyle = document.createElement('style');
 skinStyle.textContent = [
@@ -153,16 +163,16 @@ function init() {
     return last[1];
   }
 
-  function sampleDancePose(time) {
-    const beat = time * STREET_DANCE.bpm / 60;
-    const pose = { ...STREET_DANCE_REST_POSE };
-    Object.entries(STREET_DANCE.tracks).forEach(([joint, points]) => {
+  function sampleTimelinePose(time, motion) {
+    const beat = time * motion.bpm / 60;
+    const pose = { ...TIMELINE_REST_POSES.get(motion.id) };
+    Object.entries(motion.tracks).forEach(([joint, points]) => {
       pose[joint] = sampleTrack(points, beat);
     });
-    danceRoot = {
-      side: sampleTrack(STREET_DANCE.root.side, beat),
-      yaw: sampleTrack(STREET_DANCE.root.yaw, beat),
-    };
+    danceRoot = motion.root ? {
+      side: sampleTrack(motion.root.side, beat),
+      yaw: sampleTrack(motion.root.yaw, beat),
+    } : null;
     return pose;
   }
 
@@ -172,7 +182,8 @@ function init() {
     if (!gesture || !gesture.id) return Q1_REST_POSE;
     const progress = (performance.now() - gesture.startedAt) / (gesture.duration * 1000);
     if (progress >= 1) return Q1_REST_POSE;
-    if (gesture.id === STREET_DANCE.id) return sampleDancePose(progress * STREET_DANCE.duration);
+    const timeline = TIMELINE_MOTIONS.get(gesture.id);
+    if (timeline) return sampleTimelinePose(progress * timeline.duration, timeline);
     return sampleHomePose(gesture.id, progress);
   }
 
@@ -191,8 +202,9 @@ function init() {
       }
       if (window.__homeGesture && window.__homeGesture.id === id) return;
       poseHold = null;
-      if (id === STREET_DANCE.id) {
-        window.__homeGesture = { id, startedAt: performance.now(), duration: STREET_DANCE.duration };
+      const timeline = TIMELINE_MOTIONS.get(id);
+      if (timeline) {
+        window.__homeGesture = { id, startedAt: performance.now(), duration: timeline.duration };
         return;
       }
       const motion = HOME_MOTIONS.find((item) => item.id === id);

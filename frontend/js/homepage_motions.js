@@ -2,10 +2,13 @@ import * as THREE from 'three';
 import {moodId, setMood, onMood} from './faces.js?v=15';
 import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=3';
 import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=3';
+import {BELLY_LAUGH, BELLY_LAUGH_REST_POSE} from './belly_laugh_data.js?v=3';
 
+const TIMELINE_MOTIONS = [STREET_DANCE, BELLY_LAUGH];
+const TIMELINE_BY_ID = Object.fromEntries(TIMELINE_MOTIONS.map((motion) => [motion.id, motion]));
 const MOTION_BY_ID = Object.fromEntries([
   ...HOME_MOTIONS.map((motion) => [motion.id, motion]),
-  [STREET_DANCE.id, STREET_DANCE],
+  ...TIMELINE_MOTIONS.map((motion) => [motion.id, motion]),
 ]);
 
 // MuJoCo 自然站姿下的关节世界轴，已经从 (x前, y左, z上) 转到
@@ -78,20 +81,25 @@ function sampleTrack(points, beat) {
   return last[1];
 }
 
-function sampleDancePose(time, transform) {
+function timelineRest(motion) {
+  return motion.id === STREET_DANCE.id ? STREET_DANCE_REST_POSE : BELLY_LAUGH_REST_POSE;
+}
+
+function sampleTimelinePose(time, transform) {
   const beat = time * transform.bpm / 60;
-  const pose = {...STREET_DANCE_REST_POSE};
+  const pose = {...timelineRest(transform)};
   Object.entries(transform.tracks).forEach(([joint, points]) => {
     pose[joint] = sampleTrack(points, beat);
   });
   return pose;
 }
 
-function sampleDanceRoot(time) {
-  const beat = time * STREET_DANCE.bpm / 60;
+function sampleTimelineRoot(time, transform) {
+  if (!transform.root) return {side: 0, yaw: 0};
+  const beat = time * transform.bpm / 60;
   return {
-    side: sampleTrack(STREET_DANCE.root.side, beat),
-    yaw: sampleTrack(STREET_DANCE.root.yaw, beat),
+    side: sampleTrack(transform.root.side, beat),
+    yaw: sampleTrack(transform.root.yaw, beat),
   };
 }
 
@@ -154,16 +162,17 @@ function buildClip(motion, groups) {
   return new THREE.AnimationClip(`q1_${motion.id}`, motion.duration, tracks);
 }
 
-function buildDanceClip(motion, groups) {
+function buildTimelineClip(motion, groups) {
   const steps = Math.ceil(motion.duration * 30);
   const times = Array.from({length: steps + 1}, (_, index) => motion.duration * index / steps);
+  const rest = timelineRest(motion);
   const tracks = groups.map((group) => {
     const values = [];
     times.forEach((time) => {
-      const pose = sampleDancePose(time, motion);
+      const pose = sampleTimelinePose(time, motion);
       const result = group.rest.clone();
       group.bindings.forEach(({joint, axis}) => {
-        const angle = pose[joint] - STREET_DANCE_REST_POSE[joint];
+        const angle = pose[joint] - rest[joint];
         result.multiply(new THREE.Quaternion().setFromAxisAngle(axis, angle));
       });
       values.push(result.x, result.y, result.z, result.w);
@@ -178,7 +187,10 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   const danceGroups = createBindings(model, DANCE_RETARGET);
   const clips = {
     ...Object.fromEntries(HOME_MOTIONS.map((motion) => [motion.id, buildClip(motion, groups)])),
-    [STREET_DANCE.id]: buildDanceClip(STREET_DANCE, danceGroups),
+    ...Object.fromEntries(TIMELINE_MOTIONS.map((motion) => [
+      motion.id,
+      buildTimelineClip(motion, danceGroups),
+    ])),
   };
   const motionRoot = options.motionRoot || null;
   const footMeshes = [];
@@ -259,8 +271,9 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
     },
     stop,
     update() {
-      if (!motionRoot || !action || !active || active.id !== STREET_DANCE.id) return;
-      const root = sampleDanceRoot(Math.min(action.time, STREET_DANCE.duration));
+      const timeline = active && TIMELINE_BY_ID[active.id];
+      if (!motionRoot || !action || !timeline) return;
+      const root = sampleTimelineRoot(Math.min(action.time, timeline.duration), timeline);
       motionRoot.position.set(root.side, 0, 0);
       motionRoot.rotation.set(0, THREE.MathUtils.degToRad(root.yaw), 0);
       motionRoot.updateMatrixWorld(true);
@@ -294,7 +307,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
 }
 
 /* 所有手势类动作都统一收进右栏，使用文字卡面，动作名称直接可读。 */
-const RAIL_MOTIONS = HOME_MOTIONS;
+const RAIL_MOTIONS = [...HOME_MOTIONS, ...TIMELINE_MOTIONS];
 
 export function mountHomeMotionControls(play) {
   /* 兼容旧页面：左侧 Action 里若还留着动作入口，在绑定时直接移走。 */
@@ -303,7 +316,7 @@ export function mountHomeMotionControls(play) {
 
   const grid = document.querySelector('[data-rail-grid="motions"]');
   if (grid) {
-    while (grid.children.length < HOME_MOTIONS.length + 1) {
+    while (grid.children.length < RAIL_MOTIONS.length) {
       const card = document.createElement('div');
       card.className = 'rail__card';
       grid.appendChild(card);
@@ -330,26 +343,6 @@ export function mountHomeMotionControls(play) {
       activate();
     });
   });
-
-  /* 街舞也是手势合集的一部分：放在手势页最后一格，不再单独占左栏动作卡。 */
-  const danceCard = cards[HOME_MOTIONS.length];
-  if (danceCard) {
-    danceCard.classList.add('is-motion');
-    danceCard.dataset.motion = STREET_DANCE.id;
-    danceCard.innerHTML = `<span class="motion__label">${STREET_DANCE.label}</span>`;
-    danceCard.setAttribute('role', 'button');
-    danceCard.setAttribute('tabindex', '0');
-    danceCard.setAttribute('aria-label', '播放街舞动作');
-    danceCard.setAttribute('aria-pressed', 'false');
-    danceCard.removeAttribute('aria-hidden');
-    const activateDance = () => play(STREET_DANCE.id);
-    danceCard.addEventListener('click', activateDance);
-    danceCard.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      activateDance();
-    });
-  }
 
   return (activeId) => {
     cards.forEach((card) => {

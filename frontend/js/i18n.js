@@ -124,8 +124,9 @@ const I18N = {
 
     "dock.motions": "Motions",
     "dock.poses": "Poses",
-    "dock.poses.intro": "Set a pose first, then play a motion from the action library.",
+    "dock.poses.intro": "Choose a posture for the robot before performing.",
     "dock.actions": "Actions",
+    "dock.actions.intro": "Choose an action and let the robot perform it immediately.",
     "dock.pose.natural": "Natural",
     "dock.pose.standby": "Standby",
     "dock.pose.hand": "Hand up",
@@ -321,8 +322,9 @@ const I18N = {
 
     "dock.motions": "动作",
     "dock.poses": "姿态",
-    "dock.poses.intro": "先定姿态，再从动作库选择一个动作继续表演。",
+    "dock.poses.intro": "选择一个姿态，让机器人先进入对应站姿。",
     "dock.actions": "动作库",
+    "dock.actions.intro": "选择一个动作，让机器人立即开始表演。",
     "dock.pose.natural": "自然站立",
     "dock.pose.standby": "待机姿态",
     "dock.pose.hand": "举手姿态",

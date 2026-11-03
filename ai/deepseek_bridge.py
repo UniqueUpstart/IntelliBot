@@ -43,8 +43,14 @@ HOME_ACTIONS = (
     {
         "id": "street_dance",
         "name": "街舞",
-        "description": "20 秒全身 Hip-hop 演示舞，包含摆臂、踏步、走位和转身",
+        "description": "15 秒 128 BPM 全身 Hip-hop，包含弹跳、抬膝、侧移、转身和收势",
         "aliases": ["街舞", "跳街舞", "来段街舞", "hip-hop", "hiphop"],
+    },
+    {
+        "id": "belly_laugh",
+        "name": "捧腹大笑",
+        "description": "双手捧腹、前仰后合大笑，抬手抱头继续笑，最后摆出马步收招姿势",
+        "aliases": ["捧腹大笑", "捧腹笑", "哈哈大笑", "大笑", "奶娃笑", "奶蛙笑"],
     },
 )
 SUPPORTED_ACTION_IDS = frozenset(GESTURES) | {item["id"] for item in HOME_ACTIONS}
@@ -232,6 +238,25 @@ def validate_persona(value: object) -> str:
     return persona
 
 
+def _home_action_ids(message: str) -> list[str]:
+    text = message.strip().lower()
+    if any(word in text for word in ("不要", "别", "无需", "不用", "停止", "取消")):
+        return []
+    matches: list[tuple[int, str]] = []
+    for item in HOME_ACTIONS:
+        aliases = [item["id"], item["name"], *item["aliases"]]
+        positions = [text.find(str(alias).lower()) for alias in aliases]
+        positions = [position for position in positions if position >= 0]
+        if positions:
+            matches.append((min(positions), item["id"]))
+    matches.sort(key=lambda item: item[0])
+    result: list[str] = []
+    for _, action_id in matches:
+        if action_id not in result:
+            result.append(action_id)
+    return result
+
+
 def _system_prompt(persona: str = "") -> str:
     catalog = [
         {
@@ -248,6 +273,7 @@ def _system_prompt(persona: str = "") -> str:
         "用户用‘先、再、然后、接着’要求多个动作时，actions 必须按原顺序返回，最多四个；"
         "同一动作要求多次时可以重复相同 ID。"
         "用户明确说‘街舞、跳街舞、hip-hop’时选择 street_dance；只说‘舞动’时选择 dance。"
+        "用户明确说‘捧腹大笑、哈哈大笑、奶娃笑、奶蛙笑’时选择 belly_laugh。"
         "用户要求停止、别动或取消动作时 stop=true，回复中明确说明已经停止。"
         "含有‘不要、别、无需’的动作不得执行，除非整句是在要求停止当前动作。"
         "不支持的动作必须说明暂不支持，不得选择相似动作代替。"
@@ -278,6 +304,12 @@ def _request_payload(
     recovery: bool = False,
 ) -> dict:
     system_prompt = _system_prompt(persona)
+    hinted_actions = _home_action_ids(message)
+    if hinted_actions:
+        system_prompt += (
+            f"本轮用户明确点名了扩展动作 {hinted_actions}，"
+            "actions 必须包含这些 ID，不得回答暂不支持。"
+        )
     if recovery:
         system_prompt += (
             "上一次响应未能形成有效 JSON。现在请立即返回一个完整 JSON 对象，"
@@ -409,6 +441,15 @@ def chat(
     ]
     if stop:
         actions = []
+    else:
+        hinted_actions = _home_action_ids(message)
+        if not actions and hinted_actions:
+            labels = {item["id"]: item["name"] for item in HOME_ACTIONS}
+            names = "、".join(labels.get(action, action) for action in hinted_actions)
+            reply = f"好的，我来为你播放{names}。"
+        for action in hinted_actions:
+            if action not in actions and len(actions) < 4:
+                actions.append(action)
     return {
         "reply": reply,
         "action_id": actions[0] if actions else None,
@@ -497,7 +538,7 @@ def make_handler(state: BridgeState):
                     "ok": True,
                     "model": config["model"],
                     "configured": config["configured"],
-                    "actions": [item["id"] for item in gesture_metadata()],
+                    "actions": sorted(SUPPORTED_ACTION_IDS),
                 },
             )
 

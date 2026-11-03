@@ -106,9 +106,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    (488 − 24) / 4 ≈ 116。边长交给 1fr，窄屏（78vw）时四张一起缩，
    始终四列不折行
    ============================================================ */
-/* 三页共用一块内容区，只显示 data-view 对应的那一页。 */
+/* 各页共用一块内容区，只显示 data-view 对应的那一页。 */
 .rail__view{display:none}
 [data-panel-body][data-view="poses"] [data-rail-view="poses"],
+[data-panel-body][data-view="actions"] [data-rail-view="actions"],
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
 [data-panel-body][data-view="chat"] [data-rail-view="chat"],
 [data-panel-body]:not([data-view]) [data-rail-view="poses"]{display:block}
@@ -518,6 +519,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 /* 右栏两枚不与左栏的指令分组色走：那一列是「看机器人」的入口，
    与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
 .item[data-panel="Poses"]{--itc:var(--theme)}
+.item[data-panel="Actions"]{--itc:var(--theme)}
 .item[data-panel="Emotions"]{--itc:var(--theme)}
 .item[data-panel="Chat"]{--itc:var(--theme)}
 .item[data-panel="Model"]{--itc:var(--theme)}
