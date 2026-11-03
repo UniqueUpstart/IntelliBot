@@ -4,7 +4,8 @@
   position:fixed;
   z-index:21;
   top:calc(var(--top-h) + var(--edge) + 26px);
-  right:calc(var(--edge) + var(--rail-w) + 12px);
+  /* 回到右侧栏正上方的中线；换皮浮条收进左栏后，这里不再需要为它让位 */
+  right:calc(var(--edge) + (var(--rail-w) - 48px) / 2);
   width:48px;
   height:48px;
   display:grid;
@@ -23,13 +24,8 @@
   font-weight:var(--fw);
   letter-spacing:.02em;
   line-height:1;
-  transition:background .15s ease,border-color .15s ease,color .15s ease,
-             transform .1s ease,right .3s var(--ease);
+  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease;
 }
-body:has(.rail--right.is-open) .pose-reset-trigger{
-  right:calc(var(--edge) + min(var(--rail-expanded),78vw) + 12px);
-}
-body:has(.rail--right.is-hidden) .pose-reset-trigger{right:var(--edge)}
 .pose-reset-trigger:hover,
 .pose-reset-trigger:active{
   background:var(--theme);
@@ -253,8 +249,7 @@ body:has(.rail--right.is-hidden) .pose-reset-trigger{right:var(--edge)}
 
 @media (max-width:640px){
   .group--view{display:none}
-  .pose-reset-trigger,
-  body:has(.rail--right.is-open) .pose-reset-trigger{right:var(--edge)}
+  .pose-reset-trigger{right:var(--edge)}
 }
 
 @media (prefers-reduced-motion:reduce){

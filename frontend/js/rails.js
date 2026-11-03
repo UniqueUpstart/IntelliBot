@@ -74,9 +74,9 @@
 /* 右栏动作面板：先用空白卡占好四列的位置，手势与表情模块随后往这些节点里
    填内容（动作名 / 表情屏），只填不换节点 —— 磁吸脚本在加载时把卡收进自己的
    列表，换掉 DOM 就得重扫一遍。
-   手势页 8 张（两行）、表情页 16 张（四行），都是一行四张 */
+   手势页 12 张（全部手势动作含街舞）、表情页 16 张（四行），都是一行四张 */
 (function () {
-  var COUNTS = { gestures: 6, emotions: 16 };
+  var COUNTS = { gestures: 12, emotions: 16 };
   document.querySelectorAll('[data-rail-grid]').forEach(function (grid) {
     var total = COUNTS[grid.dataset.railGrid] || 8;
     var html = '';

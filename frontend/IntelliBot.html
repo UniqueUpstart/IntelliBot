@@ -19,17 +19,17 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=10"></script>
+<script src="js/i18n.js?v=11"></script>
   <link rel="stylesheet" href="css/base.css?v=8">
   <link rel="stylesheet" href="css/topbar.css?v=8">
-  <link rel="stylesheet" href="css/rail.css?v=23">
+  <link rel="stylesheet" href="css/rail.css?v=24">
   <link rel="stylesheet" href="css/cards.css?v=23">
   <link rel="stylesheet" href="css/modal.css?v=27">
   <link rel="stylesheet" href="css/chat.css?v=33">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=30">
+<link rel="stylesheet" href="css/viewtool.css?v=31">
 </head>
 <body>
 
@@ -144,6 +144,13 @@
         <span class="item__label" data-i18n="rail.left.tendance">Tendance</span>
       </button>
 
+      <button class="item" type="button" data-panel="Skin" aria-expanded="false" aria-controls="panel-shortcuts">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11.4 4.2 7.1 6.8c-1 .6-1.5 1.7-1.3 2.8l.9 5.1c.1.8.8 1.3 1.5 1.4l2.1.2v8.8c0 1.6 1.3 2.9 2.9 2.9h5.6c1.6 0 2.9-1.3 2.9-2.9v-8.8l2.1-.2c.8-.1 1.4-.6 1.5-1.4l.9-5.1c.2-1.2-.3-2.3-1.3-2.8l-4.3-2.6c-.7-.4-1.6-.4-2.3 0l-1.4.8c-.7.4-1.6.4-2.3 0l-1.4-.8c-.7-.4-1.6-.4-2.3 0Z"/></svg>
+        </span>
+        <span class="item__label" data-i18n="rail.left.skin">Skins</span>
+      </button>
+
       <!-- 编辑入口：和上面四个一样是左栏自己的图标项，
            点开就是本栏左侧那块面板，面板里切到 data-view="edit" 显示表单 -->
       <button class="item item--edit" type="button" data-panel="Edit"
@@ -213,6 +220,45 @@
           </button>
         </div>
       </div>
+
+      <!-- 换皮页：从原来浮在舞台上的独立小条收进左栏，外观选项与右侧手势卡同尺寸 -->
+      <div class="skin-view" data-skin-panel data-skin-view>
+        <h3 class="skin-view__title" data-i18n="rail.left.skin">换皮</h3>
+        <p class="skin-view__hint" data-i18n="rail.left.skin.hint">选择一个机器人外观，或导入自己的模型。</p>
+        <div class="skin-grid" data-skin-pick role="group"
+             aria-label="机器人外观" data-i18n-aria="rail.left.skin">
+          <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
+            <span class="skin-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M9 8.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Zm3 4.5a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 13Zm8 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-6.7 5.2h5.4M16 8.5V5m-4 18v4m8-4v4"/></svg>
+            </span>
+            <span class="skin-card__name" data-i18n="rail.left.skin.q1">原模型</span>
+          </button>
+          <button class="skin-card" type="button" data-skin-id="builtin:xbot" aria-pressed="false">
+            <span class="skin-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.5"/><path d="M10 24.5v-5.6c0-3.3 2.7-6 6-6s6 2.7 6 6v5.6M7 25h18M12 13.8l-4 4m12-4 4 4m-9 6.2v5m4-5v5"/></svg>
+            </span>
+            <span class="skin-card__name">X Bot</span>
+          </button>
+          <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
+            <span class="skin-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
+            </span>
+            <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
+          </button>
+          <label class="skin-card skin-card--import" role="button" tabindex="0"
+                 aria-label="导入模型" data-i18n-aria="rail.left.skin.import">
+            <span class="skin-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M16 7v18M7 16h18"/></svg>
+            </span>
+            <span class="skin-card__name" data-i18n="rail.left.skin.import">导入</span>
+            <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
+          </label>
+        </div>
+        <button class="skin-delete" type="button" data-skin-delete hidden>
+          <span data-i18n="rail.left.skin.delete">删除当前导入</span>
+        </button>
+        <p class="skin-note" data-skin-note hidden></p>
+      </div>
       <section class="sc-group sc-group--action">
         <h3 class="sc-group__title" data-i18n="rail.left.group.action">Action</h3>
         <div class="sc-grid">
@@ -264,7 +310,7 @@
 
 <!-- ===================== 右侧：Gestures / Emotions =====================
      原来这里是 Chat / Log 两个占位页，现在两页都由动作卡填满：
-     手势页铺 8 张、表情页铺 16 张，一行四张（卡片由 js/rails.js 注入，
+     手势页铺 12 张（全部手势动作含街舞）、表情页铺 16 张，一行四张（卡片由 js/rails.js 注入，
      动作名来自 js/homepage_motions.js、表情屏来自 js/faces.js） -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
@@ -313,7 +359,7 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<script src="js/rails.js?v=13"></script>
+<script src="js/rails.js?v=14"></script>
 
 <!-- 把卡片拖到机器人身上：拾起 → 思考 → 点头 → 卡片消失 → 播动作 -->
 <script src="js/card_pickup.js?v=11"></script>
@@ -647,9 +693,9 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=57"></script>
+<script type="module" src="js/robot3d.js?v=58"></script>
 <script type="module" src="js/view-control.js?v=41"></script>
-<script type="module" src="js/q1skin.js?v=20"></script>
+<script type="module" src="js/q1skin.js?v=22"></script>
 
 </body>
 </html>

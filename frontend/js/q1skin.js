@@ -1,6 +1,6 @@
 /* 主页皮肤。
    下拉里的「原模型」是 q1_ff.glb，自己播片段。
-   「示意人形」和导入的 Mixamo / glTF 跟主页 Gestures、以及 Action 05 街舞的同一套关节角走。
+   「示意人形」和导入的 Mixamo / glTF 跟右侧 Gestures（含街舞）的同一套关节角走。
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js';
@@ -14,19 +14,6 @@ skinStyle.textContent = [
   '.skinfx:not([hidden]) canvas{display:block;width:100%;height:100%;pointer-events:auto;touch-action:none;cursor:grab}',
   '.skinfx.is-joint canvas{cursor:crosshair}',
   '.skinfx.is-cam canvas,.skinfx.is-drag canvas{cursor:grabbing}',
-  '.skinbar{position:fixed;top:calc(var(--top-h) + 28px);left:calc(var(--edge) + var(--rail-w) + 12px);z-index:30;',
-  'display:flex;flex-direction:column;align-items:stretch;gap:2px;width:max-content;max-width:132px;',
-  'padding:4px;border-radius:16px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(20,24,28,.1);',
-  'pointer-events:auto;font:13px/1 "Segoe UI",sans-serif;color:#1c1e22;transition:left .3s var(--ease)}',
-  'body:has(.rail--left.is-open) .skinbar{left:calc(var(--edge) + min(var(--rail-expanded),78vw) + 12px)}',
-  'body:has(.rail--left.is-hidden) .skinbar{left:var(--edge)}',
-  '.skinbar button,.skinbar select,.skinbar__file{border:0;background:transparent;border-radius:12px;',
-  'padding:7px 10px;cursor:pointer;color:inherit;font:inherit;text-align:left}',
-  '.skinbar select{width:100%;max-width:124px}',
-  '.skinbar button:hover,.skinbar__file:hover{background:rgba(0,0,0,.05)}',
-  '.skinbar__note{color:#5c6570;padding:4px 8px;white-space:normal}',
-  '@media (max-width:640px){.skinbar{left:var(--edge)}body:has(.rail--left.is-open) .skinbar{left:var(--edge)}}',
-  '@media (prefers-reduced-motion:reduce){.skinbar{transition:none}}',
 ].join('');
 document.head.appendChild(skinStyle);
 
@@ -113,11 +100,13 @@ function init() {
   shadow.position.z = 0.002;
   scene.add(shadow);
 
-  const bar = buildBar();
-  const pick = bar.querySelector('[data-skin-pick]');
-  const note = bar.querySelector('[data-skin-note]');
-  const removeBtn = bar.querySelector('[data-skin-delete]');
-  const fileInput = bar.querySelector('[data-skin-file]');
+  const panel = document.querySelector('[data-skin-panel]');
+  if (!panel) return;
+  const pick = panel.querySelector('[data-skin-pick]');
+  const note = panel.querySelector('[data-skin-note]');
+  const removeBtn = panel.querySelector('[data-skin-delete]');
+  const fileInput = panel.querySelector('[data-skin-file]');
+  const importCard = panel.querySelector('.skin-card--import');
   const loaded = new Map();
   let current = 'builtin:q1';
   let shown = false;
@@ -189,15 +178,13 @@ function init() {
 
   function watchGestures() {
     const grid = document.querySelector('[data-rail-grid="gestures"]');
-    const danceCard = document.querySelector('[data-action-motion="street_dance"]');
     if (!grid) {
       requestAnimationFrame(watchGestures);
       return;
     }
     const sync = () => {
-      const danceOn = danceCard && danceCard.classList.contains('is-on');
-      const card = danceOn ? null : grid.querySelector('.is-on[data-motion]');
-      const id = danceOn ? STREET_DANCE.id : (card && card.dataset.motion);
+      const card = grid.querySelector('.is-on[data-motion]');
+      const id = card && card.dataset.motion;
       if (!id) {
         window.__homeGesture = null;
         return;
@@ -214,9 +201,6 @@ function init() {
         : null;
     };
     new MutationObserver(sync).observe(grid, { attributes: true, subtree: true, attributeFilter: ['class'] });
-    if (danceCard) {
-      new MutationObserver(sync).observe(danceCard, { attributes: true, attributeFilter: ['class'] });
-    }
   }
   watchGestures();
 
@@ -655,11 +639,34 @@ function init() {
     if (active && active.apply) active.apply();
   }
 
+  function optionCard(id) {
+    return Array.from(pick.querySelectorAll('[data-skin-id]'))
+      .find((card) => card.dataset.skinId === id) || null;
+  }
+
+  function paintPick(id) {
+    pick.querySelectorAll('[data-skin-id]').forEach((card) => {
+      const active = card.dataset.skinId === id;
+      card.classList.toggle('is-on', active);
+      card.setAttribute('aria-pressed', String(active));
+    });
+  }
+
   function addOption(id, label) {
-    const option = document.createElement('option');
-    option.value = id;
-    option.textContent = label;
-    pick.appendChild(option);
+    if (optionCard(id)) return;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'skin-card';
+    card.dataset.skinId = id;
+    card.setAttribute('aria-pressed', 'false');
+    card.innerHTML = [
+      '<span class="skin-card__icon" aria-hidden="true">',
+      '<svg viewBox="0 0 32 32"><path d="M16 5.5 9.5 9v5l2.5 1.5V25h8V15.5L22.5 14V9L16 5.5Z"/></svg>',
+      '</span>',
+      '<span class="skin-card__name"></span>',
+    ].join('');
+    card.querySelector('.skin-card__name').textContent = label;
+    pick.appendChild(card);
   }
 
   async function useBundled(id, url, name) {
@@ -695,6 +702,7 @@ function init() {
   async function selectSkin(id) {
     current = id;
     footRestZ = null;
+    paintPick(id);
     try { localStorage.setItem(SKIN_KEY, id); } catch (err) { /* 隐私模式可能拒绝写入 */ }
     if (active) active.object.visible = false;
     active = null;
@@ -757,17 +765,25 @@ function init() {
       motion.add(bound.object);
       bound.object.visible = false;
       addOption(id, file.name.replace(/\.[^.]+$/, ''));
-      pick.value = id;
       await selectSkin(id);
     } catch (err) {
       setNote(err.message);
     }
   });
+  importCard.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    fileInput.click();
+  });
 
-  pick.addEventListener('change', () => { selectSkin(pick.value); });
+  pick.addEventListener('click', (event) => {
+    const card = event.target.closest('[data-skin-id]');
+    if (card) selectSkin(card.dataset.skinId);
+  });
   removeBtn.addEventListener('click', async () => {
     if (!current.startsWith('file:')) return;
-    const label = pick.selectedOptions[0] ? pick.selectedOptions[0].textContent : '这个皮肤';
+    const option = optionCard(current);
+    const label = option ? option.querySelector('.skin-card__name').textContent : '这个皮肤';
     if (!confirm('从列表里去掉「' + label + '」？')) return;
     const id = current;
     await dbDelete(id);
@@ -776,8 +792,7 @@ function init() {
       motion.remove(entry.object);
       loaded.delete(id);
     }
-    pick.querySelector('option[value="' + id + '"]').remove();
-    pick.value = 'builtin:q1';
+    if (option) option.remove();
     await selectSkin('builtin:q1');
   });
 
@@ -785,8 +800,7 @@ function init() {
     rows.forEach((row) => addOption(row.id, row.name.replace(/\.[^.]+$/, '')));
     let saved = 'builtin:q1';
     try { saved = localStorage.getItem(SKIN_KEY) || saved; } catch (err) { /* 沿用原模型 */ }
-    if (![...pick.options].some((option) => option.value === saved)) saved = 'builtin:q1';
-    pick.value = saved;
+    if (!optionCard(saved)) saved = 'builtin:q1';
     await selectSkin(saved);
   }).catch((err) => {
     setNote(err.message);
@@ -964,23 +978,6 @@ function buildFigure(mat) {
   waistYaw.add(arm('left', bones, mat.skin));
   waistYaw.add(arm('right', bones, mat.skin));
   return { root, bones };
-}
-
-function buildBar() {
-  const bar = document.createElement('div');
-  bar.className = 'skinbar';
-  bar.innerHTML = [
-    '<select data-skin-pick aria-label="机器人皮肤">',
-    '<option value="builtin:q1">原模型</option>',
-    '<option value="builtin:xbot">X Bot</option>',
-    '<option value="builtin:figure">示意人形</option>',
-    '</select>',
-    '<label class="skinbar__file">导入<input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden></label>',
-    '<button type="button" data-skin-delete hidden>删除</button>',
-    '<span class="skinbar__note" data-skin-note hidden></span>',
-  ].join('');
-  document.body.appendChild(bar);
-  return bar;
 }
 
 function openDb() {

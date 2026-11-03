@@ -176,6 +176,123 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 /* 手势卡：卡面是机器人做这个动作的缩略图（离屏渲染的半身像，见 robot3d.js），
    模型没就绪时先显示英文名，图一到就撤掉。图压在最上层，
    hover 只亮边框，选中时 theme 底片才从图后面透出来 */
+/* 左栏换皮页：沿用右栏手势卡的四列方形节奏，避免再出现独立浮动控件 */
+.skin-view{
+  display:none;
+  flex-direction:column;
+  gap:12px;
+}
+[data-panel-body][data-view="skin"] .skin-view{
+  display:flex;
+}
+[data-panel-body][data-view="skin"] .sc-group{
+  display:none;
+}
+/* 手势类动作统一收进右栏；左栏 DOM 里若还有旧动作入口，加载期间也不露出来 */
+.sc-group--action [data-motion],
+.sc-group--action [data-action-motion]{
+  display:none;
+}
+.skin-view__title{
+  position:sticky;
+  top:calc(var(--title-top) - var(--pad-y));
+  z-index:4;
+  margin:0;
+  font-size:var(--fs-16); line-height:1; letter-spacing:.4px; font-weight:var(--fw);
+  color:var(--text-secondary);
+}
+.skin-view__hint{
+  margin:-4px 0 4px;
+  font-size:var(--fs-12); line-height:1.45;
+  color:var(--text-muted);
+}
+.skin-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:8px;
+}
+.skin-card{
+  appearance:none; -webkit-appearance:none;
+  position:relative;
+  aspect-ratio:1;
+  min-width:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:8px;
+  padding:10px 6px;
+  border:0; border-radius:16px;
+  background:var(--card);
+  color:var(--text-reduced);
+  font-family:inherit; font-weight:var(--fw);
+  cursor:pointer;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:box-shadow .12s linear, color .12s linear;
+}
+.skin-card::before{
+  content:'';
+  position:absolute; inset:0;
+  border-radius:inherit;
+  background:var(--theme);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .14s cubic-bezier(.16,.84,.3,1);
+}
+.skin-card:hover,
+.skin-card:focus-visible{
+  box-shadow:inset 0 0 0 1.5px var(--theme);
+}
+.skin-card.is-on{
+  color:var(--text-invert);
+  box-shadow:inset 0 0 0 1.5px var(--theme);
+}
+.skin-card.is-on::before{opacity:1}
+.skin-card:focus-visible{
+  outline:2px solid var(--theme);
+  outline-offset:2px;
+}
+.skin-card__icon,
+.skin-card__name{position:relative; z-index:1}
+.skin-card__icon{
+  width:34px; height:34px;
+  display:grid; place-items:center;
+}
+.skin-card__icon svg{
+  width:100%; height:100%; display:block;
+  fill:none; stroke:currentColor; stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.skin-card__name{
+  max-width:100%;
+  font-size:var(--fs-14); line-height:1.15;
+  text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.skin-card--import{color:var(--text-muted)}
+.skin-delete{
+  appearance:none; -webkit-appearance:none;
+  align-self:flex-start;
+  min-height:36px;
+  padding:0 14px;
+  border:0; border-radius:999px;
+  background:var(--card);
+  color:var(--text-reduced);
+  font:inherit; font-size:var(--fs-14);
+  cursor:pointer;
+}
+.skin-delete:hover{background:var(--warning); color:var(--text-invert)}
+.skin-delete[hidden], .skin-note[hidden]{display:none}
+.skin-note{
+  margin:0;
+  padding:10px 12px;
+  border-radius:12px;
+  background:var(--card);
+  color:var(--text-muted);
+  font-size:var(--fs-12); line-height:1.45;
+}
+
+/* 手势卡：中文标签两三个字，居中。卡片比原来底栏那版（64）大了一档，
+   字号跟着提到 14，不然一张 116 的方格里只剩两粒小字 */
 .rail__card.is-motion{
   display:grid; place-items:center;
   cursor:pointer;
@@ -309,6 +426,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    与它展开后卡片里的 theme 选中底是同一套颜色，圆钮跟着用 theme 才不打架 */
 .item[data-panel="Gestures"]{--itc:var(--theme)}
 .item[data-panel="Emotions"]{--itc:var(--theme)}
+.item[data-panel="Skin"]{--itc:var(--theme)}
 /* 选中与 hover 才把底片放出来（颜色本身常驻，靠 scale 开合），
    同样不带边；进场这条曲线先快后慢，尾巴慢慢贴住圆周。
    出场不在这里写，回到基态时用镜像曲线，等于原路缩回 */

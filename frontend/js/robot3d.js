@@ -23,8 +23,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose } from './homepage_motions.js?v=15';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, samplePose, sampleDancePose } from './homepage_motions.js?v=16';
 import { Q1_REST_POSE, Q1_MOTIONS } from './q1_motion_data.js?v=2';
+import { STREET_DANCE } from './street_dance_data.js?v=2';
 
 const MODEL_URL = 'model/q1_ff.glb';
 const CLIP = 'idle';        /* 循环动画名；模型自带 apose/idle/standby/raisehand 等 8 段 */
@@ -1139,7 +1140,7 @@ renderer.setPixelRatio(DPR_STEPS[0]);
   }
 
   function motionThumb(id) {
-    if (!ready || !model || !joints || !Q1_MOTIONS[id]) return '';
+    if (!ready || !model || !joints || (!Q1_MOTIONS[id] && id !== STREET_DANCE.id)) return '';
     if (thumbCache[id]) return thumbCache[id];
 
     if (!thumbTarget) {
@@ -1159,7 +1160,9 @@ renderer.setPixelRatio(DPR_STEPS[0]);
 
     /* 稍微侧一点：纯正面时前后摆臂会被压成一条竖线，看不出在做哪个动作 */
     rig.rotation.set(0, 0.34, 0);
-    setJointPose(samplePose(id, 0.42));
+    setJointPose(id === STREET_DANCE.id
+      ? sampleDancePose(STREET_DANCE.duration * 0.42, STREET_DANCE)
+      : samplePose(id, 0.42));
 
     const pixels = new Uint8Array(THUMB * THUMB * 4);
     renderer.setRenderTarget(thumbTarget);

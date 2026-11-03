@@ -78,7 +78,7 @@ function sampleTrack(points, beat) {
   return last[1];
 }
 
-function sampleDancePose(time, transform) {
+export function sampleDancePose(time, transform) {
   const beat = time * transform.bpm / 60;
   const pose = {...STREET_DANCE_REST_POSE};
   Object.entries(transform.tracks).forEach(([joint, points]) => {
@@ -293,16 +293,19 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   };
 }
 
-/* 已经搬进左栏 Action 的两条动作（舞动、cha-cha）不再在右栏重复出现 ——
-   右栏只剩另外六条。卡面也不再写名字：模型就绪后换成机器人做这个动作的缩略图，
+/* 所有手势类动作都统一收进右栏，左栏 Action 只保留非手势卡片。
+   卡面也不再写名字：模型就绪后换成机器人做这个动作的缩略图，
    模型没加载出来（或者没有 WebGL）时退回名字，卡片不至于空着 */
-const RAIL_EXCLUDE = new Set(['dance', 'cha_cha']);
-const RAIL_MOTIONS = HOME_MOTIONS.filter((motion) => !RAIL_EXCLUDE.has(motion.id));
+const RAIL_MOTIONS = HOME_MOTIONS;
 
 export function mountHomeMotionControls(play) {
+  /* 兼容旧页面：左侧 Action 里若还留着动作入口，在绑定时直接移走。 */
+  document.querySelectorAll('.sc-group--action [data-motion], .sc-group--action [data-action-motion]')
+    .forEach((card) => card.remove());
+
   const grid = document.querySelector('[data-rail-grid="gestures"]');
   if (grid) {
-    while (grid.children.length < HOME_MOTIONS.length) {
+    while (grid.children.length < HOME_MOTIONS.length + 1) {
       const card = document.createElement('div');
       card.className = 'rail__card';
       grid.appendChild(card);
@@ -331,21 +334,22 @@ export function mountHomeMotionControls(play) {
     });
   });
 
-  const danceCard = document.querySelector('[data-action-motion="street_dance"]');
+  /* 街舞也是手势合集的一部分：放在手势页最后一格，不再单独占左栏动作卡。 */
+  const danceCard = cards[HOME_MOTIONS.length];
   if (danceCard) {
     danceCard.classList.add('is-motion');
+    danceCard.dataset.motion = STREET_DANCE.id;
+    danceCard.innerHTML = `<span class="motion__label">${STREET_DANCE.label}</span>`
+      + '<img class="motion__thumb" alt="" decoding="async" draggable="false" hidden>';
     danceCard.setAttribute('role', 'button');
     danceCard.setAttribute('tabindex', '0');
     danceCard.setAttribute('aria-label', '播放街舞动作');
     danceCard.setAttribute('aria-pressed', 'false');
+    danceCard.removeAttribute('aria-hidden');
     const activateDance = () => play(STREET_DANCE.id);
-    danceCard.addEventListener('click', (event) => {
-      if (event.target.closest('.sc__pin')) return;
-      activateDance();
-    });
+    danceCard.addEventListener('click', activateDance);
     danceCard.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      if (event.target.closest('.sc__pin')) return;
       event.preventDefault();
       activateDance();
     });
@@ -370,6 +374,19 @@ export function mountHomeMotionControls(play) {
       if (label) label.remove();
       filled = true;
     });
+    if (danceCard) {
+      const img = danceCard.querySelector('.motion__thumb');
+      if (img && !img.getAttribute('src')) {
+        const url = api.motionThumb(STREET_DANCE.id);
+        if (url) {
+          img.src = url;
+          img.hidden = false;
+          const label = danceCard.querySelector('.motion__label');
+          if (label) label.remove();
+          filled = true;
+        }
+      }
+    }
     return filled;
   }
 
@@ -381,10 +398,5 @@ export function mountHomeMotionControls(play) {
       card.classList.toggle('is-on', active);
       if (card.dataset.motion) card.setAttribute('aria-pressed', String(active));
     });
-    if (danceCard) {
-      const active = activeId === STREET_DANCE.id;
-      danceCard.classList.toggle('is-on', active);
-      danceCard.setAttribute('aria-pressed', String(active));
-    }
   };
 }
