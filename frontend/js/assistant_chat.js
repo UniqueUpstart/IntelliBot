@@ -2,6 +2,9 @@
   'use strict';
 
   var composer = document.querySelector('.composer');
+  if (composer && composer.parentElement !== document.body) {
+    document.body.appendChild(composer);
+  }
   var panel = document.querySelector('[data-assistant-chat]') ||
     (composer && composer.querySelector('[data-assistant-chat]'));
   if (!composer || !panel) return;
@@ -231,6 +234,25 @@
     });
   }
 
+  function syncHistoryButton() {
+    if (!historyButton) return;
+    var tab = document.querySelector('.rail--left .item[data-panel="Chat"]');
+    var expanded = !!tab && tab.getAttribute('aria-expanded') === 'true';
+    var key = expanded ? 'chat.closeHistory' : 'chat.openHistory';
+    var fallback = expanded ? '关闭完整聊天记录' : '打开完整聊天记录';
+    historyButton.textContent = expanded ? '×' : '+';
+    historyButton.setAttribute('aria-expanded', String(expanded));
+    historyButton.setAttribute('data-i18n-aria', key);
+    historyButton.setAttribute('aria-label', tr(key, fallback));
+  }
+
+  function toggleChat() {
+    var tab = document.querySelector('.rail--left .item[data-panel="Chat"]');
+    if (!tab) return;
+    if (tab.getAttribute('aria-expanded') === 'true') tab.click();
+    else openChat();
+  }
+
   function clear() {
     history = [];
     records = [];
@@ -269,7 +291,19 @@
     var bubble = event.target.closest('[data-stage-message]');
     if (bubble) openChat(bubble.dataset.recordId);
   });
-  if (historyButton) historyButton.addEventListener('click', function () { openChat(); });
+  if (historyButton) {
+    var chatTab = document.querySelector('.rail--left .item[data-panel="Chat"]');
+    historyButton.addEventListener('pointerdown', function (event) { event.stopPropagation(); });
+    historyButton.addEventListener('click', toggleChat);
+    if (chatTab && window.MutationObserver) {
+      new MutationObserver(syncHistoryButton).observe(chatTab, {
+        attributes: true,
+        attributeFilter: ['aria-expanded'],
+      });
+    }
+    document.addEventListener('langchange', syncHistoryButton);
+    syncHistoryButton();
+  }
   if (window.addEventListener) {
     window.addEventListener('robot-manual-motion', function () {
       sequenceToken += 1; stopButton.hidden = true; status.textContent = '已切换为手动动作';
