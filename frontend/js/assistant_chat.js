@@ -597,6 +597,9 @@
      document 上接管：指针落在列的矩形里、且这列确实装不下内容，
      才把 deltaY 换成 scrollTop */
   if (stage) document.addEventListener('wheel', function (event) {
+    /* 弹窗和左右栏都有自己的滚动容器。它们会覆盖舞台聊天列，但坐标仍可能
+       落在背后的列矩形内；先按实际事件目标排除，避免把滚轮送到不可见的聊天列。 */
+    if (event.target.closest('.modal, .rail')) return;
     var flow = stageStream();
     if (!flow || flow.scrollHeight <= flow.clientHeight + 4) return;
     var box = flow.getBoundingClientRect();

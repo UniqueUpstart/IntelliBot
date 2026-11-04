@@ -70,7 +70,9 @@
   }
 
   function formatLabel(format) {
-    return format === 'anthropic' ? 'Anthropic' : 'OpenAI';
+    return format === 'anthropic'
+      ? t('model.format.anthropic', 'Anthropic')
+      : t('model.format.openai', 'OpenAI');
   }
 
   function normalizeProvider(provider) {
@@ -213,13 +215,17 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = modelLabel(current.model) || t('model.choose', '选择模型');
-    effort.hidden = current.configured;
+    effort.hidden = false;
     effort.removeAttribute('data-i18n');
-    effort.textContent = t('model.status.unconfigured', '未配置');
+    effort.textContent = current.configured
+      ? t('model.status.configured', '已配置')
+      : t('model.status.unconfigured', '未配置');
     /* 模型胶囊只挂 aria-label：原生 title 悬停会弹黑底小框，输入框尾部不要这个 */
     trigger.removeAttribute('title');
     trigger.setAttribute('aria-label', formatLabel(current.api_format) + ' · ' + current.model +
-      (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置')));
+      ' · ' + (current.configured
+        ? t('model.status.configured', '已配置')
+        : t('model.status.unconfigured', '未配置')));
     wrap.classList.toggle('is-ready', current.configured);
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
@@ -241,9 +247,15 @@
     var payload = null;
     try { payload = await response.json(); } catch (_error) {}
     if (!response.ok || (payload && payload.error)) {
+      if (response.status === 404 && (!path || path === '/ai/config' || path === '/ai/models')) {
+        throw new Error(t(
+          'model.backend.outdated',
+          '当前后端版本不支持模型设置，请重新构建并启动项目。'
+        ));
+      }
       throw new Error(payload && payload.error && payload.error.message
         ? payload.error.message
-        : '模型配置请求失败');
+        : t('model.request.failed', '模型配置请求失败'));
     }
     return payload && payload.data ? payload.data : payload;
   }
