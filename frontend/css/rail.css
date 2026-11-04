@@ -120,23 +120,43 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
    进入 chat 视图时只保留聊天页，避免旧卡片把历史记录挤到滚动区下方。 */
 [data-panel-body][data-view="chat"] > :not([data-rail-view="chat"]){display:none}
 
-/* 分栏标题：字号、字距、字色、行盒与吸顶位置都对齐左栏的 .sc-group__title（24 号）
-   —— 两边是同一级标题，只是左边按指令组排、右边按视图排。
-   吸顶位置仍是「雾带中线减半个标题盒」那一套：--title-top 由 .rail__panel 给，
-   --pad-y 是本面板的上内边距（20），所以 top 写成两者之差，实际落在 12，
-   与左栏的 12 同高。z-index 压在雾带（3）之上，卡片从它下面过时标题始终清楚 */
-.rail__title{
-  position:sticky; top:calc(var(--title-top) - var(--pad-y)); z-index:4;
-  margin:0 0 12px;
+/* 有页标题的视图：面板自身不留上内边距，这段留白交给固定头那一层。
+   左栏 persona / 快捷指令页的标题仍留在流里（也仍是 sticky），所以这两页
+   照旧写 0；右栏三页的标题已经移到滚动区外，内容从标题下沿 56 起 ——
+   20 标题上沿 + 24 行高 + 12 与首张卡片的间距 */
+[data-panel-body][data-view="persona"],
+[data-panel-body][data-view="shortcuts"]{padding-top:0}
+[data-panel-body][data-view="gestures"],
+[data-panel-body][data-view="emotions"],
+[data-panel-body][data-view="preference"]{padding-top:56px}
+
+/* 页标题：挂在不滚动的那一层（.rail__head，滚动区 .panel__body 的兄弟）上，
+   top 直接写死 20。它不参与 sticky 定位，滚动、面板开合、系统缩放都不会让它挪位，
+   也不存在「合成线程比内容晚一帧」那种相对抖动 —— 这一层根本不动。
+   这一层只有定位，不带任何底色：上下两条雾带仍是面板上原来那两条，
+   浓度、平台段、渐隐曲线一概不动 */
+.rail__head{
+  position:absolute; top:0; left:0; right:0;
+  z-index:4;
+  pointer-events:none;
+  display:none;
+}
+.rail__head .rail__title{
+  display:none;
+  position:absolute; top:20px; left:var(--panel-pad); right:var(--panel-pad);
+  margin:0; padding:0;
   font-size:24px; line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-/* 每页第一枚标题：静止位置与吸顶位置重合，都用 --title-top（遮罩中线 24 减
-   半个 24 号标题盒的 12）。正文自带 --pad-y 的上留白，这里用同样的差值抵掉，
-   写法与快捷指令页第一组标题那条一致 */
-.rail__view > .rail__title:first-child{
-  margin-top:0;
-}
+/* 显示哪一枚标题由栏体上的 data-view 决定（rails.js 每次切视图同步写一份）。
+   只有右栏这三页的标题挪到了这一层，左栏两页的标题仍在流里吸顶 */
+.rail[data-view="gestures"] .rail__head,
+.rail[data-view="emotions"] .rail__head,
+.rail[data-view="preference"] .rail__head{display:block}
+.rail[data-view="gestures"] .rail__head [data-head="gestures"],
+.rail[data-view="emotions"] .rail__head [data-head="emotions"],
+.rail[data-view="preference"] .rail__head [data-head="preference"]{display:block}
 /* 卡片网格：一行四张，列宽用 1fr 摊满，卡片靠 aspect-ratio 保持方格 */
 .rail__grid{
   display:grid;
@@ -561,13 +581,14 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
      一条细缝。上下各多长 2px、由 overflow:clip 裁掉，边界处就变成采样区内侧，
      缝消失。染色层同步一起外扩，避免只补了模糊、颜色仍短 1px */
   --frost-over:2px;
-  /* 组标题盒顶边到面板顶端的距离，初始位置与吸顶位置共用这一个值。
-     取顶部遮罩的竖直中点：遮罩总高 = --frost-head + --frost-h = 48，中线 24，
-     标题盒高 24（24 号字 line-height:1），顶边 = 24 - 12 = 12，标题中心正落在 24。
-     标题的 top / margin-top 与尾部脚本算吸附时机时都读它，改这一处即可整体平移；
-     改 --frost-head 或 --frost-h 时这个数值要跟着重算（(head + h) / 2 - 12）。
-     写死成 px 而不是 calc：尾部脚本用 parseFloat 读它，calc 表达式读出来是 NaN */
-  --title-top:12px;
+  /* 标题文字上沿到面板顶端的距离。标题盒的顶边贴着面板顶（top:0），
+     这段距离由标题自身的 padding-top 撑出来 —— 盒顶与 sticky 的吸附线重合，
+     滚动时标题不会先被内容带着走一段再钉住。
+     右栏与左栏标题都读这一个值；左栏快捷指令页的组间距会减掉它来保持原来的视觉节奏。
+     写死成 px 而不是 calc：尾部脚本按 px 读数值 */
+  --title-top:20px;
+  /* 标题盒顶边贴住面板顶，吸附线就是 0；脚本按它算淡出起止点 */
+  --title-pin:0px;
   flex:0 0 auto;
   width:0;
   /* 雾带就压在面板内沿上，裁切留在 padding box 即可 */

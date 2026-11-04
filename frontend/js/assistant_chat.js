@@ -86,6 +86,66 @@
   /* 只有真的滚出内容时才给顶上那截渐隐：一条消息的板子不该是半透明的 */
   function stageSync(stream) {
     stream.classList.toggle('is-overflow', stream.scrollHeight > stream.clientHeight + 4);
+    queueStageEdges();
+  }
+
+  /* 气泡滚到列的上沿或下沿时淡出、缩一点，滚出去的过程就不是被硬切一刀。
+     位置读 offsetTop / offsetHeight，不读 getBoundingClientRect —— 气泡身上
+     挂着 rotateY 和 scale，rect 量到的是投影后的框，跟滚动量对不上。
+     两条边缘各留一个豁免：还贴在顶上时顶边不淡（第一条就是内容起点），
+     已经停在底上时底边不淡（那是刚到的最新一条，正该看清）。
+     淡出的距离取 88px，约一条半气泡，滚动时能看到它一路退场而不是突然消失 */
+  var EDGE_FADE = 88;
+  /* 列的矩形快照，syncStagePerspective 每次重算时覆盖；滚轮热区判得勤，
+     没有它就变成每个 wheel 事件拉一次布局 */
+  var stageRect = null;
+  function syncStageEdges(flow) {
+    var stream = flow || stageStream();
+    if (!stream) return;
+    var scroll = stream.scrollTop;
+    var view = stream.clientHeight;
+    var canScroll = stream.scrollHeight > view + 4;
+    var atTop = scroll <= 4;
+    var atBottom = stream.scrollHeight - scroll - view < 8;
+    var kids = stream.children;
+    var count = kids.length;
+    var i;
+    /* 先把布局量一次读完，再进第二圈写：offsetTop 会等上一次样式写完才肯给数，
+       读一条写一条就成了交替读写，每条气泡都多付一次样式重算，条数一多就掉帧 */
+    var tops = new Array(count);
+    var bottoms = new Array(count);
+    for (i = 0; i < count; i += 1) {
+      tops[i] = kids[i].offsetTop;
+      bottoms[i] = tops[i] + kids[i].offsetHeight;
+    }
+    for (i = 0; i < count; i += 1) {
+      var edge = 1;
+      if (canScroll) {
+        if (!atTop) edge = Math.min(edge, (tops[i] - scroll) / EDGE_FADE);
+        if (!atBottom) edge = Math.min(edge, (scroll + view - bottoms[i]) / EDGE_FADE);
+      }
+      edge = edge < 0 ? 0 : (edge > 1 ? 1 : edge);
+      /* smoothstep：贴着中间那段走平，真正靠近边才明显发力，
+         不然只要一滚动，满屏都像蒙了层雾 */
+      var eased = edge * edge * (3 - 2 * edge);
+      var node = kids[i];
+      /* 只在真变了才写：滚一屏，一半以上的气泡都稳稳停在 1 或 0，
+         逐条重写会把整列的样式标脏，白重算一遍 */
+      if (node.__stageEdge !== undefined && Math.abs(node.__stageEdge - eased) < 0.004) continue;
+      node.__stageEdge = eased;
+      node.style.setProperty('--edge', eased.toFixed(3));
+    }
+  }
+
+  /* 滚动一帧写一个属性就够：scroll 事件比帧密，攒到下一帧统一算，
+     免得一长串历史每条都跟着布局抖动 */
+  var edgeFrame = 0;
+  function queueStageEdges() {
+    if (edgeFrame) return;
+    edgeFrame = window.requestAnimationFrame(function () {
+      edgeFrame = 0;
+      syncStageEdges();
+    });
   }
 
   /* 相机跟着视口走，不写死：镜头架在屏幕中轴与视口中线上，距离取视口高度的
@@ -97,6 +157,9 @@
     if (!flow) return;
     var box = flow.getBoundingClientRect();
     if (!box.width || !box.height) return;
+    /* 顺手存一份矩形：滚轮每次都要判热区，而列的位置只在尺寸变化时才动，
+       不必每个 wheel 事件都去问一次布局 */
+    stageRect = { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width };
     var vw = window.innerWidth || document.documentElement.clientWidth;
     var vh = window.innerHeight || document.documentElement.clientHeight;
     var narrow = vw <= 900;
@@ -594,20 +657,75 @@
     if (bubble) openChat(bubble.dataset.recordId);
   });
   /* 那一列自己不接指针（中间那条竖带给三维场景留着拖视角），滚轮从
-     document 上接管：指针落在列的矩形里、且这列确实装不下内容，
-     才把 deltaY 换成 scrollTop */
+     document 上接管。接管范围分三段：左边一条、右边一条，中间那条留给
+     机器人 —— 指针落在中缝里就原样交回去，滚轮只干一件事，
+     不会又缩放模型又把聊天记录拖着走。
+     中缝宽按列宽取 16%，上限 300（半宽 150），窄屏跟着缩 */
+  var GAP_RATIO = 0.16;
+  var GAP_HALF_MAX = 150;
+  /* 一帧里可能来好几个 wheel，攒成一个数再一次写 scrollTop：
+     每次写都会引发一轮滚动与合成，合并掉就少掉好几帧的抖动 */
+  var wheelStep = 0;
+  var wheelFrame = 0;
+  function flushStageWheel(flow) {
+    wheelFrame = 0;
+    var step = wheelStep;
+    wheelStep = 0;
+    if (!step) return;
+    var max = flow.scrollHeight - flow.clientHeight;
+    var next = Math.max(0, Math.min(max, flow.scrollTop + step));
+    if (next === flow.scrollTop) return;
+    flow.scrollTop = next;
+  }
+  /* 指针是否落在列矩形之外。滚轮热区、现量与快照两处判定共用这一条 */
+  function outsideStage(box, x, y) {
+    return y < box.top || y > box.bottom || x < box.left || x > box.right;
+  }
   if (stage) document.addEventListener('wheel', function (event) {
     /* 弹窗和左右栏都有自己的滚动容器。它们会覆盖舞台聊天列，但坐标仍可能
        落在背后的列矩形内；先按实际事件目标排除，避免把滚轮送到不可见的聊天列。 */
     if (event.target.closest('.modal, .rail')) return;
     var flow = stageStream();
     if (!flow || flow.scrollHeight <= flow.clientHeight + 4) return;
-    var box = flow.getBoundingClientRect();
-    if (event.clientX < box.left || event.clientX > box.right ||
-        event.clientY < box.top || event.clientY > box.bottom) return;
-    flow.scrollTop += event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    /* 栏一打开舞台就整块 visibility:hidden（见 css 那条 body:has(.rail.is-open)），
+       它这时候不该再接滚轮。以前只按矩形判，左右栏和聊天列在窄一点的屏上横向重叠，
+       指针明明落在栏里的列表上，滚轮却被这层接走并 preventDefault，
+       表现就是栏偶尔滑不动 —— 判断依据换成「舞台上不上场」，不是几何 */
+    if (document.querySelector('.rail.is-open, .modal[aria-hidden="false"]')) return;
+    /* 弹窗和输入区自己滚自己的，别抢 */
+    var target = event.target;
+    if (target && target.closest && target.closest('.modal, .composer, .model-menu')) return;
+    var box = stageRect || flow.getBoundingClientRect();
+    /* 竖直方向上压着列的范围才算热区：列上方是顶栏与机器人，下方是输入区，
+       指针落在那些地方时不该把整页的滚轮吃掉 */
+    if (outsideStage(box, event.clientX, event.clientY)) {
+      /* 快照是上次重算时量的，面板或顶栏伸缩后会偏。落在边界外就现量一次再判，
+         边界内的事件仍旧走快照，不为此每个事件都拉一次布局 */
+      var live = flow.getBoundingClientRect();
+      box = { left: live.left, right: live.right, top: live.top, bottom: live.bottom, width: live.width };
+      stageRect = box;
+      if (outsideStage(box, event.clientX, event.clientY)) return;
+    }
+    var gap = Math.min(GAP_HALF_MAX, box.width * GAP_RATIO);
+    if (Math.abs(event.clientX - (box.left + box.right) / 2) < gap) return;
+    /* 已经贴顶还往上推、或者贴底还往下推，这一下本来就滚不动了：
+       再 preventDefault 只会让整页也一动不动，读起来就是「卡住」。
+       所以到界就放手，把事件原样交还给外层 */
+    var delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    if (!delta) return;
+    var max = flow.scrollHeight - flow.clientHeight;
+    if ((delta < 0 && flow.scrollTop <= 1) || (delta > 0 && flow.scrollTop >= max - 1)) return;
+    wheelStep += delta;
     event.preventDefault();
+    if (!wheelFrame) {
+      wheelFrame = window.requestAnimationFrame(function () { flushStageWheel(flow); });
+    }
   }, { passive: false });
+  /* 滚动和补底都走程序改 scrollTop，scroll 事件照样会冒出来，接这一处就够了 */
+  if (stage) {
+    var stageFlow = stageStream();
+    if (stageFlow) stageFlow.addEventListener('scroll', queueStageEdges, { passive: true });
+  }
   /* 相机参数先摆好，再等字体落位重摆一次 —— 字体换了行高、列的位置也可能挪 */
   if (stage) {
     syncStagePerspective();

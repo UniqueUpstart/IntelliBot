@@ -15,14 +15,14 @@ gsap.registerPlugin(ScrollTrigger);
   function setup(body) {
     var titles = Array.prototype.slice.call(body.querySelectorAll('.sc-group__title'));
 
-    /* 标题盒顶边离面板顶端的距离，与 CSS 的 --title-top 同源；
-       改标题位置只动那一个变量，这里量一次就同步，不用两处对齐。
-       缺省 12 是顶部遮罩 (16 + 32) / 2 再减半个标题盒 */
-    var titleTop = 12;
+    /* 标题盒顶边贴住面板顶，吸顶线就是 0；文字靠标题自身的 padding-top 下移，
+       与这一条线无关。改标题位置只动 --title-top，吸附时机不用跟着改。
+       缺省 0 与 CSS 的 --title-pin 同源 */
+    var titlePin = 0;
 
     function measure() {
-      var v = parseFloat(getComputedStyle(body).getPropertyValue('--title-top'));
-      titleTop = isNaN(v) ? 12 : v;
+      var v = parseFloat(getComputedStyle(body).getPropertyValue('--title-pin'));
+      titlePin = isNaN(v) ? 0 : v;
     }
 
     /* 内容撑不满时没有可滚的距离，上下两条雾带压在空白上只剩两块灰，收掉更好看。
@@ -40,7 +40,7 @@ gsap.registerPlugin(ScrollTrigger);
       return g.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
     }
     /* 标题吸顶后，标题盒顶边离面板顶端的距离 */
-    function pinTop() { return titleTop; }
+    function pinTop() { return titlePin; }
 
     function startOf(t) {
       var g = t.parentElement;

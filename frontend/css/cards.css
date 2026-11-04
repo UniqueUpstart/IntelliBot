@@ -69,10 +69,12 @@
 /* 视图切换：快捷指令合集一页把三组全铺出来，不再按类型分页。
    每组的标题同时也是吸顶的那一枚，内容滚起来才有东西压到雾带上 */
 .panel__body[data-view="shortcuts"] .sc-group + .sc-group{
-  margin-top:var(--group-gap);   /* 不同指令区域上下间隔，默认 16 */
+  /* 组标题的盒顶要在 0 上吸顶，20 的留白挪进了标题的 padding-top，
+     这里把这段补回来：16 的视觉间距 = -4 的外边距 + 20 的标题内边距 */
+  margin-top:calc(var(--group-gap) - var(--title-top));
 }
 .sc-group{
-  --sc: var(--series-green-light);              /* 默认组色，Action 用；Dialog / Tendance 在标签上覆盖 */
+  --sc: var(--series-green-light);              /* 默认组色，Action 用；Dialog 在标签上覆盖 */
   /* 组宽撑满栏宽，让下面的 .sc-grid 有整栏可以平分。
      原来是 max-content（组宽跟着两张 240 的卡走），列宽改成 1fr 之后
      那就成了死循环：容器先按内容收缩，1fr 再按这个收缩后的宽度分配，
@@ -80,14 +82,12 @@
   width:auto;
 }
 .sc-group__title{
-  /* 吸顶位置由 --title-top 决定（12 = 顶部遮罩的竖直中线）。Chrome 的 sticky 偏移
-     以滚动区内容盒为基准，而内容盒已被 --pad-y(32) 的上下留白推开，所以实际写下去的
-     top 要减掉这段留白：top:-32 时标题盒顶边正好落在 0
-     （实测 -32→0、-16→16、0→32、16→48，是线性平移）。
-     标题盒高 24、顶边 12、中心 24，与遮罩中线重合。
-     z-index:4 压过雾带（3），卡片从标题底下滑过时标题是清晰的 */
+  /* 盒顶边贴在视图顶（top:0，视图上内边距已归零），文字靠 padding-top 落到 --title-top(20)。
+     吸附线与静止位都是 0，滚动时标题一动不动 —— 不依赖 sticky 的换算，
+     也不用再减 --pad-y。z-index:4 压过雾带（3），卡片从标题底下滑过时标题是清晰的 */
   position:sticky;
-  top:calc(var(--title-top) - var(--pad-y));
+  top:0;
+  padding-top:var(--title-top,20px);
   z-index:4;
   /* 24 号字的行盒比字形底部多出约 3px 的降部留白，行盒下留 8 时字形到卡片约 11；
      这里给 8 的行盒间距，标题字形到卡片 = 8 + 3 的降部，视觉留白不挤 */
@@ -95,13 +95,10 @@
   font-size:24px; line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);   /* 组标题用次级文字色，压在雾带上也够实 */
 }
-/* 每个视图里排在最上面的那枚标题，初始位置与吸顶位置对齐，都是 --title-top（遮罩竖直中线）。
-   正文自带 --pad-y(32) 的上留白，这里用同样的差值把它抵掉，
-   后面的卡片跟着一起上移，标题与首张卡片之间那 8px 的节奏不变。
-   合集里三组同页，排第一的永远是 DOM 第一个 section（action），
-   用 :first-child 指名，后面的组各自吃一段 --group-gap */
+/* 合集里三组同页，排第一的永远是 DOM 第一个 section（action）。
+   它的标题盒顶边就是视图顶，文字由 padding-top 推到 20，不再需要负外边距 */
 .panel__body[data-view="shortcuts"] .sc-group:first-child > .sc-group__title{
-  margin-top:calc(var(--title-top) - var(--pad-y));
+  margin-top:0;
 }
 .sc-grid{
   display:grid;
@@ -231,7 +228,6 @@
 
 .sc-group--action{--sc:var(--series-green-light)}
 .sc-group--dialog{--sc:var(--series-blue-light)}
-.sc-group--tendance{--sc:var(--series-pink-light)}
 
 /* 窄屏放不下两张 240 并排：卡片退回一列，栏宽也跟着收 */
 /* 居中弹窗：Connect / Preference / Advance / Settings 共用的一块空面板。

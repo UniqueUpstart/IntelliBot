@@ -77,7 +77,6 @@
 }
 .edit__type[data-edit-type="action"]{--itc:var(--series-green-light)}
 .edit__type[data-edit-type="dialog"]{--itc:var(--series-blue-light)}
-.edit__type[data-edit-type="tendance"]{--itc:var(--series-pink-light)}
 
 /* 类型胶囊与提交钮共用一套底片：isolation + z-index:-1 让底片落在本体背景之上、
    文字之下（文字是按钮的行内内容，绝对定位的伪元素默认会盖住它）。
@@ -258,7 +257,15 @@
    ============================================================ */
 .composer{
   position:fixed; left:50%; bottom:16px;
-  translate:-50% 0;
+  /* 退场位移与缩量各占一条通道，写法与 css/rail.css 的 --hide-d / --hide-s 一致：
+     translate 属性在最外层、只横向回一半做居中，纵向留给脚本补间；
+     scale 单独一条，缩小时以自身中心收拢，不被 left:50% 拽偏。
+     两者都由 js/composer.js 的 composerMotion 逐帧写，这里只给静止态兜底 */
+  --exit-s:1;
+  --exit-d:0px;
+  translate:-50% var(--exit-d);
+  scale:var(--exit-s);
+  transform-origin:50% 50%;
   z-index:25;                 /* 压过栏体(20)、垫在弹窗(50)之下 */
   /* fixed 元素的 width:auto 是 shrink-to-fit，上限只到 left 剩下的那半屏，
      长到 50vw 时会被挤掉一点、居中跟着偏；max-content 让外套始终等于输入框 */
@@ -467,8 +474,8 @@
 
 /* 右栏聊天历史与舞台最新消息 */
 .rail__view--chat{position:relative;height:100%;min-height:0}
-/* 聊天页不让面板上内边距（32）把表头推下去：标题顶边与右栏 Emotions 页的
-   --title-top（12）对齐，雾带、宽度、左右留白都沿用同一套 */
+/* 聊天页不让面板上内边距（32）把表头推下去：表头是绝对定位、不参与滚动，
+   顶边直接给 20，与其它页标题的静止位（也是吸顶位）对齐 */
 [data-panel-body][data-view="chat"]{overflow:hidden;padding-top:0;padding-bottom:18px}
 [data-panel-body][data-view="chat"] .rail__view--chat{display:flex;flex-direction:column}
 .rail__view--chat .assistant-chat{
@@ -520,16 +527,18 @@
 }
 .composer__starters button:focus-visible{outline:none}
 .chat-view__head{
-  align-items:center;
+  /* 顶对齐而不是居中：右端那排工具钮最低 30，比 24 的标题盒高，
+     center 会把标题往下推 3px，和左右栏其它页的标题错开一档 */
+  align-items:flex-start;
   gap:12px;
-  /* 表头脱离流，整条压在记录流上面：高 48 = 面板顶部雾带的总高（16 平台
-     + 32 渐隐），标题顶边 12 与右栏 .rail__title 的吸顶位同高。
+  /* 表头脱离流，整条压在记录流上面：高 52 由 20 上留白 + 24 标题盒 + 8 下留白
+     叠出来，标题顶边 20 与右栏 .rail__title 的静止位置同高。
      z-index 抬到雾带（3）之上，标题始终清楚；记录往上滚时从雾带下面过，
      和 Emotions 页卡片从标题下过是同一种读法 */
   position:absolute;
   inset:0 0 auto 0;
   z-index:4;
-  padding:12px 0 8px;
+  padding:20px 0 8px;
 }
 .chat-view__actions{
   position:relative;
@@ -606,10 +615,9 @@
   gap:11px;
 }
 .chat-view__identity .view-title{
-  font-size:20px;
-  line-height:1.05;
-  letter-spacing:.2px;
-  color:var(--text-primary);
+  /* 字号、字距、颜色全部跟着 .view-title 的统一排版走（24 号、次级色），
+     这一页原先单独压到 20 号、primary，是左右栏里唯一一处不一样的标题 */
+  margin:0;
 }
 .chat-view__identity .view-sub{
   max-width:290px;
@@ -743,11 +751,13 @@
    ============================================================ */
 .composer{
   width:min(720px,calc(100vw - 220px));
-  transition:opacity .16s ease,visibility .16s ease;
 }
-body:has(.rail.is-open) .composer{
-  opacity:0;
-  visibility:hidden;
+/* 栏体展开时输入框整块向下让位：同一条弹性曲线、同样的 .95 缩量，
+   只是方向朝下（输入框的「外沿」在屏幕底部）。
+   这组变量只是兜底 —— 脚本没跑到或补间被打断重载时，类一挂就直接到位 */
+.composer.is-out{
+  --exit-s:.95;
+  --exit-d:calc(100% + 24px);
   pointer-events:none;
 }
 .composer__surface{
@@ -1143,13 +1153,19 @@ body:has(.rail.is-open) .composer{
   content:'  ✓';
   color:var(--theme-dark);
 }
-/* 快捷胶囊贴着输入面板的左缘排一行：不要再居中，也不要前面那枚圆点标签 */
+/* 快捷胶囊排在卡片底行、左下角三横钮的右手边：不再越过卡片顶缘压到舞台上。
+   锚点按 footer 的盒模型算 —— 左内边距 16 + 圆钮直径 38 + 间距 10 = 64；
+   纵向让 28 高的胶囊与 38 高的圆钮同心，底距就是 10 + (38 − 28) / 2 = 15。
+   right 仍写 auto，right:auto 时宽度才由 max-content 撑开 */
 .composer__starters{
   right:auto;
-  left:0;
-  bottom:calc(100% + 12px);
+  left:calc(16px + 38px + 10px);
+  bottom:calc(10px + (38px - 28px) / 2);
   width:max-content;
-  max-width:100%;
+  /* 右侧给模型胶囊与发送钮留出位置：这一行两枚钮加起来约 133 宽，
+     再留一点余量。语言包换成长词条时宁可裁字，也不要压到钮上 */
+  max-width:calc(100% - 64px - 160px);
+  overflow:hidden;
   gap:8px;
   justify-content:flex-start;
   padding:0;
@@ -1159,6 +1175,8 @@ body:has(.rail.is-open) .composer{
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
 }
+/* 余量被吃掉时收成省略号，胶囊轮廓不跟着变形 */
+.composer__starters button{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 词条的皮肤：跟左右边栏同一层玻璃 —— 半透明的 --panel 加背后的高斯模糊，
    浮在舞台上时背后有什么就透出一点被磨开的颜色，静止时描边与字都取 muted，
    安静地停在输入框上方 */
@@ -1183,6 +1201,18 @@ body:has(.rail.is-open) .composer{
   outline:none;
   transform:none;
 }
+/* 卡片收到 840 及以下时底行放不下这两枚词条（父级宽度 = 100vw − 220，
+   留给字条的部分跟着缩），退回原来的位置：浮在卡片上方、允许折行。
+   断点按最长的英文词条 379 宽反推，再留一档余量 */
+@media (max-width:840px){
+  .composer__starters{
+    left:0;
+    bottom:calc(100% + 12px);
+    max-width:100%;
+    overflow:visible;
+    flex-wrap:wrap;
+  }
+}
 
 /* Keep the transcript crisp: flat surfaces, restrained corners and no blur. */
 .assistant-chat__log{
@@ -1195,11 +1225,14 @@ body:has(.rail.is-open) .composer{
   width:fit-content;
   min-width:0;
   max-width:min(84%,300px);
-  padding:8px;
-  border:1px solid color-mix(in srgb,#d7d7d4 82%,var(--border));
+  /* 四周一圈同宽的内边距，字号与行高不变；原来上下 8、左右 8 的窄垫在
+     14 号字上显得局促，句首与圆角离得太近 */
+  padding:16px;
+  /* 不描边：两块气泡靠底色分开，机器人的白、用户的 theme 色本身就有边界 */
+  border:0;
   /* 靠中轴那侧的下角压成直角：助手在左、用户在右 */
   border-radius:24px 24px 24px 0;
-  background:color-mix(in srgb,var(--bg) 56%,var(--card-solid));
+  background:#fff;
   box-shadow:0 2px 8px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .08));
   color:var(--text-secondary);
   font-family:"Source Han Sans SC","Noto Sans SC","Segoe UI",sans-serif;
@@ -1239,18 +1272,22 @@ body:has(.rail.is-open) .composer{
 }
 .assistant-chat__message--user{
   border-radius:24px 24px 0 24px;
-  border-color:color-mix(in srgb,var(--theme) 66%,var(--border));
-  background:color-mix(in srgb,var(--theme) 42%,var(--card-solid));
-  color:var(--text-primary);
+  /* 自己的话直接用主题色铺满。theme 两支明暗主题下都是同一枚浅色，
+     所以字色固定取深墨，不跟 --text-primary 走（深色模式下那支会变白） */
+  background:var(--theme);
+  color:#1c1c1c;
 }
 .assistant-chat__message--pending{
-  border-style:solid;
   color:var(--text-muted);
 }
 .assistant-chat__message--error{
-  border-color:color-mix(in srgb,#bb5b54 30%,var(--border));
   background:color-mix(in srgb,#bb5b54 7%,var(--card-solid));
   color:#a73f38;
+}
+/* 深色底下纯白一块太扎眼：机器人那侧换成面板实色（#3a3a3a），
+   与其它卡片同一层次；用户那侧的主题色两支主题共用一支浅色，不必跟着换 */
+:root[data-theme="dark"] .assistant-chat__message:not(.assistant-chat__message--user){
+  background:var(--card-solid);
 }
 .assistant-chat__note{
   padding:0;
@@ -1317,17 +1354,21 @@ body:has(.rail.is-open) .composer{
    转发（指针落在这一列里就把 deltaY 交给 scrollTop），气泡自己再接回来 */
 .stage-chat__flow{
   position:absolute;
-  top:20%;
-  bottom:26%;
+  /* 上下不写死高度，由这两条夹出来：顶栏占到 16%，底部输入区占到 20%，
+     中间 64% 全给记录。原先 20/26 只留了 54%，一屏装不下几条就到底了 */
+  top:16%;
+  bottom:20%;
   left:50%;
   transform:translateX(-50%);
-  width:min(920px,calc(100vw - 48px));
+  /* 列宽比正文习惯的 920 再放开一档：中间那条竖带要留给机器人，
+     列越宽，两列气泡的外缘越靠屏幕边，内侧倒退得越多 */
+  width:min(1080px,calc(100vw - 24px));
   display:flex;
   flex-direction:column;
   gap:12px;
   /* 左右这点内边距是给透视留的余量：气泡外缘绕内侧竖边转过来会放大，
      没有这段留白，掀起来的那半截会被滚动区的边界裁掉 */
-  padding:4px 44px;
+  padding:4px 32px;
   overflow-y:auto;
   overscroll-behavior:contain;
   pointer-events:none;
@@ -1345,7 +1386,10 @@ body:has(.rail.is-open) .composer{
 .stage-chat__bubble{
   --tilt:16deg;
   flex:0 0 auto;
-  max-width:min(46%,380px);
+  /* 收在 38% / 320：气泡是贴着两端的，宽度就是它往中线探出去的距离。
+     380 那档会压到机器人身上，收窄换回来一整条空档，
+     读感几乎没差（320 一行仍有十八九字） */
+  max-width:min(38%,320px);
   border:0;
   border-radius:24px;
   padding:16px;
@@ -1373,8 +1417,15 @@ body:has(.rail.is-open) .composer{
      scale 是独立属性，不写进 transform，那边还挂着 rotateY */
   --sx:1;
   --sy:1;
-  scale:var(--sx) var(--sy);
-  animation:stage-bubble-in .3s var(--ease) both;
+  /* 滚到列的上下沿时渐隐渐小：--edge 由 assistant_chat.js 按气泡离那两条边
+     还剩多少余量写 0~1。scale 里把它乘进 --sx，弹性补间和边缘缩放各占各的
+     因子，谁也不覆盖谁；透明度单独一条，不塞进 transform。
+     最淡留 0.06 而不是 0：贴边那一瞬间气泡还有半截露在列里，
+     直接归零会看成被剪断 */
+  --edge:1;
+  scale:calc(var(--sx) * (0.94 + 0.06 * var(--edge))) var(--sy);
+  opacity:calc(.06 + .94 * var(--edge));
+  animation:stage-bubble-in .3s var(--ease) backwards;
 }
 .stage-chat__bubble span{display:block}
 /* 只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角收圆 24 */
@@ -1391,11 +1442,12 @@ body:has(.rail.is-open) .composer{
   background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
   color:var(--text-primary);
 }
-/* 入场只做淡入与轻微上浮，缩放留给 --sx 那条弹性补间：
-   两边都写 scale 会叠乘，弹回时按两份比例一起缩，幅度翻倍 */
+/* 入场只做淡入与轻微上浮：终点留给元素自己的计算值 —— opacity 里挂着
+   --edge，滚动中会随时变，所以这里不写 to。写了 to 再配 fill:both，
+   动画结束后会把 opacity 锁在 1，边缘渐隐就永远不生效。
+   缩放留给 --sx 那条弹性补间，两边都写 scale 会叠乘 */
 @keyframes stage-bubble-in{
   from{opacity:0;transform:translateY(8px) rotateY(var(--tilt))}
-  to{opacity:1;transform:rotateY(var(--tilt))}
 }
 
 /* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这一列不必叠着 */
@@ -1405,14 +1457,14 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 @media(max-width:900px){
   .stage-chat__flow{
     top:16%;
-    bottom:26%;
-    width:calc(100vw - 24px);
+    bottom:22%;
+    width:calc(100vw - 12px);
     gap:10px;
-    padding:4px 30px;
+    padding:4px 20px;
   }
-  /* 窄屏两半很窄，气泡放宽到 74%，角度由脚本按屏宽调小，
-     才不会一句话被拆成七八行 */
-  .stage-chat__bubble{--tilt:8deg; max-width:min(74%,340px)}
+  /* 窄屏两半很窄，气泡收到 54%：再宽就顶到中线上，机器人的位置没了。
+     角由脚本按屏宽调小，才不会一句话被拆成七八行 */
+  .stage-chat__bubble{--tilt:8deg; max-width:min(54%,280px)}
   .stage-chat__bubble--user{--tilt:-8deg}
 }
 @media(prefers-reduced-motion:reduce){

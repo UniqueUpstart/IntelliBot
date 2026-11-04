@@ -3,6 +3,73 @@
 (function () {
   var wrap = document.querySelector('.composer');
   if (!wrap) return;
+
+  /* ---- 栏体展开时向下让位 ----
+     和左右栏体共用一套退场语言：位移走 --exit-d、缩量走 --exit-s，
+     同一条弹性曲线 elastic.out(1.0, 0.8)、同样 0.6s、同样缩到 .95。
+     区别只在方向 —— 栏体朝左右屏外甩，输入框贴在底边，就朝下屏外落。
+     位移量按「底边距 + 自身高度 + 余量」现算：小屏那一档把 bottom 抬到
+     76 去避开横躺的两栏，写死 100% 会剩半截留在屏里 */
+  var OUT_S = 0.95;
+  var OUT_DUR = 0.6;
+  var OUT_EASE = 'elastic.out(1.0, 0.8)';
+  var calmMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function outOffset() {
+    var bottom = parseFloat(window.getComputedStyle(wrap).bottom);
+    if (isNaN(bottom)) bottom = 16;
+    return bottom + wrap.offsetHeight + 12;
+  }
+
+  /* 打断也要接得住：先按当前计算值压实内联，再挂 is-out，
+     否则类里的终值会抢先跳到位，补间等于从终点起步 */
+  window.composerMotion = function (hide) {
+    if (!window.gsap || !wrap.isConnected) {
+      wrap.classList.toggle('is-out', hide);
+      return;
+    }
+    var cs = window.getComputedStyle(wrap);
+    var curS = parseFloat(cs.getPropertyValue('--exit-s'));
+    var curD = parseFloat(cs.getPropertyValue('--exit-d'));
+    gsap.set(wrap, {
+      '--exit-s': isNaN(curS) ? 1 : curS,
+      '--exit-d': (isNaN(curD) ? 0 : curD) + 'px'
+    });
+    wrap.classList.toggle('is-out', hide);
+    /* 回来时先把元素放回可见，再让曲线把它顶上来；
+       出去时等落定再收 visibility，免得屏幕里半截就先消失 */
+    if (!hide) wrap.style.visibility = '';
+    gsap.to(wrap, {
+      '--exit-s': hide ? OUT_S : 1,
+      '--exit-d': (hide ? outOffset() : 0) + 'px',
+      duration: calmMotion.matches ? 0 : OUT_DUR,
+      ease: OUT_EASE,
+      overwrite: 'auto',
+      onComplete: function () {
+        if (!hide || !wrap.classList.contains('is-out')) return;
+        wrap.style.visibility = 'hidden';
+      }
+    });
+  };
+
+  /* 触发条件是「任意栏体展开」，与 CSS 里原来 body:has(.rail.is-open) 一致。
+     只看 .rail 的 class 变化：输入框自己挂 is-out 也会进这个观察器，
+     但那一趟 anyRailOpen() 结果没变，直接略过 */
+  function anyRailOpen() {
+    return !!document.querySelector('.rail.is-open');
+  }
+  var railOpen = anyRailOpen();
+  if (railOpen) {
+    wrap.classList.add('is-out');
+    wrap.style.visibility = 'hidden';
+  }
+  new MutationObserver(function () {
+    var on = anyRailOpen();
+    if (on === railOpen) return;
+    railOpen = on;
+    window.composerMotion(on);
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
   var field = wrap.querySelector('.composer__input');
   if (!field) return;
 

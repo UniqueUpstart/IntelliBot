@@ -123,12 +123,10 @@ function init() {
   const pixelBuddy = buildPixelBuddy(root, bones);
   const clockwork = buildClockwork(root, bones);
 
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.22, 32),
-    new THREE.MeshBasicMaterial({ color: 0x1a1c1e, transparent: true, opacity: 0.12 })
-  );
-  shadow.position.z = 0.002;
-  scene.add(shadow);
+  /* 脚底原来有一块半径 0.22 的深色圆盘当接触阴影。它的尺寸和落点是按 Q1 的脚距
+     量死的，而这套舞台画的是 xbot / clockwork / pixel / figure 与用户导入的模型，
+     它们各有自己的体量与站位 —— 固定半径、固定在原点的圆盘压下去落不到脚下，
+     只会变成脚底一块黑斑，透视一拉开还会浮在空中。阴影已整体去掉，不再绘制 */
 
   const panel = document.querySelector('[data-skin-panel]');
   if (!panel) return;
@@ -491,8 +489,6 @@ function init() {
     if (danceRoot && Number.isFinite(level) && footRestZ !== null) {
       motion.position.z = footRestZ - level;
     }
-    shadow.position.x = 0;
-    shadow.position.y = side;
   }
 
   function draw() {

@@ -35,8 +35,18 @@
     if (body) {
       body.dataset.view = String((item && item.dataset.panel) || '').toLowerCase();
       body.scrollTop = 0;
+      /* 同一个视图名再写到栏体上：页标题那一层（.rail__head）是滚动区的兄弟，
+         拿不到 body 的 data-view，得靠栏体上的这一份来选显哪一枚标题 */
+      rail.dataset.view = body.dataset.view;
     }
   }
+
+  /* 首屏还没点过任何图标，栏体上先补一份初始视图名，标题才能照常显示 */
+  rails.forEach(function (rail) {
+    const body = rail.querySelector('[data-panel-body]');
+    const view = body && body.dataset.view;
+    if (view && !rail.dataset.view) rail.dataset.view = view;
+  });
 
   rails.forEach(function (rail) {
     /* 箭头已经搬到栏体外（fixed），用 data-rail 关联回各自的栏 */
@@ -88,12 +98,12 @@
   });
 })();
 
-/* 快捷指令合集：卡片排在右栏 Shortcuts 页里，三组一次全出 —— 没有钉 / 取钉，
+/* 快捷指令合集：卡片排在右栏 Shortcuts 页里，两组一次全出 —— 没有钉 / 取钉，
    也不再按组切页。这一段只管新增卡片：编辑页填的类型 / 名字 / 简介从这里落成一张 .sc，
    追加到该组末尾、编号按位置重排；新增的同样进 localStorage，刷新后按顺序重放一遍 */
 (function () {
   var STORE = 'intellibot:cards';   /* 新增卡片：{ type, name, brief } */
-  var LABEL = { action: 'Action', dialog: 'Dialog', tendance: 'Tendance' };
+  var LABEL = { action: 'Action', dialog: 'Dialog' };
 
   var made = [];
   try {

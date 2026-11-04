@@ -22,11 +22,11 @@
 <script src="js/i18n.js?v=38"></script>
   <link rel="stylesheet" href="css/base.css?v=15">
   <link rel="stylesheet" href="css/topbar.css?v=20">
-  <link rel="stylesheet" href="css/rail.css?v=45">
-  <link rel="stylesheet" href="css/workspace.css?v=22">
-  <link rel="stylesheet" href="css/cards.css?v=25">
+  <link rel="stylesheet" href="css/rail.css?v=49">
+  <link rel="stylesheet" href="css/workspace.css?v=25">
+  <link rel="stylesheet" href="css/cards.css?v=29">
   <link rel="stylesheet" href="css/modal.css?v=35">
-  <link rel="stylesheet" href="css/chat.css?v=84">
+  <link rel="stylesheet" href="css/chat.css?v=94">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -167,10 +167,6 @@
               </button>
               <button class="edit__type" type="button" data-edit-type="dialog" aria-pressed="false">
                 <span class="edit__label" data-i18n="rail.left.dialog">Dialog</span>
-                <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-              </button>
-              <button class="edit__type" type="button" data-edit-type="tendance" aria-pressed="false">
-                <span class="edit__label" data-i18n="rail.left.tendance">Tendance</span>
                 <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
               </button>
             </div>
@@ -368,13 +364,6 @@
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
         </section>
         <div class="composer">
-          <!-- 只留两枚快捷胶囊，贴在输入面板左缘；原来前面那枚「圆点 + Try asking」
-               已经撤掉，位置对齐靠 css/chat.css 里的 left:0，不再居中 -->
-          <div class="composer__starters" data-chat-suggestions role="group"
-               data-i18n-aria="chat.starters" aria-label="试试这样问">
-            <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-            <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-          </div>
           <div class="composer__surface">
             <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
                       maxlength="500" data-assistant-input
@@ -392,6 +381,14 @@
                   <path class="composer__menu-line" d="M4 17h16"/>
                 </svg>
               </button>
+              <!-- 只留两枚快捷胶囊，贴在左下角三横钮的右侧；早先挂在输入面板
+                   上方、越过卡片顶缘压到舞台上，位置改到卡内一行后由
+                   css/chat.css 的 left / bottom 对齐这枚 38 见方的圆钮 -->
+              <div class="composer__starters" data-chat-suggestions role="group"
+                   data-i18n-aria="chat.starters" aria-label="试试这样问">
+                <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+                <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+              </div>
               <div class="composer__trail">
                 <!-- 模型胶囊：点开后不是弹一块浮层，而是胶囊自己长成面板 ——
                      底板 .composer__model-surface 以下边界锚定向上长，宽度从
@@ -444,7 +441,7 @@
      前两页由卡片填满：手势页铺 10 张（卡面是机器人做这个动作的缩略图，模型没就绪时
      先显示名字）、表情页铺 16 张，一行四张，卡片节点由 js/rails.js 先占位，内容分别由
      js/homepage_motions.js、js/faces.js 填。后两页是从左栏搬来的快捷指令合集与它的编辑页：
-     合集把 Action / Dialog / Tendance 三组放在同一页，不再按类型分页 -->
+     合集把 Action / Dialog 两组放在同一页，不再按类型分页 -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
   <div class="rail__bar">
@@ -493,15 +490,21 @@
          卡片从遮罩下面滚过去时被糊开、标题始终清楚 -->
     <span class="frost frost--top" aria-hidden="true"></span>
     <span class="frost frost--bottom" aria-hidden="true"></span>
+    <!-- 页标题单独一层，挂在面板上、不进滚动区：top 是写死的 20，滚动时既不参与
+         sticky 定位、也不跟着内容走，所以不存在取整或合成延迟带来的抖动与移位。
+         这一层不带底色，遮罩仍是面板上原来那条，不改它的浓度与曲线 -->
+    <div class="rail__head">
+      <div class="rail__title" data-head="gestures" data-i18n="dock.gestures">Gestures</div>
+      <div class="rail__title" data-head="emotions" data-i18n="dock.emotions">Emotions</div>
+      <div class="rail__title" data-head="preference" data-i18n="nav.preference">Costume</div>
+    </div>
     <div class="panel__body" data-panel-body data-view="gestures">
       <!-- 四页共用这一块滚动区，按 data-view 显隐：点图标时 rails.js 写
            data-view="gestures" / "emotions" / "shortcuts" / "edit"，CSS 只留对应的那一页 -->
       <div class="rail__view" data-rail-view="gestures">
-        <div class="rail__title" data-i18n="dock.gestures">Gestures</div>
         <div class="rail__grid" data-rail-grid="gestures"></div>
       </div>
       <div class="rail__view" data-rail-view="emotions">
-        <div class="rail__title" data-i18n="dock.emotions">Emotions</div>
         <div class="rail__grid" data-rail-grid="emotions"></div>
       </div>
 
@@ -536,15 +539,6 @@
           </div>
         </section>
 
-        <section class="sc-group sc-group--tendance">
-          <h3 class="sc-group__title" data-i18n="rail.left.group.tendance">Tendance</h3>
-          <div class="sc-grid">
-            <div class="sc"><span class="sc__id">01</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span></div>
-            <div class="sc"><span class="sc__id">02</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span></div>
-            <div class="sc"><span class="sc__id">03</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span></div>
-            <div class="sc"><span class="sc__id">04</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span></div>
-          </div>
-        </section>
       </div>
 
       <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组方卡、最多 6 张，
@@ -553,7 +547,6 @@
            导入过程的提示挂在最末一行。两个 data-skin-* 钩子原样保留，
            q1skin.js 无需改动 -->
       <div class="rail__view rail__view--pref" data-rail-view="preference">
-        <div class="rail__title" data-i18n="nav.preference">Costume</div>
         <div class="pref" data-skin-panel>
           <div class="pref__group pref__group--skin">
             <div class="skin-grid" data-skin-pick role="group"
@@ -648,10 +641,6 @@
                   <span class="edit__label" data-i18n="rail.left.dialog">Dialog</span>
                   <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
                 </button>
-                <button class="edit__type" type="button" data-edit-type="tendance" aria-pressed="false">
-                  <span class="edit__label" data-i18n="rail.left.tendance">Tendance</span>
-                  <svg class="edit__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-                </button>
               </div>
             </div>
             <label class="edit__field">
@@ -687,7 +676,7 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
-<script src="js/rails.js?v=19"></script>
+<script src="js/rails.js?v=21"></script>
 
 <!-- 把卡片拖到机器人身上：拾起 → 思考 → 点头 → 卡片消失 → 播动作 -->
 <script src="js/card_pickup.js?v=13"></script>
@@ -705,7 +694,7 @@
 
 <script src="js/magnet.js?v=13"></script>
 
-<script src="js/sticky.js?v=3"></script>
+<script src="js/sticky.js?v=5"></script>
 
 <!-- ===================== 登录 / 注册 =====================
      首次进入网站自动浮出；未登录时点账号胶囊照常展开菜单，
@@ -1140,10 +1129,10 @@
 
 <script src="js/modal.js?v=35"></script>
 <script src="js/contact.js?v=3"></script>
-<script src="js/composer.js?v=7"></script>
+<script src="js/composer.js?v=8"></script>
 <script src="js/model_config.js?v=15"></script>
 <script src="js/persona.js?v=4"></script>
-<script src="js/assistant_chat.js?v=26"></script>
+<script src="js/assistant_chat.js?v=29"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->

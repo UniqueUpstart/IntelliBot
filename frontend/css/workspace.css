@@ -19,21 +19,31 @@
 .view-head > div{min-width:0}
 .view-title{
   margin:0;
+  /* 排版对齐右栏 Emotions 页那枚 .rail__title：24 号、行高 1、字距 .4、
+     字重 --fw、次级文字色。这枚是 h3，不写 font-weight 会落到浏览器的 700，
+     比右栏那枚显粗，一眼就看得出不是同一套 */
   font-size:24px;
-  line-height:1.15;
-  letter-spacing:0;
-  color:var(--text-primary);
+  line-height:1;
+  letter-spacing:.4px;
+  font-weight:var(--fw);
+  color:var(--text-secondary);
 }
 html[lang="zh-CN"] .view-title,
 html[lang="zh-CN"] .model-view__title,
 html[lang="zh-CN"] .rail__title,
-html[lang="zh-CN"] .skin-view__title{
+html[lang="zh-CN"] .skin-view__title,
+html[lang="zh-CN"] .sc-group__title{
   font-family:"Noto Sans SC","Microsoft YaHei",sans-serif;
   font-size:22px;
   font-weight:500;
   line-height:1.15;
   letter-spacing:.01em;
 }
+/* 栏内这几枚标题的行高跟英文版一样压到 1：中文那 1.15 会把标题盒多撑 1.6px，
+   吸顶之后就和雾带中线差开一小截。弹窗标题不吸顶，仍旧保留 1.15 */
+html[lang="zh-CN"] .view-title,
+html[lang="zh-CN"] .rail__title,
+html[lang="zh-CN"] .sc-group__title{line-height:1}
 .view-sub{
   max-width:420px;
   margin:8px 0 0;
@@ -352,17 +362,15 @@ html[lang="zh-CN"] .skin-view__title{
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .persona-view .view-badge{display:none}
-/* 表头落到与右栏 Emotions 页同一高度：右栏标题盒顶边在面板顶下 20，字形落在 22。
-   这里标题行高 1.15（28 的盒装 24 号字）比右栏的 line-height:1 多出约 2 的上半行距，
-   所以面板上内边距取 18，字形与右栏落在同一条基线上。
-   吸顶后停在同一个位置，卡片与表单从顶部雾带（0–48）下面滚过；z-index 压过雾带（3），
-   标题与加号不会被那层模糊糊掉 */
-[data-panel-body][data-view="persona"]{padding-top:18px}
+/* 表头与右栏 Emotions 页同一高度：视图上内边距已归零（见 rail.css 里那条
+   [data-view] 规则），表头盒顶边贴住面板顶，文字靠 padding-top 落到 20。
+   吸附线与静止位都是 0，滚动时表头不动 */
 .persona-view .view-head{
   position:sticky;
   top:0;
   z-index:4;
-  height:28px;
+  height:calc(24px + var(--title-top));
+  padding-top:var(--title-top);
   align-items:center;
 }
 .persona-field--color input{
