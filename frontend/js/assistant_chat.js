@@ -124,24 +124,46 @@
   }
 
   /* 待机时的自言自语：往舞台上追一条就够，不做定时清理——
-     记录留在两侧的滚动流里，由用户自己翻看 */
+     记录留在两侧的滚动流里，由用户自己翻看。
+     同一条刚说过就不再说：换成另一种，两种都刚说过就整轮跳过 */
+  function stageLastText(role) {
+    var stream = stageStream(role);
+    var last = stream && stream.lastElementChild;
+    return last ? last.textContent.trim() : '';
+  }
   function showIdleReaction(kind) {
     if (pending) return;
-    var key = kind === 'look' ? 'idle.look.prompt' : 'idle.settle.prompt';
-    var fallback = kind === 'look'
-      ? '我在看看周围。你想让我做点什么？'
-      : '站久了，活动一下。要不要看个动作？';
-    showStage('assistant', tr(key, fallback));
+    var texts = {
+      look: tr('idle.look.prompt', '我在看看周围。你想让我做点什么？'),
+      settle: tr('idle.settle.prompt', '站久了，活动一下。要不要看个动作？'),
+    };
+    if (!texts[kind]) kind = 'look';
+    var last = stageLastText('assistant');
+    if (last && last === texts[kind]) {
+      var other = kind === 'look' ? 'settle' : 'look';
+      if (last === texts[other]) return;
+      kind = other;
+    }
+    showStage('assistant', texts[kind]);
+  }
+
+  /* 悬停时间戳：年.月.日 时:分，两位补零 */
+  function stampTime(ms) {
+    var d = new Date(ms);
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
   function addRecord(role, text, modifier) {
-    var record = {id: records.length + 1, role: role, content: text};
+    var record = {id: records.length + 1, role: role, content: text, time: Date.now()};
     records.push(record);
     var node = document.createElement('div');
     node.className = 'assistant-chat__message assistant-chat__message--' + role;
     if (modifier) node.classList.add('assistant-chat__message--' + modifier);
     decorateBubble(node, role, record.id);
     node.dataset.recordId = String(record.id);
+    node.dataset.time = stampTime(record.time);
     node.textContent = text;
     log.appendChild(node);
     scrollBottom();

@@ -122,6 +122,7 @@
 .group,
 .rail__surface,
 .user__surface,
+.persona-card,
 .sc{
   --sh: 16px;
   --sh-a: .1;
