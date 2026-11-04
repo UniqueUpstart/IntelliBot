@@ -20,7 +20,7 @@
    表情就是这张图上白色的线，黑底不发光。图案由 faces.js 一处提供，
    底栏 Emotions 那排缩略图画的也是同一份数据。 */
 import * as THREE from 'three';
-import {sampleIdle, idleState} from './idle_motion.js?v=2';
+import {sampleIdle, idleState} from './idle_motion.js?v=3';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';

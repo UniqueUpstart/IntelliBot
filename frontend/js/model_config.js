@@ -4,11 +4,12 @@
   var panel = document.querySelector('[data-model-panel]');
   var form = document.querySelector('[data-model-form]');
   var trigger = document.querySelector('[data-model-trigger]');
+  var wrap = document.querySelector('[data-model-switch]');
   var label = document.querySelector('[data-model-label]');
   var effort = document.querySelector('[data-model-effort]');
   var menu = document.querySelector('[data-model-menu]');
   var menuList = document.querySelector('[data-model-menu-list]');
-  if (!panel || !form || !trigger || !label || !effort || !menu || !menuList) return;
+  if (!panel || !form || !trigger || !wrap || !label || !effort || !menu || !menuList) return;
 
   var formatInput = form.querySelector('[data-model-format]');
   var baseInput = form.querySelector('[data-model-base-url]');
@@ -164,7 +165,12 @@
 
   function renderMenu() {
     menuList.replaceChildren();
-    var models = modelsFor(current.provider);
+    /* 当前模型不列进表里：它固定是面板底部那条胶囊本身，上面只放能换过去的候选。
+       整个 provider 只有一个可选时（没配过、也没取到列表），退回把当前这条列出来，
+       否则点开是一块空板 */
+    var models = modelsFor(current.provider).filter(function (model) {
+      return model !== current.model;
+    });
     if (!models.length) models = [current.model || ''].filter(Boolean);
     models.forEach(function (model) {
       var item = document.createElement('button');
@@ -179,13 +185,8 @@
       name.className = 'model-menu__name';
       name.textContent = modelLabel(model);
 
-      var check = document.createElement('span');
-      check.className = 'model-menu__check';
-      check.setAttribute('aria-hidden', 'true');
-      check.textContent = '✓';
-
       item.setAttribute('aria-label', model);
-      item.append(name, check);
+      item.append(name);
       menuList.appendChild(item);
     });
   }
@@ -219,7 +220,7 @@
     trigger.removeAttribute('title');
     trigger.setAttribute('aria-label', formatLabel(current.api_format) + ' · ' + current.model +
       (current.configured ? '' : ' · ' + t('model.status.unconfigured', '未配置')));
-    trigger.classList.toggle('is-ready', current.configured);
+    wrap.classList.toggle('is-ready', current.configured);
     paintPreset(current.provider, current.base_url, current.model);
     setStatus(
       current.configured ? 'ready' : 'idle',
@@ -330,14 +331,37 @@
     }
   }
 
+  /* 胶囊长成面板：底板高度 = 胶囊 38 + 待选列表的高度，量完写到 --model-h 上，
+     由 css 的 height 过渡从 38 走到这个值。列表在展开前是透明的但已经排版，
+     没展开也能量到真实尺寸；量不到时 css 那边回落到 38 */
+  function measureMenu() {
+    wrap.style.setProperty('--model-h', (38 + menu.offsetHeight) + 'px');
+  }
+
+  var closeTimer = 0;
+
   function closeMenu() {
-    menu.hidden = true;
+    wrap.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
+    clearTimeout(closeTimer);
+    /* 等底板缩回胶囊再收尾：列表 display:none，外层那格宽度也放开 */
+    closeTimer = setTimeout(function () {
+      menu.hidden = true;
+      wrap.style.width = '';
+    }, 320);
   }
 
   function openMenu() {
     renderMenu();
+    clearTimeout(closeTimer);
     menu.hidden = false;
+    /* 展开后那枚钮改成绝对定位（要横跨整块面板），外层就先按胶囊的原宽度钉住，
+       否则这一格会塌成 0，底板与列表的 100% 也就没了参照 */
+    wrap.style.width = wrap.offsetWidth + 'px';
+    measureMenu();
+    /* 先把「胶囊态」的 38 刷成当前计算值，再加类，height 才有起点可过渡 */
+    void wrap.offsetWidth;
+    wrap.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
   }
 
@@ -423,6 +447,11 @@
       closeMenu();
       trigger.focus();
     }
+  });
+
+  /* 换视口宽窄时列表会重排（窄屏那档底部与宽度都变），展开中的底板要跟着量一次 */
+  window.addEventListener('resize', function () {
+    if (!menu.hidden) measureMenu();
   });
   document.addEventListener('langchange', function () {
     if (loaded) paint(current);

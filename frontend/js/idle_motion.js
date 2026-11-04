@@ -1,15 +1,15 @@
 // Shared idle rhythm. Reactions are sampled from the render loop so no extra
 // timer or animation clip can compete with gesture playback.
 const KEY = 'intellibot.idle.enabled';
-const FIRST_REACTION_MS = 20000;
-const REACTION_GAP_MS = [24000, 42000];
+const FIRST_REACTION_MS = 45000;
+const REACTION_GAP_MS = [75000, 150000];
 const REACTION_DURATION_MS = 5200;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let enabled = true;
 try { enabled = localStorage.getItem(KEY) !== '0'; } catch (_) {}
 let lastActivity = performance.now(), phase = 0, weight = 0, last = performance.now();
 let nextReaction = lastActivity + FIRST_REACTION_MS;
-let reaction = null;
+let reaction = null, lastKind = 'settle';
 let state = {enabled, active: false, kind: 'rest', offsets: {}};
 const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 const randomGap = () => REACTION_GAP_MS[0] + Math.random() * (REACTION_GAP_MS[1] - REACTION_GAP_MS[0]);
@@ -57,8 +57,11 @@ export function sampleIdle(now, blocked = false) {
   weight = blocked || !allowed ? 0 : weight + (target - weight) * Math.min(1, dt * 3);
   if (allowed) phase += dt;
   if (allowed && !reaction && now >= nextReaction) {
+    /* 两种反应轮流来：随机抽签会连着冒出同一条自言自语 */
+    const kind = lastKind === 'look' ? 'settle' : 'look';
+    lastKind = kind;
     reaction = {
-      kind: Math.random() < .5 ? 'look' : 'settle',
+      kind,
       start: now,
       direction: Math.random() < .5 ? -1 : 1,
     };

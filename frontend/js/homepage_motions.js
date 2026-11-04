@@ -420,7 +420,8 @@ export function mountHomeMotionControls(play) {
   });
 
   /* 缩略图归三维那侧拍：robot3d.js 的 motionThumb 拿离屏 target 渲一张，
-     之后走缓存。模型 6.4MB，比这段脚本晚就绪：先留名字，robot-ready 再补一次 */
+     之后走缓存。模型 6.4MB，比这段脚本晚就绪：先留名字，robot-ready 再补一次。
+     图到了也不撤名字 —— 卡面留两层，静止露名称、指针停上去才换成图（见 rail.css） */
   function fillThumbs() {
     const api = window.robot3d;
     if (!api || typeof api.motionThumb !== 'function') return false;
@@ -434,8 +435,7 @@ export function mountHomeMotionControls(play) {
       if (!url) return;
       img.src = url;
       img.hidden = false;
-      const label = card.querySelector('.motion__label');
-      if (label) label.remove();
+      card.classList.add('is-thumb');
       filled = true;
     });
     return filled;

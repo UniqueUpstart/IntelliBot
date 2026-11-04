@@ -128,30 +128,37 @@ html[lang="zh-CN"] .skin-view__title{
   appearance:none; -webkit-appearance:none;
   position:relative;
   min-width:0;
-  min-height:76px;
+  min-height:80px;
   display:flex;
   align-items:center;
-  gap:11px;
-  padding:10px 12px;
+  gap:12px;
+  padding:16px;
   border:0;
-  border-radius:16px;
+  border-radius:24px;
   background:var(--card);
   color:var(--text-secondary);
   font:inherit;
   text-align:left;
   cursor:pointer;
-  box-shadow:inset 0 0 0 1px transparent;
+  /* 外投影与动作卡同一档（--sh/--sh-a 见 base.css），选中环仍走 inset */
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px transparent;
   transition:box-shadow .14s ease, background-color .14s ease;
 }
 .persona-card:hover,
 .persona-card:focus-visible{
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--persona-color,var(--theme)) 55%,transparent);
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px color-mix(in srgb,var(--persona-color,var(--theme)) 55%,transparent);
   outline:none;
 }
 /* 选中只加一圈实边，不换底色：磁吸把它抬起来的时候，
    底片始终是那块 --card，翻动才不会忽明忽暗 */
 .persona-card.is-on{
-  box-shadow:inset 0 0 0 1.5px var(--persona-color,var(--theme));
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1.5px var(--persona-color,var(--theme));
 }
 .persona-card__avatar{
   position:relative;
@@ -173,13 +180,13 @@ html[lang="zh-CN"] .skin-view__title{
   box-shadow:0 0 0 2px var(--persona-color,var(--theme));
 }
 .persona-card__copy{
-  min-width:0;display:grid;gap:5px;
+  min-width:0;display:grid;gap:4px;
   transition:padding-right .2s var(--ease);
 }
 .persona-card__copy strong,
 .persona-card__copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.persona-card__copy strong{font-size:var(--fs-14);font-weight:var(--fw)}
-.persona-card__copy span{color:var(--text-muted);font-size:var(--fs-12)}
+.persona-card__copy strong{color:var(--text-primary);font-size:14px;font-weight:var(--fw)}
+.persona-card__copy span{color:var(--text-reduced);font-size:14px}
 /* 自定义角色卡右侧那枚删除钮：指针停在卡上（或键盘聚焦进来）才在竖直中线浮现。
    点第一下不删，先横向长成 Confirm 胶囊 —— 3 秒内不再点就自动收回，
    和账号面板的退出确认同一档时长，避免误触把角色点没了。
@@ -330,10 +337,10 @@ html[lang="zh-CN"] .skin-view__title{
   border:0;
   border-radius:14px;
   background:var(--card);
-  color:var(--text-primary);
+  color:var(--text-reduced);
   caret-color:var(--theme);
   font:inherit;
-  font-size:var(--fs-14);
+  font-size:14px;
   outline:none;
   box-shadow:inset 0 0 0 1px transparent;
   transition:box-shadow .12s linear;
@@ -345,8 +352,19 @@ html[lang="zh-CN"] .skin-view__title{
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .persona-view .view-badge{display:none}
-/* 标题行里只有标题与那枚加号，按中线对齐才不会让按钮吊在标题上沿 */
-.persona-view .view-head{align-items:center}
+/* 表头落到与右栏 Emotions 页同一高度：右栏标题盒顶边在面板顶下 20，字形落在 22。
+   这里标题行高 1.15（28 的盒装 24 号字）比右栏的 line-height:1 多出约 2 的上半行距，
+   所以面板上内边距取 18，字形与右栏落在同一条基线上。
+   吸顶后停在同一个位置，卡片与表单从顶部雾带（0–48）下面滚过；z-index 压过雾带（3），
+   标题与加号不会被那层模糊糊掉 */
+[data-panel-body][data-view="persona"]{padding-top:18px}
+.persona-view .view-head{
+  position:sticky;
+  top:0;
+  z-index:4;
+  height:28px;
+  align-items:center;
+}
 .persona-field--color input{
   width:96px;
   max-width:100%;

@@ -6,7 +6,7 @@
 <title>IntelliBot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
 /* 明暗模式在首帧之前定下来。色值全挂在 :root 的那套变量上，
    晚一步再改 data-theme 会先按浅色画一遍、再整屏跳到深色。
@@ -19,14 +19,14 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=35"></script>
-  <link rel="stylesheet" href="css/base.css?v=14">
+<script src="js/i18n.js?v=37"></script>
+  <link rel="stylesheet" href="css/base.css?v=15">
   <link rel="stylesheet" href="css/topbar.css?v=20">
-  <link rel="stylesheet" href="css/rail.css?v=38">
-  <link rel="stylesheet" href="css/workspace.css?v=17">
+  <link rel="stylesheet" href="css/rail.css?v=45">
+  <link rel="stylesheet" href="css/workspace.css?v=22">
   <link rel="stylesheet" href="css/cards.css?v=25">
-  <link rel="stylesheet" href="css/modal.css?v=34">
-  <link rel="stylesheet" href="css/chat.css?v=63">
+  <link rel="stylesheet" href="css/modal.css?v=35">
+  <link rel="stylesheet" href="css/chat.css?v=78">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -51,7 +51,7 @@
   </span>
 
   <nav class="nav" aria-label="主导航">
-    <!-- 视角：与 Preference 那条同族的托盘，排在它左边。
+    <!-- 视角：顶栏这一条独立托盘，落在标志与账号胶囊之间。
          左端是视角条、右端是复位，托盘的内边距 4、组内间距 8、
          高 48 全部沿用 .group，里面的按钮 40 与导航胶囊同高。
          立体磁吸也一并复用：js/magnet.js 的配置按 .group 抓，
@@ -78,11 +78,6 @@
           <path d="M3 3v5h5"/>
         </svg>
       </button>
-    </div>
-
-    <div class="group" role="group" aria-label="Control">
-      <button class="pill" type="button" aria-pressed="false" data-modal="Preference"><span class="pill__label" data-i18n="nav.preference">Preference</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="pill" type="button" aria-pressed="false" data-modal="Advance"><span class="pill__label" data-i18n="nav.advance">Advance</span><svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
     </div>
 
     <div class="user is-guest" id="account">
@@ -344,9 +339,6 @@
       <div class="rail__view rail__view--chat" data-rail-view="chat">
         <div class="view-head chat-view__head">
           <div class="chat-view__identity">
-            <span class="chat-view__mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 2.8c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7Z"/><path d="M18.7 16.3c.2 1.8 1 2.6 2.8 2.8-1.8.2-2.6 1-2.8 2.8-.2-1.8-1-2.6-2.8-2.8 1.8-.2 2.6-1 2.8-2.8Z"/></svg>
-            </span>
             <div>
               <h3 class="view-title">IntelliBot</h3>
             </div>
@@ -401,13 +393,25 @@
                 </svg>
               </button>
               <div class="composer__trail">
-                <button class="composer__model" type="button" data-model-trigger
-                        aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
-                  <span class="composer__model-label" data-model-label>选择模型</span>
-                  <span class="composer__model-effort" data-model-effort
-                        data-i18n="model.effort.high" hidden>高</span>
-                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-                </button>
+                <!-- 模型胶囊：点开后不是弹一块浮层，而是胶囊自己长成面板 ——
+                     底板 .composer__model-surface 以下边界锚定向上长，宽度从
+                     胶囊宽撑到面板宽、圆角从半高收成 18。当前模型永远是最下面
+                     这条（就是这枚钮本身），待选的几条列在它上面，点了即切换。
+                     外层只负责占位，尺寸恒等于胶囊，展开时输入条不重排 -->
+                <div class="composer__model" data-model-switch>
+                  <div class="composer__model-surface">
+                    <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
+                      <div class="model-menu__list" data-model-menu-list></div>
+                    </div>
+                  </div>
+                  <button class="composer__model-trigger" type="button" data-model-trigger
+                          aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+                    <span class="composer__model-label" data-model-label>选择模型</span>
+                    <span class="composer__model-effort" data-model-effort
+                          data-i18n="model.effort.high" hidden>高</span>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+                  </button>
+                </div>
                 <!-- 发送钮：路径取自 icon/arrow.svg（右指箭头，CSS 里放倒 90 度朝上），
                      画两遍叠在同一格：一枚飞出去，一枚在下面等着落回来 -->
                 <button class="composer__send" type="button" data-assistant-send
@@ -423,12 +427,6 @@
                 </button>
               </div>
             </div>
-          </div>
-          <div class="model-menu" id="composer-model-menu" data-model-menu role="menu"
-               aria-labelledby="composer-model-title" hidden>
-            <div class="model-menu__title" id="composer-model-title"
-                 data-i18n="model.choose">选择模型</div>
-            <div class="model-menu__list" data-model-menu-list></div>
           </div>
         </div>
       </div>
@@ -470,6 +468,13 @@
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M18.4 3.6 7.2 18.2h6.6L12.6 28.4 24.6 13.4h-7l.8-9.8Z"/></svg>
         </span>
         <span class="item__label" data-i18n="rail.left.shortcuts">Shortcuts</span>
+      </button>
+
+      <button class="item" type="button" data-panel="Preference" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
+        </span>
+        <span class="item__label" data-i18n="nav.preference">Costume</span>
       </button>
 
       <button class="item item--edit" type="button" data-panel="Edit"
@@ -540,6 +545,90 @@
             <div class="sc"><span class="sc__id">04</span><span class="sc__brief" data-i18n="rail.left.brief">Brief Intro</span><span class="sc__time" data-i18n="rail.left.duration">Expected Duration(s)</span><span class="sc__go"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span></div>
           </div>
         </section>
+      </div>
+
+      <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组方卡、最多 6 张，
+           选中的那枚涨满主题色，导入进来的模型由 js/q1skin.js 追加到末尾。
+           导入与「删除当前导入」都排在卡下面，后者只在选中导入的模型时出现，
+           导入过程的提示挂在最末一行。两个 data-skin-* 钩子原样保留，
+           q1skin.js 无需改动 -->
+      <div class="rail__view rail__view--pref" data-rail-view="preference">
+        <div class="rail__title" data-i18n="nav.preference">Costume</div>
+        <div class="pref" data-skin-panel>
+          <div class="pref__group pref__group--skin">
+            <div class="skin-grid" data-skin-pick role="group"
+                 aria-label="机器人外观" data-i18n-aria="rail.left.skin">
+              <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><path d="M9 8.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Zm3 4.5a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 13Zm8 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-6.7 5.2h5.4M16 8.5V5m-4 18v4m8-4v4"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.q1">原模型</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:naiwa" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><path d="M8 11.5C8 7.9 11.6 5 16 5s8 2.9 8 6.5V20c0 4.4-3.6 7-8 7s-8-2.6-8-7V11.5Z"/><ellipse cx="16" cy="18.5" rx="5.2" ry="4.8" fill="#f5e6c8"/><circle cx="12.3" cy="11.2" r="1.7" fill="#2f7d32"/><circle cx="19.7" cy="11.2" r="1.7" fill="#2f7d32"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.naiwa">奶蛙皮肤</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:glacier" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#7ec8e3"/><circle cx="13" cy="13" r="1.3" fill="#0e1a22"/><circle cx="19" cy="13" r="1.3" fill="#0e1a22"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.glacier">冰川</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:dusk" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#7a5cff"/><circle cx="13" cy="13" r="1.3" fill="#161226"/><circle cx="19" cy="13" r="1.3" fill="#161226"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.dusk">暮紫</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:coral" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#ff7a6e"/><circle cx="13" cy="13" r="1.3" fill="#2a1412"/><circle cx="19" cy="13" r="1.3" fill="#2a1412"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.coral">珊瑚</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:ink" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#1f8a78"/><circle cx="13" cy="13" r="1.3" fill="#0d1c19"/><circle cx="19" cy="13" r="1.3" fill="#0d1c19"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.ink">墨青</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:xbot" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.5"/><path d="M10 24.5v-5.6c0-3.3 2.7-6 6-6s6 2.7 6 6v5.6M7 25h18M12 13.8l-4 4m12-4 4 4m-9 6.2v5m4-5v5"/></svg>
+                </span>
+                <span class="skin-card__name">X Bot</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:clockwork" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="6" width="14" height="12" rx="2" fill="#bd8855"/><circle cx="13" cy="11" r="1.5"/><circle cx="19" cy="11" r="1.5"/><path d="M12 23v5M20 23v5M9 21h14M5 19h22" stroke="#b28b45"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.clockwork">发条玩偶</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:pixel" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="15" rx="1" fill="#b7e4d3"/><path d="M11 10h3v4h-3zm7 0h3v4h-3z" fill="#203d43" stroke="none"/><path d="M13 17h6M11 23v5M21 23v5M8 23h16"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.pixel">Steve</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
+              </button>
+            </div>
+            <label class="pref__row" role="button" tabindex="0" data-skin-import>
+              <span data-i18n="rail.left.skin.import">Import</span>
+              <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
+            </label>
+            <button class="pref__row" type="button" data-skin-delete hidden>
+              <span data-i18n="rail.left.skin.delete">删除当前导入</span>
+            </button>
+            <p class="pref__note" data-skin-note hidden></p>
+          </div>
+        </div>
       </div>
 
       <!-- 编辑页：右栏 Edit 钮把本面板切到 data-view="edit" 时出现。
@@ -719,16 +808,6 @@
           <svg class="modal__act-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
         </button>
       </div>
-      <!-- Preference 的主动作也挂在这一列：导入模型。壳与左边那颗同一套
-           （胶囊、主题色底常驻、悬停文字滑出让箭头、按住回弹），但它没有
-           连接仿真那套「点一下换一句话」的状态，文案定死 -->
-      <div class="modal__act" data-preference-only hidden>
-        <label class="modal__act-btn pref__import" role="button" tabindex="0" data-skin-import>
-          <span class="modal__act-label" data-i18n="rail.left.skin.import">Import</span>
-          <svg class="modal__act-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-          <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
-        </label>
-      </div>
     </div>
 
     <!-- Advance：MuJoCo 仿真联调的全部操作都在这里，页面上不再有额外浮层。
@@ -812,77 +891,6 @@
     </div>
 
 
-    <!-- Preference：机器人外观。方卡按 6 列排，换色皮肤多出来的落到下一行。
-         选中的那枚涨满主题色，导入进来的模型由 js/q1skin.js 追加到末尾。
-         导入钮不在这块里 —— 它挂在标题区右上角（.modal__act 那颗胶囊）；
-         这里只留「删除当前导入」那一行与导入过程的提示，两者平时都 hidden -->
-    <div class="pref" data-preference-only hidden>
-      <div class="pref__item" data-skin-panel>
-        <div class="pref__group pref__group--skin">
-          <div class="skin-grid" data-skin-pick role="group"
-               aria-label="机器人外观" data-i18n-aria="rail.left.skin">
-            <button class="skin-card is-on" type="button" data-skin-id="builtin:q1" aria-pressed="true">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><path d="M9 8.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Zm3 4.5a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 13Zm8 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-6.7 5.2h5.4M16 8.5V5m-4 18v4m8-4v4"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.q1">原模型</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:naiwa" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><path d="M8 11.5C8 7.9 11.6 5 16 5s8 2.9 8 6.5V20c0 4.4-3.6 7-8 7s-8-2.6-8-7V11.5Z"/><ellipse cx="16" cy="18.5" rx="5.2" ry="4.8" fill="#f5e6c8"/><circle cx="12.3" cy="11.2" r="1.7" fill="#2f7d32"/><circle cx="19.7" cy="11.2" r="1.7" fill="#2f7d32"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.naiwa">奶蛙皮肤</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:glacier" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#7ec8e3"/><circle cx="13" cy="13" r="1.3" fill="#0e1a22"/><circle cx="19" cy="13" r="1.3" fill="#0e1a22"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.glacier">冰川</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:dusk" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#7a5cff"/><circle cx="13" cy="13" r="1.3" fill="#161226"/><circle cx="19" cy="13" r="1.3" fill="#161226"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.dusk">暮紫</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:coral" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#ff7a6e"/><circle cx="13" cy="13" r="1.3" fill="#2a1412"/><circle cx="19" cy="13" r="1.3" fill="#2a1412"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.coral">珊瑚</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:ink" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#1f8a78"/><circle cx="13" cy="13" r="1.3" fill="#0d1c19"/><circle cx="19" cy="13" r="1.3" fill="#0d1c19"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.ink">墨青</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:xbot" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.5"/><path d="M10 24.5v-5.6c0-3.3 2.7-6 6-6s6 2.7 6 6v5.6M7 25h18M12 13.8l-4 4m12-4 4 4m-9 6.2v5m4-5v5"/></svg>
-              </span>
-              <span class="skin-card__name">X Bot</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:pixel" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="15" rx="1" fill="#b7e4d3"/><path d="M11 10h3v4h-3zm7 0h3v4h-3z" fill="#203d43" stroke="none"/><path d="M13 17h6M11 23v5M21 23v5M8 23h16"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.pixel">Steve</span>
-            </button>
-            <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
-              <span class="skin-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
-              </span>
-              <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
-            </button>
-          </div>
-          <button class="pref__row" type="button" data-skin-delete hidden>
-            <span data-i18n="rail.left.skin.delete">删除当前导入</span>
-          </button>
-          <p class="pref__note" data-skin-note hidden></p>
-        </div>
-      </div>
-    </div>
     <!-- Privacy：条款体例的隐私政策。每条 = 序号 + 小标题 + 正文，序号取主题色。
          顺序按「定义 → 范围 → 信息类型 → 目的依据 → 单项说明 → 存储期限 →
          对外提供 → 安全 → 权利 → 未成年人 → 变更」排，是隐私声明的常规编法；
@@ -1137,9 +1145,9 @@
 <script src="js/modal.js?v=35"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
-<script src="js/model_config.js?v=13"></script>
+<script src="js/model_config.js?v=14"></script>
 <script src="js/persona.js?v=4"></script>
-<script src="js/assistant_chat.js?v=17"></script>
+<script src="js/assistant_chat.js?v=19"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
