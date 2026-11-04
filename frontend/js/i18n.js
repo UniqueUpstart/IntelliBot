@@ -11,6 +11,7 @@ const I18N = {
     "nav.settings": "Settings",
     "nav.privacy": "Privacy",
     "nav.contact": "Contact",
+    "mobile.navigation": "Mobile navigation",
 
     "auth.dialog": "Sign in or register",
     "auth.login": "Sign in",
@@ -249,6 +250,7 @@ const I18N = {
     "nav.settings": "设置",
     "nav.privacy": "隐私",
     "nav.contact": "联系",
+    "mobile.navigation": "移动端功能导航",
 
     "auth.dialog": "登录或注册",
     "auth.login": "登录",

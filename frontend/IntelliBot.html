@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>IntelliBot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
 <link rel="stylesheet" href="css/auth.css?v=25">
+<link rel="stylesheet" href="css/mobile.css?v=1">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -754,6 +755,37 @@
   <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z" fill="currentColor"/></svg>
 </button>
 
+<!-- 手机端将桌面两侧栏收成一条底部导航。按钮只代理现有侧栏入口，
+     面板内容、动作执行与聊天状态仍由原组件维护，不复制业务逻辑。 -->
+<div class="mobile-sheet-scrim" data-mobile-sheet-scrim aria-hidden="true"></div>
+<nav class="mobile-dock" data-mobile-dock data-i18n-aria="mobile.navigation" aria-label="移动端功能导航">
+  <button class="mobile-dock__item" type="button" data-mobile-panel="Chat" data-mobile-side="left"
+          data-i18n-aria="rail.left.chatFlow" aria-label="对话" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H10l-4 3v-3H4z"/><path d="M8 9h8M8 12.5h5"/></svg>
+    <span data-i18n="rail.left.chatFlow">对话</span>
+  </button>
+  <button class="mobile-dock__item" type="button" data-mobile-panel="Gestures" data-mobile-side="right"
+          data-i18n-aria="dock.motions" aria-label="动作" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="7" r="2"/><path d="m8.5 15.5 3-3 2 2 2-4M4 7h5M6.5 4.5v5"/></svg>
+    <span data-i18n="dock.motions">动作</span>
+  </button>
+  <button class="mobile-dock__item" type="button" data-mobile-panel="Emotions" data-mobile-side="right"
+          data-i18n-aria="dock.emotions" aria-label="表情" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/></svg>
+    <span data-i18n="dock.emotions">表情</span>
+  </button>
+  <button class="mobile-dock__item" type="button" data-mobile-panel="Preference" data-mobile-side="right"
+          data-i18n-aria="nav.preference" aria-label="服装" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 4 2 4-2 3 3-2.5 3v9h-9v-9L5 7z"/><path d="M9 5.2c.4 1.5 1.4 2.3 3 2.3s2.6-.8 3-2.3"/></svg>
+    <span data-i18n="nav.preference">服装</span>
+  </button>
+  <button class="mobile-dock__item" type="button" data-mobile-panel="Persona" data-mobile-side="left"
+          data-i18n-aria="rail.left.persona" aria-label="角色" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3"/><path d="M4.5 19c.4-4 2.2-6 5.5-6s5.1 2 5.5 6M18 5l.8 1.8 1.9.7-1.5 1.3.4 2-1.6-1-1.6 1 .4-2-1.5-1.3 1.9-.7z"/></svg>
+    <span data-i18n="rail.left.persona">角色</span>
+  </button>
+</nav>
+
 <script src="js/rails.js?v=22"></script>
 
 <!-- 把卡片拖到机器人身上：拾起 → 思考 → 点头 → 卡片消失 → 播动作 -->
@@ -769,6 +801,7 @@
 <script src="js/press.js?v=16"></script>
 
 <script src="js/panels.js?v=12"></script>
+<script src="js/mobile.js?v=1"></script>
 
 <script src="js/magnet.js?v=14"></script>
 

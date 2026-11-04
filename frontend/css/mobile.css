@@ -1,0 +1,233 @@
+/* Mobile stage layout
+   Keep the robot as the primary surface. Desktop rails become bottom sheets and
+   the five most-used destinations move into a thumb-friendly dock. */
+.mobile-dock,
+.mobile-sheet-scrim{display:none}
+
+@media (max-width:760px){
+  :root{
+    --edge:12px;
+    --top-h:44px;
+    --mobile-dock-h:64px;
+    --mobile-safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+
+  html,body{height:100%;height:100dvh}
+  body{min-height:100dvh;touch-action:manipulation}
+
+  .topbar{
+    top:max(8px,env(safe-area-inset-top,0px));
+    left:12px;
+    right:12px;
+    height:44px;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:0;
+  }
+  .brand{width:36px;height:36px;margin-left:0}
+  .brand svg{width:36px;height:36px}
+  .nav{gap:8px}
+  .group--view{height:44px;padding:3px}
+  .group--view .viewdock,
+  .group--view .pose-reset-trigger{width:38px;height:38px}
+
+  /* The account remains available without taking half of the phone header. */
+  .user:not(.is-open){--user-w:48px;--user-half:24px}
+  .user:not(.is-open) .user__name{display:none}
+  .user.is-open{
+    --user-w:min(288px,calc(100vw - 24px));
+    --user-half:calc(var(--user-w) / 2);
+  }
+
+  .mobile-dock{
+    position:fixed;
+    left:12px;
+    right:12px;
+    bottom:max(8px,var(--mobile-safe-bottom));
+    z-index:44;
+    height:var(--mobile-dock-h);
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:2px;
+    padding:5px;
+    border-radius:24px;
+    background:var(--panel);
+    box-shadow:0 0 20px rgba(var(--shadow),calc(.13 * var(--sh-k)));
+    -webkit-backdrop-filter:blur(var(--blur));
+    backdrop-filter:blur(var(--blur));
+  }
+  .mobile-dock__item{
+    appearance:none;
+    min-width:0;
+    min-height:54px;
+    padding:5px 2px 4px;
+    border:0;
+    border-radius:19px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    background:transparent;
+    color:var(--text-reduced);
+    font:var(--fw) 12px/1 var(--font);
+    cursor:pointer;
+  }
+  .mobile-dock__item svg{
+    width:24px;
+    height:24px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .mobile-dock__item span{
+    max-width:100%;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .mobile-dock__item[aria-pressed="true"]{
+    background:var(--theme);
+    color:var(--text-primary-invert);
+  }
+  .mobile-dock__item:focus-visible{outline:2px solid var(--hint);outline-offset:2px}
+
+  .mobile-sheet-scrim{
+    position:fixed;
+    inset:0;
+    z-index:37;
+    display:block;
+    background:rgb(28 28 28 / .18);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .2s ease,visibility 0s linear .2s;
+  }
+  body:has(.rail.is-open) .mobile-sheet-scrim{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transition:opacity .2s ease,visibility 0s;
+  }
+
+  /* Existing rail content becomes a bottom sheet; the hidden icon bar is
+     represented by the persistent dock above. */
+  .rail,
+  .rail--left,
+  .rail--right{
+    position:fixed;
+    top:auto;
+    left:12px;
+    right:12px;
+    bottom:calc(max(8px,var(--mobile-safe-bottom)) + var(--mobile-dock-h) + 8px);
+    width:auto;
+    height:min(68dvh,620px);
+    translate:0 20px!important;
+    scale:1!important;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    z-index:42;
+    transition:opacity .2s ease,translate .24s var(--ease),visibility 0s linear .24s;
+  }
+  .rail.is-open{
+    width:auto;
+    translate:0 0!important;
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transition:opacity .2s ease,translate .24s var(--ease),visibility 0s;
+  }
+  .rail.is-hidden{opacity:0!important;pointer-events:none!important}
+  .rail__surface{display:block;border-radius:28px}
+  .rail__bar,.rail__toggle{display:none!important}
+  .rail__panel,
+  .rail.is-open .rail__panel{
+    position:relative;
+    inset:auto;
+    width:100%;
+    height:100%;
+    opacity:1;
+    display:flex;
+  }
+  .rail__panel::after{display:none}
+  .panel__body{
+    width:100%;
+    min-width:0;
+    padding-left:16px;
+    padding-right:16px;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .rail__grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .rail--right .rail__view--pref .skin-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+  /* Composer stays reachable with one thumb, directly above the dock. */
+  .composer{
+    width:calc(100vw - 24px);
+    max-width:none;
+    bottom:calc(max(8px,var(--mobile-safe-bottom)) + var(--mobile-dock-h) + 8px);
+  }
+  .composer__surface{border-radius:22px}
+  .composer__input{width:100%!important;max-width:100%;font-size:16px}
+  .composer__model-trigger{max-width:132px}
+  body:has(.rail.is-open) .composer{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .robofx{--robofx-top:68px;--robofx-bottom:224px}
+  .stage-chat__flow{
+    top:13%;
+    bottom:31%;
+    padding-inline:8px;
+  }
+  .stage-chat__bubble{
+    --tilt:0deg!important;
+    max-width:42%;
+    padding:10px;
+    border-radius:18px;
+    font-size:13px;
+  }
+
+  .modal{
+    padding:
+      max(12px,env(safe-area-inset-top,0px))
+      12px
+      calc(12px + var(--mobile-safe-bottom));
+  }
+  .modal__panel{max-height:calc(100dvh - 24px - var(--mobile-safe-bottom))}
+  .auth__panel{
+    --auth-w:calc(100vw - 24px);
+    max-height:calc(100dvh - 24px - var(--mobile-safe-bottom));
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  body.is-mobile-keyboard .mobile-dock{translate:0 calc(100% + 20px)}
+  body.is-mobile-keyboard .composer{bottom:max(8px,var(--mobile-safe-bottom))}
+  body.is-mobile-keyboard .rail{bottom:max(8px,var(--mobile-safe-bottom));height:min(62dvh,520px)}
+}
+
+@media (max-width:420px){
+  .rail__grid,
+  .rail--right .rail__view--pref .skin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mobile-dock__item{font-size:11px}
+  .stage-chat__bubble{max-width:40%;font-size:12px}
+}
+
+@media (max-width:760px) and (max-height:620px){
+  .rail{height:min(64dvh,440px)}
+  .robofx{--robofx-top:60px;--robofx-bottom:200px}
+  .stage-chat{display:none}
+}
+
+@media (max-width:760px) and (prefers-reduced-motion:reduce){
+  .mobile-dock,
+  .mobile-sheet-scrim,
+  .rail{transition:none!important}
+}
