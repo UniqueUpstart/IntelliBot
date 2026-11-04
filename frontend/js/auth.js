@@ -363,6 +363,9 @@
   async function logout() {
     disarmLogout();
     if (logoutBtn) logoutBtn.disabled = true;
+    if (window.intellibotProfile && typeof window.intellibotProfile.flush === 'function') {
+      try { await window.intellibotProfile.flush(); } catch (err) {}
+    }
     try {
       await api('/auth/logout', { method: 'POST', body: {} });
     } catch (err) {
@@ -448,6 +451,12 @@
     skipEls.forEach(function (el) {
       el.addEventListener('click', skip);
     });
+    /* 登录卡片外的遮罩空白也算一次明确的退出动作。
+       面板内部交给表单自己处理，点击输入框、页签和按钮都不会误关。 */
+    root.addEventListener('click', function (event) {
+      if (event.target.closest('.auth__panel')) return;
+      skip();
+    });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && root.classList.contains('is-open')) skip();
     });
@@ -512,6 +521,7 @@
   /* 给别的脚本留个读口：当前登录用户与手动开合 */
   window.intellibotAuth = {
     get user() { return user; },
+    get token() { return readToken(); },
     open: openPanel,
     close: closePanel,
     logout: logout

@@ -19,19 +19,19 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=40"></script>
-  <link rel="stylesheet" href="css/base.css?v=17">
-  <link rel="stylesheet" href="css/topbar.css?v=20">
+<script src="js/i18n.js?v=44"></script>
+  <link rel="stylesheet" href="css/base.css?v=18">
+  <link rel="stylesheet" href="css/topbar.css?v=21">
   <link rel="stylesheet" href="css/rail.css?v=55">
   <link rel="stylesheet" href="css/workspace.css?v=33">
   <link rel="stylesheet" href="css/cards.css?v=31">
-  <link rel="stylesheet" href="css/modal.css?v=35">
-  <link rel="stylesheet" href="css/chat.css?v=131">
+  <link rel="stylesheet" href="css/modal.css?v=36">
+  <link rel="stylesheet" href="css/chat.css?v=132">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
-<link rel="stylesheet" href="css/auth.css?v=12">
+<link rel="stylesheet" href="css/auth.css?v=13">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -346,6 +346,8 @@
           <div class="chat-view__actions">
             <button class="assistant-chat__tool" type="button" data-assistant-stop
                     data-i18n="chat.stop" hidden>停止动作</button>
+            <button class="assistant-chat__tool" type="button" data-assistant-speech-stop
+                    data-i18n="chat.speech.stop" hidden>停止朗读</button>
             <!-- 齿轮收成一枚正圆，点开时整块向下长成面板：外圈的宽高与圆角由
                  .chat-dock__surface 过渡，形变与柔光复用 panels.js 的 pop
                  （和账号面板同一条曲线），下面两项直接挂 .pill ——
@@ -409,6 +411,14 @@
           </button>
         </div>
         <div class="composer">
+          <div class="chat-starters" data-chat-suggestions role="group"
+               data-i18n-aria="chat.starters" aria-label="Try asking">
+            <span class="chat-starters__label" data-i18n="chat.starters">Try asking</span>
+            <div class="chat-starters__list">
+              <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+              <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+            </div>
+          </div>
           <div class="composer__surface">
             <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
                       maxlength="500" data-assistant-input
@@ -426,15 +436,24 @@
                   <path class="composer__menu-line" d="M4 17h16"/>
                 </svg>
               </button>
-              <!-- 只留两枚快捷胶囊，贴在左下角三横钮的右侧；早先挂在输入面板
-                   上方、越过卡片顶缘压到舞台上，位置改到卡内一行后由
-                   css/chat.css 的 left / bottom 对齐这枚 38 见方的圆钮 -->
-              <div class="composer__starters" data-chat-suggestions role="group"
-                   data-i18n-aria="chat.starters" aria-label="试试这样问">
-                <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-                <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-              </div>
               <div class="composer__trail">
+                <button class="composer__voice composer__voice--mic" type="button"
+                        data-assistant-voice data-i18n-aria="chat.voice.start"
+                        aria-label="开始语音输入" aria-pressed="false" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="8" y="3" width="8" height="12" rx="4"/>
+                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/>
+                  </svg>
+                </button>
+                <button class="composer__voice composer__voice--speech" type="button"
+                        data-assistant-speech-toggle data-i18n-aria="chat.speech.on"
+                        aria-label="关闭自动朗读" aria-pressed="true" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9h3.5L12 5.5v13L7.5 15H4z"/>
+                    <path class="composer__sound-wave" d="M15.5 8.2a5.2 5.2 0 0 1 0 7.6M18 5.8a8.5 8.5 0 0 1 0 12.4"/>
+                    <path class="composer__sound-slash" d="m5 5 14 14"/>
+                  </svg>
+                </button>
                 <!-- 模型胶囊：点开后不是弹一块浮层，而是胶囊自己长成面板 ——
                      底板 .composer__model-surface 以下边界锚定向上长，宽度从
                      胶囊宽撑到面板宽、圆角从半高收成 18。当前模型永远是最下面
@@ -491,6 +510,13 @@
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
+      <button class="item" type="button" data-panel="Preference" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
+        </span>
+        <span class="item__label" data-i18n="nav.preference">Costume</span>
+      </button>
+
       <button class="item" type="button" data-panel="Gestures" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12.1 3.6c-.9 0-1.6.7-1.6 1.6v10.2l-1.8-2.4c-.5-.7-1.5-.9-2.2-.4-.7.5-.8 1.4-.4 2.1l4.6 6.9c1.1 1.7 3 2.7 5 2.7h3.4c2.9 0 5.2-2.3 5.2-5.2v-6.7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v2.9h-.6V8.5c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v6.4h-.6V7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v8h-.6V5.2c0-.9-.7-1.6-1.6-1.6Z"/></svg>
@@ -510,13 +536,6 @@
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M18.4 3.6 7.2 18.2h6.6L12.6 28.4 24.6 13.4h-7l.8-9.8Z"/></svg>
         </span>
         <span class="item__label" data-i18n="rail.left.shortcuts">Shortcuts</span>
-      </button>
-
-      <button class="item" type="button" data-panel="Preference" aria-expanded="false" aria-controls="panel-tools">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
-        </span>
-        <span class="item__label" data-i18n="nav.preference">Costume</span>
       </button>
 
       <button class="item item--edit" type="button" data-panel="Edit"
@@ -586,11 +605,10 @@
 
       </div>
 
-      <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组方卡、最多 6 张，
-           选中的那枚涨满主题色，导入进来的模型由 js/q1skin.js 追加到末尾。
-           导入与「删除当前导入」都排在卡下面，后者只在选中导入的模型时出现，
-           导入过程的提示挂在最末一行。两个 data-skin-* 钩子原样保留，
-           q1skin.js 无需改动 -->
+      <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组自适应方卡，
+           选中的那枚涨满主题色，导入卡固定在模型网格末尾，新导入的模型由
+           js/q1skin.js 插在导入卡前面。「删除当前导入」排在卡下面，只在选中
+           导入的模型时出现，导入过程的提示挂在最末一行 -->
       <div class="rail__view rail__view--pref" data-rail-view="preference">
         <div class="pref" data-skin-panel>
           <div class="pref__group pref__group--skin">
@@ -626,6 +644,24 @@
                 </span>
                 <span class="skin-card__name" data-i18n="rail.left.skin.coral">珊瑚</span>
               </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:medal" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="8" y="7" width="16" height="14" rx="3" fill="#301018"/><path d="M16 9.2 19.2 14.2 16 16.4 12.8 14.2Z" fill="#e8b040"/><path d="M16 9.2 22 13.2 19.2 14.2Z" fill="#ffeccc"/><path d="M16 9.2 10 13.2 12.8 14.2Z" fill="#ffeccc"/><path d="M12 24v3.5M20 24v3.5"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.medal">漆扇</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:ion" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="7" width="14" height="13" rx="3" fill="#121826" stroke="#5ef4ff"/><path d="M16 9.5v8" stroke="#d2ffff"/><circle cx="13.2" cy="12.2" r="1" fill="#e8fbff"/><circle cx="18.8" cy="12.2" r="1" fill="#e8fbff"/><path d="M12 24v3.5M20 24v3.5" stroke="#5ef4ff"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.ion">夜辉</span>
+              </button>
+              <button class="skin-card" type="button" data-skin-id="builtin:livery" aria-pressed="false">
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><rect x="9" y="7" width="14" height="13" rx="3" fill="#f7f8fa" stroke="#ff7a1a"/><rect x="11" y="10" width="10" height="6" rx="1.2" fill="#2c3036" stroke="#ff7a1a"/><circle cx="13.2" cy="12.2" r="1" fill="#1b1d20"/><circle cx="18.8" cy="12.2" r="1" fill="#1b1d20"/><path d="M12 24v3.5M20 24v3.5"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.livery">橙纹</span>
+              </button>
               <button class="skin-card" type="button" data-skin-id="builtin:ink" aria-pressed="false">
                 <span class="skin-card__icon" aria-hidden="true">
                   <svg viewBox="0 0 32 32"><rect x="9" y="8" width="14" height="12" rx="3" fill="#1f8a78"/><circle cx="13" cy="13" r="1.3" fill="#0d1c19"/><circle cx="19" cy="13" r="1.3" fill="#0d1c19"/><path d="M12 24v3.5M20 24v3.5M8.5 20.5h15"/></svg>
@@ -650,17 +686,14 @@
                 </span>
                 <span class="skin-card__name" data-i18n="rail.left.skin.pixel">Steve</span>
               </button>
-              <button class="skin-card" type="button" data-skin-id="builtin:figure" aria-pressed="false">
+              <label class="skin-card skin-card--import" role="button" tabindex="0" data-skin-import>
                 <span class="skin-card__icon" aria-hidden="true">
-                  <svg viewBox="0 0 32 32"><circle cx="16" cy="7" r="3.2"/><path d="M16 11v9m-6-6 6-2 6 2m-6 4-5 8m5-8 5 8"/></svg>
+                  <svg viewBox="0 0 32 32"><path d="M6 10h8l3 3h9v13H6V10Z"/><path d="M16 14v7m-3.5-3.5L16 21l3.5-3.5"/></svg>
                 </span>
-                <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
-              </button>
+                <span class="skin-card__name" data-i18n="rail.left.skin.import">导入</span>
+                <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
+              </label>
             </div>
-            <label class="pref__row" role="button" tabindex="0" data-skin-import>
-              <span data-i18n="rail.left.skin.import">Import</span>
-              <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
-            </label>
             <button class="pref__row" type="button" data-skin-delete hidden>
               <span data-i18n="rail.left.skin.delete">删除当前导入</span>
             </button>
@@ -727,7 +760,7 @@
 <script src="js/card_pickup.js?v=15"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
-<script src="js/avatar.js?v=5"></script>
+<script src="js/avatar.js?v=7"></script>
 
 <!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
 <script src="lib/gsap.min.js"></script>
@@ -755,9 +788,47 @@
   <form class="auth__panel" id="auth-panel" role="dialog" aria-modal="true"
         data-i18n-aria="auth.dialog" aria-label="Sign in or register" novalidate>
 
-    <!-- 左侧 2/3 留白：卡片按 3:2（宽:高）定形，右列占 1/3 放表单。
-         这块现在空着，占位是为了让右列落在三分之一上，以后要放插画或品牌图也在这里 -->
-    <div class="auth__aside" aria-hidden="true"></div>
+    <section class="auth__aside" aria-labelledby="auth-aside-title">
+      <div class="auth__brand">
+        <img src="icon/logo.svg" alt="" aria-hidden="true">
+        <span>IntelliBot</span>
+      </div>
+
+      <div class="auth__story">
+        <p class="auth__signal"><span aria-hidden="true"></span><span data-i18n="auth.aside.signal">智能机器人交互平台</span></p>
+        <h2 id="auth-aside-title" data-i18n="auth.aside.title">让语言变成表情与动作</h2>
+        <p data-i18n="auth.aside.body">与智能机器人自然交流，用一句话触发回应、表情和动作。</p>
+      </div>
+
+      <div class="auth__robot-scene" aria-hidden="true">
+        <span class="auth__orbit auth__orbit--one"></span>
+        <span class="auth__orbit auth__orbit--two"></span>
+        <span class="auth__greeting" data-i18n="auth.aside.greeting">你好，很高兴见到你！</span>
+        <svg class="auth__robot" viewBox="0 0 260 360">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect class="auth__robot-shell" x="94" y="22" width="72" height="62" rx="29"/>
+            <rect class="auth__robot-face" x="102" y="30" width="56" height="43" rx="20"/>
+            <path d="M117 49h6m14 0h6m-22 12c6 4 12 4 18 0"/>
+            <path class="auth__robot-shell" d="M94 102c13-12 59-12 72 0l17 105c-27 23-79 23-106 0z"/>
+            <path d="M107 88v14m46-14v14M91 126c-18 1-28 12-31 30l-15 87m124-117c18 1 28 12 31 30l15 87"/>
+            <path class="auth__robot-shell" d="M60 150l-14 79m154-79l14 79"/>
+            <circle cx="45" cy="244" r="14"/><circle cx="215" cy="244" r="14"/>
+            <path d="M101 226l-17 35-4 68m79-103l17 35 4 68"/>
+            <path class="auth__robot-shell" d="M84 261l-4 68m96-68l4 68"/>
+            <path d="M65 337h34m62 0h34"/>
+            <circle cx="91" cy="128" r="13"/><circle cx="169" cy="128" r="13"/>
+            <circle cx="82" cy="258" r="13"/><circle cx="178" cy="258" r="13"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="auth__continuity" aria-label="产品能力">
+        <span data-i18n="auth.aside.chat">智能对话</span>
+        <span data-i18n="auth.aside.skin">动作交互</span>
+        <span data-i18n="auth.aside.settings">本地仿真</span>
+      </div>
+      <p class="auth__privacy" data-i18n="auth.aside.privacy">登录后可继续上次的对话与个性化体验。</p>
+    </section>
 
     <div class="auth__body">
       <!-- 页签：纯文字，登录 / 注册，两者平分列宽、字居中。选中与 hover
@@ -814,7 +885,7 @@
 </div>
 
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
-<script src="js/auth.js?v=11"></script>
+<script src="js/auth.js?v=12"></script>
 
 <!-- 居中弹窗：Preference / Advance / Settings / Privacy 四枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
@@ -936,23 +1007,23 @@
       <div class="doc__body">
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">01</span>定义</div>
-          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面及其姿态控制、动作演示与本地仿真联动功能；「本地存储」指浏览器提供的 localStorage 机制；「你」指访问并使用本服务的自然人。</p>
+          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面、账号、智能对话、姿态控制、动作演示与本地仿真联动功能；「本地存储」包括浏览器 localStorage 与运行本服务的电脑上的 SQLite 数据库；「你」指访问并使用本服务的自然人。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">02</span>适用范围</div>
-          <p class="doc__text">本政策适用于你访问本服务并使用上述功能的全过程。本服务不提供账号注册、云端同步、在线支付与广告投放，涉及此类场景的处理规则不适用本政策；本服务之外的外部网站适用其各自的隐私政策。</p>
+          <p class="doc__text">本政策适用于你访问本服务并使用上述功能的全过程。本服务提供本机账号注册与状态保存，但不提供互联网云端同步、在线支付与广告投放；本服务之外的外部网站适用其各自的隐私政策。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
-          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入界面偏好：<span class="doc__code">intellibot.mode</span>（显示模式）、<span class="doc__code">intellibot.bg</span>（背景样式）、<span class="doc__code">intellibot:avatar</span>（所选头像）、<span class="doc__code">intellibot:personas</span> 与 <span class="doc__code">intellibot:persona</span>（自定义 AI 角色及其样式），以及模型历史和机器人外观选择。</p>
+          <p class="doc__text">本服务保存你主动创建的用户名、昵称、密码哈希和登录会话，并可按账号保存近期对话、压缩后的个性头像、内置机器人外观、界面偏好、自定义 AI 角色与快捷指令。本服务不收集联系方式、设备标识符、精确位置或生物识别信息，也不通过 Cookie、像素标签等技术进行跨站追踪。API Key 与导入模型文件不进入账号状态。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
-          <p class="doc__text">上述本地信息的用途是在你下次访问时还原界面、角色和机器人外观，处理依据为你对相应设置的主动选择。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务，以生成回复；本服务不会基于这些信息开展用户画像、个性化推荐、广告投放或自动化决策，也不会将其用于模型训练。</p>
+          <p class="doc__text">上述信息用于验证登录身份，并在你再次登录时还原近期对话、界面、角色、快捷指令和机器人外观。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务以生成回复；本服务不会基于这些信息开展用户画像、广告投放或模型训练。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">05</span>头像信息的处理</div>
-          <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换，结果以 dataURL 形式写入上述存储项。原始文件不会被二次读取、不会被复制到其他位置，也不经网络传输；你可随时替换或清除该头像。</p>
+          <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换；登录后仅将压缩结果随账号状态保存到本机数据库。原始文件不会被复制或上传到外部服务，你可随时替换该头像。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">06</span>仿真数据的传输范围</div>
@@ -960,7 +1031,7 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">07</span>存储位置与留存期限</div>
-          <p class="doc__text">上述数据仅存于你的终端设备，不设固定留存期限，保存至你主动清除为止。你可通过浏览器设置清除该站点的数据，或在开发者工具中移除对应键值；删除后相关偏好恢复初始状态。</p>
+          <p class="doc__text">浏览器偏好保存在当前浏览器；账号、登录会话与账号状态保存在运行本服务的电脑上。数据保存至你主动清除浏览器站点数据或删除本地数据库为止；清除后对应内容恢复初始状态。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">08</span>对外提供与共享</div>
@@ -968,11 +1039,11 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">09</span>安全措施与风险提示</div>
-          <p class="doc__text">本服务通过限制对外请求、不持久化敏感数据等方式降低风险。但请理解，任何本地存储都可能因设备共用、浏览器漏洞或恶意扩展而被他人读取，请在共享设备上谨慎保存个人信息，并在使用后及时清除。</p>
+          <p class="doc__text">密码只保存 Argon2id 哈希，登录令牌只保存摘要，API Key 不进入账号状态；账号数据库默认仅由本机服务访问。任何本地数据仍可能因设备共用、浏览器漏洞或恶意扩展而被读取，请在共享设备上使用后退出登录。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">10</span>你的权利</div>
-          <p class="doc__text">在适用法律允许的范围内，你有权知悉、访问、更正与删除上述数据。由于本服务不持有你的数据副本，上述权利均通过你的浏览器直接行使；我们无法代为查阅、导出、更正或删除。</p>
+          <p class="doc__text">你可以在界面中查看、修改或清除对话与偏好，并通过退出登录作废当前会话。浏览器数据可在浏览器设置中清除；账号数据库由本机项目维护者管理，可按需查看或删除。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">11</span>未成年人保护</div>
@@ -1175,10 +1246,11 @@
 
 <script src="js/modal.js?v=35"></script>
 <script src="js/contact.js?v=3"></script>
-<script src="js/composer.js?v=8"></script>
-<script src="js/model_config.js?v=20"></script>
+<script src="js/composer.js?v=10"></script>
+<script src="js/model_config.js?v=21"></script>
 <script src="js/persona.js?v=5"></script>
-<script src="js/assistant_chat.js?v=38"></script>
+<script src="js/assistant_chat.js?v=44"></script>
+<script src="js/profile_state.js?v=3"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
@@ -1199,7 +1271,7 @@
 </script>
 <script type="module" src="js/robot3d.js?v=80"></script>
 <script type="module" src="js/view-control.js?v=51"></script>
-<script type="module" src="js/q1skin.js?v=44"></script>
+<script type="module" src="js/q1skin.js?v=51"></script>
 
 </body>
 </html>

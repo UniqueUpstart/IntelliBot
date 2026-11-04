@@ -26,6 +26,7 @@ from backend.ai.deepseek_bridge import (
     validate_ai_config,
     validate_chat_request,
     validate_persona,
+    validate_speech_request,
 )
 import backend.ai.deepseek_bridge as bridge
 
@@ -365,6 +366,22 @@ class DeepSeekBridgeTest(unittest.TestCase):
                     self.assertEqual(calls, 2)
             finally:
                 bridge.refresh_capabilities(force=True)
+
+    def test_speech_request_is_validated(self):
+        self.assertEqual(
+            validate_speech_request({
+                "text": " 你好 ",
+                "voice": "zh-CN-XiaoxiaoNeural",
+            }),
+            ("你好", "zh-CN-XiaoxiaoNeural"),
+        )
+        with self.assertRaises(BridgeError):
+            validate_speech_request({"text": ""})
+        with self.assertRaises(BridgeError):
+            validate_speech_request({
+                "text": "你好",
+                "voice": "unregistered-voice",
+            })
 
     def test_json_mode_is_removed_when_provider_rejects_it(self):
         requests = []

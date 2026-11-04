@@ -39,6 +39,12 @@ class FakeAiHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0"))
         body = json.loads(self.rfile.read(length))
         seen_keys.append(self.headers.get("Idempotency-Key"))
+        if self.path == "/speech":
+            if body.get("text") and body.get("voice") == "zh-CN-XiaoxiaoNeural":
+                self.reply_bytes(200, b"ID3\x04fake-mp3", "audio/mpeg")
+            else:
+                self.reply(400, {"error": {"code": "INVALID_SPEECH", "message": "invalid"}})
+            return
         if self.path == "/config":
             self.model = body.get("model", self.model)
             self.reply(200, {
@@ -119,8 +125,11 @@ class FakeAiHandler(BaseHTTPRequestHandler):
 
     def reply(self, status: int, value: dict):
         data = json.dumps(value).encode()
+        self.reply_bytes(status, data, "application/json")
+
+    def reply_bytes(self, status: int, data: bytes, content_type: str):
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -150,6 +159,26 @@ def call(port: int, method: str, path: str, body=None, key: str | None = None):
     except urllib.error.HTTPError as error:
         response = error
     return response.status, json.load(response)
+
+
+def call_raw(port: int, method: str, path: str, body, key: str | None = None):
+    data = json.dumps(body).encode()
+    headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = "Bearer " + auth_token
+    if key is not None:
+        headers["Idempotency-Key"] = key
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/v1{path}",
+        data=data,
+        method=method,
+        headers=headers,
+    )
+    try:
+        response = urllib.request.urlopen(request, timeout=5)
+    except urllib.error.HTTPError as error:
+        response = error
+    return response.status, response.headers.get("Content-Type", ""), response.read()
 
 
 backend_port = free_port()
@@ -203,6 +232,16 @@ try:
     ]:
         code, result = call(backend_port, "POST", "/chat", {"message":action}, str(uuid4()))
         assert code == 502 and result["error"]["code"] == "AI_INVALID_RESPONSE", (code,result)
+
+    code, content_type, audio = call_raw(
+        backend_port,
+        "POST",
+        "/ai/speech",
+        {"text": "你好", "voice": "zh-CN-XiaoxiaoNeural"},
+        str(uuid4()),
+    )
+    assert code == 200 and content_type.startswith("audio/mpeg"), (code, content_type)
+    assert audio == b"ID3\x04fake-mp3", audio
 
     status, payload = call(
         backend_port,

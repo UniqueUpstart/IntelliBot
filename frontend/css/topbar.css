@@ -218,11 +218,11 @@
 .user.is-open .avatar{transform:none; pointer-events:auto; cursor:pointer}
 .avatar:focus-visible{outline:2px solid var(--theme); outline-offset:2px}
 
-/* 未登录：头像留空 —— 只剩底色那颗圆，没有脸，点了也不开选择条
+/* 未登录：头像显示默认图形，但不打开选择条
    （js/avatar.js 把这一手改成开登录页）。名字那一格换成入口「注册/登录」，
    压过 trigger（z 4 > 2）自己接点击。
    位置与行高不动，收起 / 展开两种状态的高度算式都不受影响 */
-.user.is-guest .avatar{background-image:none; cursor:default}
+.user.is-guest .avatar{cursor:default}
 .user.is-guest.is-open .avatar{cursor:default}
 /* 未登录：名字那格是入口，接指针、压过 trigger；字色与登录后的用户名一致，
    都取顶栏胶囊那档 --text-reduced。它是唯一可以点的一行字，所以指针上来

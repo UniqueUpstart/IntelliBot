@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import json
 import os
@@ -16,6 +17,11 @@ from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
+
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,9 +41,20 @@ MAX_BODY_BYTES = 8192
 MAX_MESSAGE_CHARS = 500
 MAX_HISTORY_ITEMS = 10
 MAX_PERSONA_CHARS = 1200
+MAX_SPEECH_CHARS = 500
+MAX_SPEECH_BYTES = 2 * 1024 * 1024
 CACHE_TTL_S = 600
 CACHE_LIMIT = 1024
 CAPABILITIES_PATH = ROOT / "assistant" / "capabilities.json"
+DEFAULT_SPEECH_VOICE = "zh-CN-XiaoxiaoNeural"
+SPEECH_VOICES = frozenset({
+    "zh-CN-XiaoxiaoNeural",
+    "zh-CN-XiaoyiNeural",
+    "zh-CN-YunxiNeural",
+    "zh-CN-YunjianNeural",
+    "en-US-AriaNeural",
+    "en-US-GuyNeural",
+})
 
 
 def _load_capabilities() -> dict:
@@ -291,6 +308,48 @@ def validate_persona(value: object) -> str:
     if len(persona) > MAX_PERSONA_CHARS:
         raise BridgeError(400, "INVALID_PERSONA", "persona 不能超过 1200 个字符")
     return persona
+
+
+def validate_speech_request(value: object) -> tuple[str, str]:
+    if not isinstance(value, dict):
+        raise BridgeError(400, "INVALID_SPEECH_REQUEST", "语音请求必须是 JSON 对象")
+    text = value.get("text")
+    if not isinstance(text, str) or not text.strip() or len(text) > MAX_SPEECH_CHARS:
+        raise BridgeError(400, "INVALID_SPEECH_TEXT", "text 需为 1 至 500 个字符")
+    voice = value.get("voice", DEFAULT_SPEECH_VOICE)
+    if not isinstance(voice, str) or voice not in SPEECH_VOICES:
+        raise BridgeError(400, "INVALID_SPEECH_VOICE", "不支持的语音音色")
+    return text.strip(), voice
+
+
+async def _synthesize_edge_speech(text: str, voice: str) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in edge_tts.Communicate(text, voice).stream():
+        if chunk.get("type") != "audio":
+            continue
+        data = chunk.get("data")
+        if not isinstance(data, (bytes, bytearray)):
+            continue
+        size += len(data)
+        if size > MAX_SPEECH_BYTES:
+            raise BridgeError(413, "SPEECH_TOO_LARGE", "生成的语音文件过大")
+        chunks.append(bytes(data))
+    if not chunks:
+        raise BridgeError(502, "TTS_INVALID_RESPONSE", "语音服务未返回音频")
+    return b"".join(chunks)
+
+
+def synthesize_speech(value: object) -> bytes:
+    text, voice = validate_speech_request(value)
+    if edge_tts is None:
+        raise BridgeError(503, "TTS_UNAVAILABLE", "未安装 edge-tts，暂时无法使用自然语音")
+    try:
+        return asyncio.run(_synthesize_edge_speech(text, voice))
+    except BridgeError:
+        raise
+    except Exception as error:
+        raise BridgeError(502, "TTS_UPSTREAM_ERROR", "自然语音服务暂时不可用") from error
 
 
 def _explicit_motion_ids(message: str) -> list[str]:
@@ -831,6 +890,9 @@ class BridgeState:
             candidate = validate_ai_config(value, self.config)
         return {"models": fetch_models(candidate, self.opener)}
 
+    def speech(self, value: object) -> bytes:
+        return synthesize_speech(value)
+
 
 def make_handler(state: BridgeState):
     class Handler(BaseHTTPRequestHandler):
@@ -840,6 +902,14 @@ def make_handler(state: BridgeState):
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _bytes(self, status: int, body: bytes, content_type: str) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
@@ -870,7 +940,7 @@ def make_handler(state: BridgeState):
             )
 
         def do_POST(self) -> None:
-            if self.path not in {"/chat", "/config", "/models"}:
+            if self.path not in {"/chat", "/config", "/models", "/speech"}:
                 self._json(404, {"error": {"code": "NOT_FOUND", "message": "接口不存在"}})
                 return
             try:
@@ -878,6 +948,13 @@ def make_handler(state: BridgeState):
                 if length < 1 or length > MAX_BODY_BYTES:
                     raise BridgeError(413, "BODY_TOO_LARGE", "请求体需为 1 至 8192 字节")
                 body = self.rfile.read(length)
+                if self.path == "/speech":
+                    try:
+                        value = json.loads(body.decode("utf-8"))
+                    except (UnicodeError, json.JSONDecodeError) as error:
+                        raise BridgeError(400, "INVALID_JSON", "语音请求必须是 JSON 对象") from error
+                    self._bytes(200, state.speech(value), "audio/mpeg")
+                    return
                 if self.path == "/models":
                     try:
                         value = json.loads(body.decode("utf-8"))
@@ -926,6 +1003,8 @@ def main() -> int:
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(BridgeState(config)))
     status = "configured" if config.api_key else "waiting-for-config"
     print(f"[ai] ready http://127.0.0.1:{args.port} model={config.model} {status}", flush=True)
+    if edge_tts is None:
+        print("[ai] edge-tts unavailable; speech will use browser fallback", file=sys.stderr)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

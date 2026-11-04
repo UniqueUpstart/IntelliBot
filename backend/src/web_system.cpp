@@ -106,7 +106,9 @@ struct WebSystem::Impl {
         "sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES "
         "users(id),created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL); CREATE TABLE IF NOT "
         "EXISTS browser_sessions(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL REFERENCES "
-        "sessions(token_hash) ON DELETE CASCADE,created_at INTEGER NOT NULL,state TEXT NOT NULL);";
+        "sessions(token_hash) ON DELETE CASCADE,created_at INTEGER NOT NULL,state TEXT NOT NULL); "
+        "CREATE TABLE IF NOT EXISTS user_state(user_id INTEGER PRIMARY KEY REFERENCES "
+        "users(id) ON DELETE CASCADE,state_json TEXT NOT NULL,updated_at INTEGER NOT NULL);";
     if (sqlite3_exec(db, sql, nullptr, nullptr, nullptr) != SQLITE_OK)
       throw std::runtime_error("database schema failed");
     if (path != ":memory:") {
@@ -274,10 +276,44 @@ struct WebSystem::Impl {
         return true;
       }
       // Release the database lock before the potentially slow AI proxy request.
-      if (p == "/api/v1/chat" && req.method == "POST") return false;
+      if ((p == "/api/v1/chat" || p == "/api/v1/ai/speech") &&
+          req.method == "POST")
+        return false;
       J info = {{"id", user.num(0)}, {"username", user.text(1)}, {"display_name", user.text(2)}};
       if (p == "/api/v1/auth/me" && req.method == "GET") {
         reply(res, 200, {{"user", info}});
+        return true;
+      }
+      if (p == "/api/v1/auth/state" && req.method == "GET") {
+        Query q(db, "SELECT state_json,updated_at FROM user_state WHERE user_id=?");
+        q.bind(1, user.num(0));
+        if (!q.row()) {
+          reply(res, 200, {{"state", nullptr}, {"updated_at", nullptr}});
+          return true;
+        }
+        reply(res, 200, {{"state", J::parse(q.text(0))}, {"updated_at", q.num(1)}});
+        return true;
+      }
+      if (p == "/api/v1/auth/state" && req.method == "PUT") {
+        if (!input.contains("state") || !input["state"].is_object()) {
+          fail(400, "INVALID_STATE", "用户状态必须是JSON对象");
+          return true;
+        }
+        const auto packed = input["state"].dump();
+        if (packed.size() > 256 * 1024) {
+          fail(413, "STATE_TOO_LARGE", "用户状态不能超过256KB");
+          return true;
+        }
+        const auto updated = now();
+        Query q(db,
+                "INSERT INTO user_state(user_id,state_json,updated_at) VALUES(?,?,?) ON "
+                "CONFLICT(user_id) DO UPDATE SET state_json=excluded.state_json,"
+                "updated_at=excluded.updated_at");
+        q.bind(1, user.num(0));
+        q.bind(2, packed);
+        q.bind(3, updated);
+        q.row();
+        reply(res, 200, {{"saved", true}, {"updated_at", updated}});
         return true;
       }
       if (p == "/api/v1/auth/logout" && req.method == "POST") {

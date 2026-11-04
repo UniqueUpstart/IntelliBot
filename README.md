@@ -1,5 +1,7 @@
 # IntelliBot
 
+![IntelliBot 智能机器人交互平台](docs/image/intellibot-cover-16x9.png)
+
 基于 MuJoCo 的机器人仿真与浏览器交互项目，支持关节、姿态、手势、底盘控制和可选的 DeepSeek 对话。目前面向 Windows 本地开发。
 
 ## 索引
@@ -64,9 +66,9 @@ py -3.12 -m venv .venv
 
 如果安装的是 Python 3.11，把 `py -3.12` 改为 `py -3.11`。后续直接使用 `.venv\Scripts\python.exe`，无需激活环境。
 
-### 3. 配置 DeepSeek（可选）
+### 3. 配置 ai
 
-不使用 AI 对话时可以跳过。需要时复制配置模板并填写自己的 API Key：
+复制配置模板并填写自己的 API Key：
 
 ```powershell
 Copy-Item .env.example .env
