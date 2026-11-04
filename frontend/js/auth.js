@@ -30,6 +30,8 @@
   const passwordEl = document.getElementById('auth-password');
   const submitBtn = document.getElementById('auth-submit');
   const submitLabel = submitBtn ? submitBtn.querySelector('.pill__label') : null;
+  const greetName = root.querySelector('[data-greet-name]');
+  const greetEl = root.querySelector('.auth__greet');
   const tabs = Array.prototype.slice.call(root.querySelectorAll('[data-auth-mode]'));
   const registerOnly = Array.prototype.slice.call(root.querySelectorAll('[data-auth-register-only]'));
   const skipEls = Array.prototype.slice.call(document.querySelectorAll('[data-auth-skip]'));
@@ -151,6 +153,13 @@
     setMessage('');
   }
 
+  /* 左栏那两行大字跟着用户名走。空着的时候塞一个不含字形的空格 ——
+     给空串会让第二行塌掉，HELLO 下面那行一没，整块的位置就跳了 */
+  function syncGreet() {
+    if (!greetName || !usernameEl) return;
+    greetName.textContent = (usernameEl.value || '').trim() || '\u00a0';
+  }
+
   /* ---------- 弹出 / 收回 ---------- */
 
   /* 与弹窗那套弹出动画同一个来源：时长、两段式挤压形变、缓动全部取自
@@ -256,9 +265,13 @@
     if (window.robot3d && window.robot3d.suspend) window.robot3d.suspend(1200);
     /* 每次重新浮出都从「看着你」的常态开始：上一次的吹口哨或笑脸不该带进来 */
     if (window.intellibotAuthFaces) window.intellibotAuthFaces.idle();
+    syncGreet();
     popIn();
     window.setTimeout(function () {
       if (!root.classList.contains('is-open') || closing) return;
+      /* 密码管理器常在这一刻才把用户名填进来，而且不派发 input 事件，
+         所以聚焦前后各对齐一次大字 */
+      syncGreet();
       const target = usernameEl && usernameEl.value ? passwordEl : usernameEl;
       if (target) target.focus({ preventScroll: true });
     }, 90);
@@ -278,6 +291,8 @@
       document.body.classList.remove('is-auth');
       /* 卡片走了，左栏那几枚色块和彩带也回到常态，下次开面板不会接着上一次的笑脸 */
       if (window.intellibotAuthFaces) window.intellibotAuthFaces.idle();
+      /* 行尾那根下划线也收起来：下次浮出要重新看焦点落在哪一格 */
+      if (greetEl) greetEl.classList.remove('is-typing');
       if (trigger) trigger.focus({ preventScroll: true });
     });
   }
@@ -425,6 +440,7 @@
         setMode('login');
         usernameEl.value = username;
         passwordEl.value = '';
+        syncGreet();
         setMessage(t('auth.register.ok'), 'ok');
         passwordEl.focus();
         /* 笑脸放在真的注册成功之后：先切回登录页、把光标放回密码框，
@@ -461,6 +477,19 @@
       event.preventDefault();
       submit();
     });
+    /* 用户名每敲一个字，左栏那行大字跟着换；用 input 而不是 keyup，
+       粘贴、输入法上屏、右键清空都能接住 */
+    if (usernameEl) {
+      usernameEl.addEventListener('input', syncGreet);
+      /* 行尾那根下划线只在用户名格子拿着焦点时闪 ——
+         光标挪到密码框、或点掉了，它就收起来，不抢「别过头吹口哨」那只眼睛的戏 */
+      usernameEl.addEventListener('focus', function () {
+        if (greetEl) greetEl.classList.add('is-typing');
+      });
+      usernameEl.addEventListener('blur', function () {
+        if (greetEl) greetEl.classList.remove('is-typing');
+      });
+    }
     tabs.forEach(function (btn) {
       btn.addEventListener('click', function () { setMode(btn.dataset.authMode); });
     });
@@ -511,6 +540,7 @@
   function boot() {
     wire();
     setMode('login');
+    syncGreet();
     applyGuest();
     syncPillWidth();
 

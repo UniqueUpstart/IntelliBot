@@ -85,6 +85,67 @@
   background:var(--bg);
 }
 
+/* 左上角那两行大字：HELLO 固定，第二行跟着用户名输入框实时换。
+   底色就是 --bg、右边又是色块，所以它是一层背景式文字 —— 放在 z-index 0，
+   色块盖过来时就该被压掉一角。
+   字体与右列表单同一个 --font（Barlow Condensed）：HELLO 是这块的抬头，
+   和右边的英文标签并排看要是同一支笔。中文落到思源黑体并加粗，
+   用户名里出现中文时不会突然细一档。
+   字号桌面档 36 / 用户名 42；窄屏按 5.4vw / 6.3vw 收，
+   否则左栏压到 300 来宽时这两行会顶到角色头顶。
+   用户名空着的时候由 js 塞一个不含字形的空格占位，两行高度不跳 */
+.auth__greet{
+  position:absolute; left:28px; top:26px; z-index:0;
+  margin:0; max-width:calc(100% - 56px);
+  color:var(--text-reduced);
+  font-family:"Barlow Condensed", "Noto Sans SC", var(--font);
+  font-size:36px;
+  font-size:clamp(24px, 5.4vw, 36px);
+  font-weight:500;
+  line-height:1.16;
+  letter-spacing:.02em;
+  text-align:left;
+  pointer-events:none;
+  overflow:hidden;
+}
+.auth__greet-line{
+  display:block;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+/* 用户名那一行再大一档、粗一档：它是这块的正文，HELLO 只是抬头 */
+.auth__greet-name{
+  font-size:42px;
+  font-size:clamp(28px, 6.3vw, 42px);
+  font-weight:700;
+}
+/* 行尾那根闪烁的下划线：只有用户名输入框拿着焦点时才亮，
+   一明一灭像在等你往下敲。用字符而不是伪元素画边框，
+   它才会跟着字体的基线走，名字里的下划线也读得出来是同一支笔。
+   字号与字重都取 HELLO 那一档 —— 同一支笔写出来的才是同一种墨，
+   跟着用户名那行走 42/700 的话，一根实心下划线会比抬头黑一截 */
+.auth__greet-caret{
+  display:inline-block;
+  margin-left:.04em;
+  font-style:normal;
+  font-size:36px;
+  font-size:clamp(24px, 5.4vw, 36px);
+  font-weight:500;
+  opacity:0;
+}
+.auth__greet.is-typing .auth__greet-caret{
+  animation:greet-caret 1.06s steps(1, end) infinite;
+}
+@keyframes greet-caret{
+  0%, 49.9%{opacity:1}
+  50%, 100%{opacity:0}
+}
+/* 关了动效就让它常亮：闪烁本身是提示，不该被一刀切掉 */
+@media (prefers-reduced-motion:reduce){
+  .auth__greet.is-typing .auth__greet-caret{
+    animation:none; opacity:1;
+  }
+}
+
 /* 角色与彩带：彩带铺满整块、压在角色下面（z-index 1），
    从色块背后往上窜的时候会被挡掉中段，只从两侧露出来 */
 .auth__cast{
@@ -179,7 +240,7 @@
 .auth__aside[data-mood="whistle"] .cast__mouth--whistle{opacity:1}
 
 /* 开心：全部换成向上弯的笑眼，theme 与粉给笑弧；
-   身子一起轻轻上跳，三枚按顺序起跳，像被同一句话逗笑 */
+   身子不动 —— 笑只发生在脸上，庆祝的动作交给从背后喷出去的彩带 */
 .auth__aside[data-mood="happy"] .cast__eyes,
 .auth__aside[data-mood="happy"] .cast__mouth--idle{opacity:0}
 .auth__aside[data-mood="happy"] .cast__lids,
@@ -197,11 +258,10 @@
 .cast__actor--theme{--cast-delay:0s}
 .cast__actor--rose{--cast-delay:.05s}
 .cast__actor--deep{--cast-delay:.09s}
-.auth__aside[data-mood="happy"] .cast__actor{transform:translateY(-10px)}
 
 /* 跟着指针晃的那一层：贴着自己这枚色块的脚底当转轴（fill-box 的 50% 100%），
    横向平移 + 斜切 + 一点纵向伸缩 —— 高的那枚甩得远，矮半圆只轻轻挪。
-   外层 .cast__actor 留给上跳与惊跳，两层各占一条 transform 通道，互不覆盖。
+   外层 .cast__actor 留给震惊时的那一下惊跳，两层各占一条 transform 通道，互不覆盖。
    三个变量由 js/auth_faces.js 按指针位置写在 .auth__aside 上、子元素继承；
    过渡挂在这里而不是逐帧写：指针一路扫过去时由浏览器接住插值，
    指针停住它自己慢慢回正，不必再养一条 rAF 循环 */
@@ -246,7 +306,6 @@
 
 @media (prefers-reduced-motion:reduce){
   .cast__actor{transition:none}
-  .auth__aside[data-mood="happy"] .cast__actor{transform:none}
   .auth__aside[data-mood="shock"] .cast__actor{animation:none}
   .cast__sway{transition:none}
 }

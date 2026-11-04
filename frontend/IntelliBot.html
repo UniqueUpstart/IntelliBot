@@ -6,7 +6,7 @@
 <title>IntelliBot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
 /* 明暗模式在首帧之前定下来。色值全挂在 :root 的那套变量上，
    晚一步再改 data-theme 会先按浅色画一遍、再整屏跳到深色。
@@ -30,7 +30,7 @@
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
-<link rel="stylesheet" href="css/auth.css?v=20">
+<link rel="stylesheet" href="css/auth.css?v=25">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -795,6 +795,13 @@
          被规则挡下（格式不对、账号密码不匹配）则眉毛抬起、瞳孔收紧、嘴张成小圆 —— 一副被吓到的样子。
          状态只由 data-mood 驱动（js/auth_faces.js），几何与配色全在 css/auth.css。 -->
     <section class="auth__aside" aria-hidden="true">
+      <!-- 左上角两行大字：第一行固定 HELLO，第二行跟着用户名输入框实时换；
+           用户名那一格聚焦时，行尾那根下划线会一直闪，像在等你往下敲。
+           它是装饰层，压在角色后面（z-index 0），也吃不到点击 -->
+      <p class="auth__greet">
+        <span class="auth__greet-line">HELLO</span>
+        <span class="auth__greet-line auth__greet-name"><span data-greet-name>&nbsp;</span><i class="auth__greet-caret" aria-hidden="true">_</i></span>
+      </p>
       <!-- 彩带画在角色后面，看起来是从它们背后窜出来的 -->
       <canvas class="auth__confetti" data-confetti></canvas>
       <svg class="auth__cast" viewBox="0 0 400 400" preserveAspectRatio="xMidYMax meet">
@@ -913,7 +920,7 @@
 
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
 <script src="js/auth_faces.js?v=5"></script>
-<script src="js/auth.js?v=14"></script>
+<script src="js/auth.js?v=16"></script>
 
 <!-- 居中弹窗：Preference / Settings / Privacy 三枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
