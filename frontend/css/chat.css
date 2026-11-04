@@ -513,7 +513,7 @@
 }
 .rail__view--chat .assistant-chat__log::-webkit-scrollbar{width:0;height:0}
 
-/* 首次进入时的建议放在主输入卡左上角，用一个小标题把“可以问什么”说清楚。
+/* 首次进入时的建议放在主输入卡左上角，直接就是几枚词条，不再顶一行小标题。
    它和下方输入区处在同一个卡片流里；发送过一次后由 assistant_chat.js 收起。 */
 .chat-starters{
   display:flex;
@@ -526,14 +526,6 @@
   animation:starters-arrive .55s cubic-bezier(.16,1,.3,1) both;
 }
 .chat-starters[hidden]{display:none}
-.chat-starters__label{
-  flex:0 0 auto;
-  color:var(--text-muted);
-  font-size:var(--fs-12);
-  font-weight:400;
-  line-height:1.2;
-  letter-spacing:.03em;
-}
 .chat-starters__list{
   display:flex;
   flex-wrap:wrap;
@@ -559,13 +551,15 @@
   cursor:pointer;
   /* 盒形与节奏留在这儿，颜色和底片在文件后段统一给（词条要跟左右边栏
      同一层玻璃），一处写一半会看不出哪边在生效 */
-  transition:background-color .18s ease,color .18s ease,transform .18s var(--ease);
+  transition:background-color .18s ease,color .18s ease;
 }
+/* 悬停只换色，不位移：词条贴在同一行里，抬起 1px 会把这一行读成在抖，
+   旁边的字跟着视觉上错位；反馈交给底色与字色就够了 */
 .chat-starters button:hover,
 .chat-starters button:focus-visible{
   background:color-mix(in srgb,var(--theme) 18%,var(--card-solid));
   color:var(--theme);
-  transform:translateY(-1px);
+  transform:none;
   outline:none;
 }
 
@@ -626,7 +620,9 @@
 }
 .chat-dock.is-open .chat-dock__surface{
   width:152px;
-  height:112px;
+  /* 32 齿轮 + 上下各 4 的垫 + 两行 32 + 中间 4 的缝 = 108，
+     与展开的账号面板同一套内边距（左右 4、行间 4、底 4） */
+  height:108px;
   border-radius:16px;
 }
 /* 触发钮压在表面层上：收起时它就是那颗圆钮的中心，展开后仍是右上角那枚
@@ -664,13 +660,14 @@
    字号压到 --fs-14、行高 32：这里只留一块紧凑面板，
    「Export history」按 --pill-fs（18–24）排会顶到右缘 */
 .chat-history-menu{
-  /* 左右都贴住表面层的紧凑内边，宽度和高度都只留给两行文字。 */
+  /* 内边距与展开的账号面板一致：左右各 4、行间 4、离底 4，
+     齿轮 32 高，所以菜单从 36 起排；面板总高 108 正好兜住两行 */
   position:absolute;
-  top:38px; right:6px; left:6px;
+  top:36px; right:4px; left:4px;
   z-index:1;
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:4px;
   /* 收起时只是隐去，不摘 DOM：展开的淡入要能从 0 起步，
      display:none 那一档没法过渡。hidden 仍由脚本切换，
      这里用类名压住它的默认 display，让透明度那条通道有得补 */

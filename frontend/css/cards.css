@@ -127,6 +127,11 @@
   outline:2px solid var(--sc);
   outline-offset:2px;
 }
+/* 对话卡（天气）也走键盘：点一下就是拖的退路，焦点环与街舞那张同一档 */
+.sc--dialog:focus-visible{
+  outline:2px solid var(--sc);
+  outline-offset:2px;
+}
 /* hover 的整卡填色改由覆盖层画：只动 opacity（合成器上做），
    卡面底色和文字绘制都不参与，也不会每帧去跟背后那层模糊重新混合，
    所以进出卡片时不会闪 */

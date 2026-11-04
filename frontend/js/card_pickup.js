@@ -363,9 +363,17 @@
     if (e.detail.phase === 'release') {
       state.node.classList.remove('is-picked', 'is-over');
       var back = state.card;
+      /* 对话卡没有动作可播，把卡上的 data-dialog 传出去，
+         由 js/dialog_card.js 替用户开口问这一句。动作卡这里是空的 */
+      var dialog = back.getAttribute('data-dialog') || '';
       stop();
       /* stop() 里刚把 is-dragging 摘掉、原卡重新露出来，紧跟着弹这一下 */
       popBack(back);
+      if (dialog) {
+        window.dispatchEvent(new CustomEvent('intellibot-dialog-card', {
+          detail: {id: dialog},
+        }));
+      }
     }
   });
 })();
