@@ -28,8 +28,8 @@
 
   /* 当前选中的那张；未登录时照样记着，登录回来直接画上 */
   var current = saved;
-  /* 未登录：头像留空、不接选择。状态由 js/auth.js 的 authchange 广播带来，
-     这里不自己读 token，两边各管一件事 */
+  /* 未登录：用固定默认头像占位，但仍不开放头像选择。
+     登录状态由 js/auth.js 的 authchange 广播带来，这里不自己读 token。 */
   var guest = false;
 
   function isData(v) { return v.indexOf('data:') === 0; }
@@ -37,9 +37,9 @@
 
   function paint(v) {
     current = v;
-    /* 未登录不画脸：那颗圆只留底色，等 authchange 说登录了再补上 */
+    /* 未登录固定显示第一张默认头像；用户已保存的自定义头像只在登录后恢复。 */
     if (guest) {
-      avatar.style.backgroundImage = 'none';
+      avatar.style.backgroundImage = 'url("' + PRESET.a1 + '")';
       return;
     }
     var custom = isData(v);
@@ -90,17 +90,19 @@
     avatar.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
 
-  /* 登录态切换：未登录把头像是空的、把选择条收掉，并改成「点了去登录」 */
+  /* 登录态切换：未登录显示默认头像、收起选择条，并改成「点了去登录」 */
   function setGuestState(on) {
     guest = on;
     user.classList.toggle('is-guest', on);
     if (on) {
       setTray(false);
-      avatar.style.backgroundImage = 'none';
+      paint(current);
       avatar.setAttribute('aria-disabled', 'true');
+      avatar.setAttribute('aria-label', window.t ? window.t('auth.entry') : '注册/登录');
       avatar.removeAttribute('aria-expanded');
     } else {
       avatar.removeAttribute('aria-disabled');
+      avatar.setAttribute('aria-label', '更改头像');
       paint(current);
     }
   }
@@ -178,7 +180,10 @@
 
   /* 初始态跟着标记走：#account 默认带 is-guest，登录后由 auth.js 摘掉 */
   guest = user.classList.contains('is-guest');
-  if (guest) avatar.setAttribute('aria-disabled', 'true');
+  if (guest) {
+    avatar.setAttribute('aria-disabled', 'true');
+    avatar.setAttribute('aria-label', window.t ? window.t('auth.entry') : '注册/登录');
+  }
   paint(saved);
   requestAnimationFrame(fitName);
   if (document.fonts && document.fonts.ready) {

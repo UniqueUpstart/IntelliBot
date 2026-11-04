@@ -1,6 +1,6 @@
 # IntelliBot
 
-![IntelliBot 智能机器人交互平台](docs/image/intellibot-login-hero.png)
+![IntelliBot 智能机器人交互平台](docs/image/intellibot-cover-16x9.png)
 
 基于 MuJoCo 的机器人仿真与浏览器交互项目，支持关节、姿态、手势、底盘控制和可选的 DeepSeek 对话。目前面向 Windows 本地开发。
 

@@ -21,12 +21,12 @@
 </script>
 <script src="js/i18n.js?v=43"></script>
   <link rel="stylesheet" href="css/base.css?v=15">
-  <link rel="stylesheet" href="css/topbar.css?v=20">
+  <link rel="stylesheet" href="css/topbar.css?v=21">
   <link rel="stylesheet" href="css/rail.css?v=55">
   <link rel="stylesheet" href="css/workspace.css?v=29">
   <link rel="stylesheet" href="css/cards.css?v=31">
   <link rel="stylesheet" href="css/modal.css?v=36">
-  <link rel="stylesheet" href="css/chat.css?v=112">
+  <link rel="stylesheet" href="css/chat.css?v=122">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -387,6 +387,14 @@
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
         </section>
         <div class="composer">
+          <div class="chat-starters" data-chat-suggestions role="group"
+               data-i18n-aria="chat.starters" aria-label="Try asking">
+            <span class="chat-starters__label" data-i18n="chat.starters">Try asking</span>
+            <div class="chat-starters__list">
+              <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
+              <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
+            </div>
+          </div>
           <div class="composer__surface">
             <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
                       maxlength="500" data-assistant-input
@@ -404,14 +412,6 @@
                   <path class="composer__menu-line" d="M4 17h16"/>
                 </svg>
               </button>
-              <!-- 只留两枚快捷胶囊，贴在左下角三横钮的右侧；早先挂在输入面板
-                   上方、越过卡片顶缘压到舞台上，位置改到卡内一行后由
-                   css/chat.css 的 left / bottom 对齐这枚 38 见方的圆钮 -->
-              <div class="composer__starters" data-chat-suggestions role="group"
-                   data-i18n-aria="chat.starters" aria-label="试试这样问">
-                <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-                <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-              </div>
               <div class="composer__trail">
                 <button class="composer__voice composer__voice--mic" type="button"
                         data-assistant-voice data-i18n-aria="chat.voice.start"
@@ -736,7 +736,7 @@
 <script src="js/card_pickup.js?v=15"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
-<script src="js/avatar.js?v=6"></script>
+<script src="js/avatar.js?v=7"></script>
 
 <!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
 <script src="lib/gsap.min.js"></script>
@@ -1225,7 +1225,7 @@
 <script src="js/composer.js?v=10"></script>
 <script src="js/model_config.js?v=18"></script>
 <script src="js/persona.js?v=5"></script>
-<script src="js/assistant_chat.js?v=39"></script>
+<script src="js/assistant_chat.js?v=43"></script>
 <script src="js/profile_state.js?v=3"></script>
 <script src="js/pose_controls.js?v=1"></script>
 

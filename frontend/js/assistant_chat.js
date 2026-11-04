@@ -88,13 +88,29 @@
 
   function scrollBottom() {
     log.scrollTop = log.scrollHeight;
-    requestAnimationFrame(function () { log.scrollTop = log.scrollHeight; });
+    syncChatScrollState();
+    requestAnimationFrame(function () {
+      log.scrollTop = log.scrollHeight;
+      syncChatScrollState();
+    });
+  }
+
+  /* 只有真的可滚时才显示首尾渐隐，短对话不会被无端压暗。 */
+  function syncChatScrollState() {
+    var max = Math.max(0, (log.scrollHeight || 0) - (log.clientHeight || 0));
+    log.setAttribute('data-scroll', max > 1 ? 'on' : 'off');
   }
 
   /* 舞台只有一条流：问答按顺序落在同一根时间轴上，靠哪边由角色决定。
      行容器负责对齐与透视，气泡挂在行里（见 css/chat.css 的 .stage-chat__row） */
   function stageStream() {
     return stage && stage.querySelector('[data-stage-stream]');
+  }
+
+  function syncStageScrollState(stream) {
+    if (!stream) return;
+    var max = Math.max(0, (stream.scrollHeight || 0) - (stream.clientHeight || 0));
+    stream.setAttribute('data-scroll', max > 1 ? 'on' : 'off');
   }
 
   function decorateBubble(node, role, recordId) {
@@ -112,7 +128,10 @@
   }
 
   function stageToBottom(stream) {
-    requestAnimationFrame(function () { stream.scrollTop = stream.scrollHeight; });
+    requestAnimationFrame(function () {
+      stream.scrollTop = stream.scrollHeight;
+      syncStageScrollState(stream);
+    });
   }
 
   /* 列的矩形快照，syncStagePerspective 每次重算时覆盖；滚轮热区判得勤，
@@ -193,6 +212,7 @@
     else node.textContent = text;
     node.dataset.recordId = key;
     if (follow) stageToBottom(stream);
+    syncStageScrollState(stream);
   }
 
   function hideStage() {
@@ -204,6 +224,7 @@
       }
     }
     stream.replaceChildren();
+    syncStageScrollState(stream);
   }
 
   /* 待机时的自言自语：往舞台上追一条就够，不做定时清理——
@@ -287,8 +308,14 @@
   }
 
   function updateVoiceButton() {
-    if (!voiceButton) return;
     var active = listening || voiceStarting;
+    if (composer) composer.classList.toggle('is-recording', active);
+    if (input) {
+      input.placeholder = active
+        ? tr('chat.voice.listening', '正在聆听…')
+        : tr('chat.placeholder', '问问 IntelliBot…');
+    }
+    if (!voiceButton) return;
     var key = active ? 'chat.voice.stop' : 'chat.voice.start';
     var fallback = active ? '停止语音输入' : '开始语音输入';
     voiceButton.classList.toggle('is-listening', active);
@@ -904,6 +931,17 @@
   }
 
   input.addEventListener('input', paintSend);
+  if (window.ResizeObserver) {
+    var chatResizeObserver = new window.ResizeObserver(syncChatScrollState);
+    chatResizeObserver.observe(log);
+    var stageScrollTarget = stageStream();
+    if (stageScrollTarget) {
+      var stageResizeObserver = new window.ResizeObserver(function () {
+        syncStageScrollState(stageStream());
+      });
+      stageResizeObserver.observe(stageScrollTarget);
+    }
+  }
   input.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(input.value); }
   });
@@ -963,7 +1001,7 @@
        落在背后的列矩形内；先按实际事件目标排除，避免把滚轮送到不可见的聊天列。 */
     if (event.target.closest('.modal, .rail')) return;
     var flow = stageStream();
-    if (!flow || flow.scrollHeight <= flow.clientHeight + 4) return;
+    if (!flow) return;
     /* 栏一打开舞台就整块 visibility:hidden（见 css 那条 body:has(.rail.is-open)），
        它这时候不该再接滚轮。以前只按矩形判，左右栏和聊天列在窄一点的屏上横向重叠，
        指针明明落在栏里的列表上，滚轮却被这层接走并 preventDefault，
@@ -984,20 +1022,25 @@
       if (outsideStage(box, event.clientX, event.clientY)) return;
     }
     var gap = Math.min(GAP_HALF_MAX, box.width * GAP_RATIO);
-    if (Math.abs(event.clientX - (box.left + box.right) / 2) < gap) return;
-    /* 已经贴顶还往上推、或者贴底还往下推，这一下本来就滚不动了：
-       再 preventDefault 只会让整页也一动不动，读起来就是「卡住」。
-       所以到界就放手，把事件原样交还给外层 */
+    var center = (box.left + box.right) / 2;
+    if (Math.abs(event.clientX - center) < gap) return;
+    /* 只接管真的有气泡的那一侧。该侧还没有记录时，滚轮原样交给
+       view-control，保留机器人的缩放；一旦出现气泡，即使暂时滚不动，
+       也不会再把同一手势误解释成缩放。 */
+    var side = event.clientX < center ? 'assistant' : 'user';
+    if (!flow.querySelector('.stage-chat__bubble--' + side)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    /* 贴顶还往上推、贴底还往下推时不再滚动，但也不会把滚轮漏给缩放。 */
     var delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
     if (!delta) return;
     var max = flow.scrollHeight - flow.clientHeight;
     if ((delta < 0 && flow.scrollTop <= 1) || (delta > 0 && flow.scrollTop >= max - 1)) return;
     wheelStep += delta;
-    event.preventDefault();
     if (!wheelFrame) {
       wheelFrame = window.requestAnimationFrame(function () { flushStageWheel(flow); });
     }
-  }, { passive: false });
+  }, { passive: false, capture: true });
 
   /* 相机参数先摆好，再等字体落位重摆一次 —— 字体换了行高、列的位置也可能挪 */
   if (stage) {
