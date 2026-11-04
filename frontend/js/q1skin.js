@@ -128,43 +128,47 @@ function init() {
   let current = 'builtin:q1';
   let shown = false;
   let active = null;
-  let naiwaWanted = false;
+  let themeWanted = null;
   let waitingForOriginal = false;
   const originalMaterialColors = new Map();
 
-  const NAIWA_MATERIALS = new Map([
-    ['head', 0xf5b400],
-    ['upperarm', 0xf5b400],
-    ['lowerarm', 0xf5b400],
-    ['upperleg', 0xf5b400],
-    ['lowerleg', 0xf5b400],
-    ['hip', 0xf5b400],
-    ['white', 0x5b3a20],
-    ['white.001', 0xf5b400],
-    ['fabric', 0xffd66b],
-    ['chest', 0xf8e8c8],
-    ['black', 0x5b3a20],
-    ['black.001', 0x5b3a20],
-    ['rubber', 0x76502d],
-    ['face', 0x1d1711],
-  ]);
+  /* 原模型换色。身体、腹部、胸甲、关节、脚底、面罩各一块，胸灯单独发光。 */
+  const BODY_MATERIALS = ['head', 'upperarm', 'lowerarm', 'upperleg', 'lowerleg', 'hip', 'white.001'];
+  const JOINT_MATERIALS = ['white', 'black', 'black.001'];
+  function palette(body, fabric, chest, joint, rubber, face, faceGlow, led) {
+    const map = new Map();
+    BODY_MATERIALS.forEach((name) => map.set(name, body));
+    map.set('fabric', fabric);
+    map.set('chest', chest);
+    JOINT_MATERIALS.forEach((name) => map.set(name, joint));
+    map.set('rubber', rubber);
+    map.set('face', face);
+    return { map, faceGlow, led };
+  }
+  const MATERIAL_THEMES = {
+    'builtin:naiwa': palette(0xf5b400, 0xffd66b, 0xf8e8c8, 0x5b3a20, 0x76502d, 0x1d1711, 0xb8ff8f, 0x78dc5a),
+    'builtin:glacier': palette(0x7ec8e3, 0xd7f3ff, 0xf4fbff, 0x1e3a4c, 0x3d6278, 0x0e1a22, 0x9ad7ff, 0x7ee0ff),
+    'builtin:dusk': palette(0x7a5cff, 0xcbb6ff, 0xf3eefe, 0x2a2144, 0x4a3d6b, 0x161226, 0xe2b6ff, 0xc084fc),
+    'builtin:coral': palette(0xff7a6e, 0xffd0c8, 0xfff1ec, 0x5c2e2a, 0x8a534c, 0x2a1412, 0xffc1a8, 0xff8a5b),
+    'builtin:ink': palette(0x1f8a78, 0x8fd9c8, 0xe7f6f2, 0x14332e, 0x2f5e54, 0x0d1c19, 0x9dffd8, 0x3ddc97),
+  };
 
-  function setOriginalMaterialTheme(enabled) {
-    naiwaWanted = enabled;
+  function setOriginalMaterialTheme(themeId) {
+    themeWanted = themeId || null;
     const robot = window.robot3d;
     const model = robot && robot.model;
     if (!robot || !robot.ready || !model) {
-      if (enabled && !waitingForOriginal) {
+      if (themeWanted && !waitingForOriginal) {
         waitingForOriginal = true;
         window.addEventListener('robot-ready', () => {
           waitingForOriginal = false;
-          setOriginalMaterialTheme(naiwaWanted);
+          setOriginalMaterialTheme(themeWanted);
         }, { once: true });
       }
       return;
     }
 
-    if (!enabled) {
+    if (!themeWanted) {
       originalMaterialColors.forEach((state, material) => {
         if (state.color && material.color) material.color.copy(state.color);
         if (state.emissive && material.emissive) material.emissive.copy(state.emissive);
@@ -177,6 +181,8 @@ function init() {
       return;
     }
 
+    const theme = MATERIAL_THEMES[themeWanted];
+    if (!theme) return;
     const seen = new Set();
     model.traverse((node) => {
       if (!node.isMesh) return;
@@ -191,13 +197,13 @@ function init() {
             emissiveIntensity: material.emissiveIntensity,
           });
         }
-        const color = NAIWA_MATERIALS.get(material.name);
+        const color = theme.map.get(material.name);
         if (color !== undefined && material.color) material.color.setHex(color);
         if (material.name === 'face' && material.emissive) {
-          material.emissive.setHex(0xb8ff8f);
+          material.emissive.setHex(theme.faceGlow);
           material.emissiveIntensity = 1.05;
         } else if (material.name === 'emissive' && material.emissive) {
-          material.emissive.setHex(0x78dc5a);
+          material.emissive.setHex(theme.led);
         }
         material.needsUpdate = true;
       });
@@ -867,21 +873,14 @@ function init() {
     if (active) active.object.visible = false;
     active = null;
     removeBtn.hidden = !id.startsWith('file:');
-    if (id === 'builtin:q1') {
-      setOriginalMaterialTheme(false);
+    if (id === 'builtin:q1' || MATERIAL_THEMES[id]) {
       setFigureVisible(false);
       showStage(false);
+      setOriginalMaterialTheme(MATERIAL_THEMES[id] ? id : null);
       setNote('');
       return;
     }
-    if (id === 'builtin:naiwa') {
-      setFigureVisible(false);
-      showStage(false);
-      setOriginalMaterialTheme(true);
-      setNote('');
-      return;
-    }
-    setOriginalMaterialTheme(false);
+    setOriginalMaterialTheme(null);
     showStage(true);
     if (id === 'builtin:xbot') {
       setFigureVisible(false);
