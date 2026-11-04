@@ -72,115 +72,13 @@
 /* 开合的几何（起手挤窄 → 撑过 1 → 弹性落定）由 js/auth.js 的 popIn / popOut 写，
    节拍与弹窗同一份；这里不再挂 transform，免得 CSS 的初始值被 GSAP 读成起手姿态 */
 
-/* 左侧负责介绍 IntelliBot 的核心体验。机器人采用与主页相同的关节轮廓语言，
-   但保持为轻量 SVG，避免登录页再创建第二个 WebGL 场景。 */
+/* 左 2/3 留白。原来这里铺着品牌、标语、机器人 SVG、能力行与提示语，
+   现在一并撤掉，只留一层纯底色 —— 渐变与点阵也去掉，整块是一面静的空白，
+   留给之后放进去的内容。不留内边距：空白块不需要，也免得以后加内容时被顶开。 */
 .auth__aside{
-  position:relative; isolation:isolate;
+  position:relative;
   min-width:0; overflow:hidden;
-  display:grid;
-  grid-template-columns:minmax(0, 1.25fr) minmax(180px, .75fr);
-  grid-template-rows:auto minmax(0, 1fr) auto auto;
-  gap:0 16px;
-  padding:clamp(24px, 3vw, 42px);
-  color:var(--text-primary);
-  background:
-    radial-gradient(circle at 72% 48%, rgb(from var(--theme) r g b / .18), transparent 32%),
-    linear-gradient(145deg, rgb(from var(--theme) r g b / .08), transparent 44%),
-    var(--bg);
-}
-.auth__aside::before{
-  content:""; position:absolute; inset:0; z-index:-1;
-  opacity:.34;
-  background-image:radial-gradient(circle, rgb(from var(--theme) r g b / .44) 1px, transparent 1.5px);
-  background-size:18px 18px;
-  mask-image:linear-gradient(105deg, transparent 2%, #000 42%, transparent 84%);
-}
-.auth__brand{
-  grid-column:1 / -1;
-  display:flex; align-items:center; gap:10px;
-  font-family:"Barlow Condensed", "Noto Sans SC", sans-serif;
-  font-size:var(--fs-18); font-weight:600;
-  letter-spacing:.01em;
-}
-.auth__brand img{width:26px; height:26px; display:block}
-.auth__story{
-  align-self:center; z-index:1;
-  max-width:430px;
-}
-.auth__signal{
-  display:flex; align-items:center; gap:8px;
-  margin:0 0 18px;
-  color:var(--text-reduced);
-  font-size:var(--fs-12); line-height:1.35;
-}
-.auth__signal > span:first-child{
-  width:8px; height:8px; flex:none; border-radius:50%;
-  background:var(--theme);
-  box-shadow:0 0 0 5px rgb(from var(--theme) r g b / .15);
-}
-.auth__story h2{
-  max-width:10em;
-  margin:0;
-  font-family:"Noto Sans SC", "Barlow Condensed", sans-serif;
-  font-size:clamp(30px, 3.1vw, 52px); line-height:1.08;
-  font-weight:600; letter-spacing:-.04em;
-}
-.auth__story > p:last-child{
-  max-width:29em;
-  margin:20px 0 0;
-  color:var(--text-reduced);
-  font-size:var(--fs-14); line-height:1.7;
-}
-.auth__robot-scene{
-  position:relative; align-self:stretch;
-  min-height:260px;
-  color:var(--theme);
-}
-.auth__robot{
-  position:absolute; left:50%; bottom:-6%;
-  width:min(100%, 250px); height:auto;
-  transform:translateX(-50%);
-  filter:drop-shadow(0 16px 20px rgba(var(--shadow), .12));
-}
-.auth__robot g{stroke-width:3}
-.auth__robot-shell{fill:rgb(from var(--card) r g b / .78); stroke-width:4}
-.auth__robot-face{fill:var(--text-primary); stroke:var(--text-primary)}
-.auth__robot-face ~ path:first-of-type{stroke:var(--bg)}
-.auth__orbit{
-  position:absolute; left:50%; top:50%;
-  border:1px solid rgb(from var(--theme) r g b / .28);
-  border-radius:50%; transform:translate(-50%, -50%) rotate(-18deg);
-}
-.auth__orbit--one{width:108%; aspect-ratio:1}
-.auth__orbit--two{width:78%; aspect-ratio:1; transform:translate(-50%, -50%) rotate(24deg)}
-.auth__greeting{
-  position:absolute; z-index:2; right:2%; top:12%;
-  padding:8px 12px;
-  border-radius:16px 16px 4px 16px;
-  background:var(--card); color:var(--text-primary);
-  box-shadow:0 8px 20px rgba(var(--shadow), calc(.1 * var(--sh-k)));
-  font-size:var(--fs-12); white-space:nowrap;
-}
-.auth__continuity{
-  grid-column:1 / -1;
-  display:flex; align-items:center; flex-wrap:wrap; gap:8px 18px;
-  padding-top:18px;
-  border-top:1px solid rgb(from var(--text-primary) r g b / .1);
-}
-.auth__continuity span{
-  position:relative; padding-left:14px;
-  color:var(--text-reduced);
-  font-size:var(--fs-12); line-height:1.4;
-}
-.auth__continuity span::before{
-  content:""; position:absolute; left:0; top:.48em;
-  width:5px; height:5px; border-radius:50%; background:var(--theme);
-}
-.auth__privacy{
-  grid-column:1 / -1;
-  margin:10px 0 0;
-  color:var(--text-muted);
-  font-size:11px; line-height:1.45;
+  background:var(--bg);
 }
 
 /* 右 1/3：表单整列，从顶部往下排。
@@ -339,16 +237,4 @@
     max-height:calc(100vh - 2 * var(--edge));
   }
   .auth__aside{display:none}
-}
-
-@media (min-width:761px) and (max-height:700px){
-  .auth__aside{padding:24px 30px}
-  .auth__story h2{font-size:clamp(28px, 3vw, 40px)}
-  .auth__story > p:last-child{margin-top:12px; line-height:1.5}
-  .auth__robot-scene{min-height:210px}
-  .auth__continuity{padding-top:12px}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .auth__signal > span:first-child{box-shadow:none}
 }

@@ -9,15 +9,19 @@
    天气那张不把「本地」丢给模型去猜 —— 模型没有实时天气，猜出来的
    数字比不答更糟。这里先用浏览器定位取经纬度，再向 Open-Meteo
    （免 key）要今天起三天的预报，把温度和降水概率写进提问里，
-   模型只负责据此给出行建议。定位被拒、断网、接口超时都只是让
-   提问退回「不带数字」的那一支，链路不断。
+   模型只负责据此给出行建议。
+   定位被拒或超时不是终点：再按出口 IP 估一次城市（同样免 key，
+   没有权限弹窗），拿到坐标照样取真实预报。两条路都断了才退回
+   「不带数字」的那一问，链路不断。
 
    取数在指针按下时就起跑：接卡仪式本身有 3.4 秒，等松手再取
    等于让用户多等一个来回。结果缓存十分钟，连着问两次不会重复请求。 */
 (function () {
   var FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+  var IP_URL = 'https://ipwho.is/';  /* 按出口 IP 估城市，免 key、无权限弹窗 */
   var CACHE_MS = 10 * 60 * 1000;  /* 十分钟内的第二次触发直接用手里的那份 */
   var LOCATE_MS = 4000;           /* 定位最多等这么久，超时按「没有坐标」处理 */
+  var IP_MS = 3500;               /* IP 定位的超时 */
   var FETCH_MS = 5000;            /* 预报接口的超时 */
   var WAIT_MS = 3000;             /* 触发之后最多再等这么久；超时就先问，不等天气 */
 
@@ -96,6 +100,38 @@
     });
   }
 
+  /* 定位被拒或超时的兜底：按出口 IP 估一个城市。精度只到城市，
+     但足够取这一城的预报，而且不弹权限框、不打断接卡仪式。
+     接口把失败写在 success:false 里，HTTP 仍是 200，得看字段 */
+  function ipLocate() {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, IP_MS);
+    /* 城市名跟着界面语言走：中文界面拿到「珠海」，英文界面拿到「Zhuhai」，
+       这条名字会原样嵌进那句提问里 */
+    var url = IP_URL + (zh() ? '?lang=zh-CN' : '');
+    return fetch(url, { signal: controller.signal })
+      .then(function (response) {
+        if (!response.ok) throw new Error('ip locate failed');
+        return response.json();
+      })
+      .then(function (json) {
+        if (!json || json.success === false) return null;
+        if (typeof json.latitude !== 'number' || typeof json.longitude !== 'number') return null;
+        return {
+          lat: json.latitude,
+          lon: json.longitude,
+          city: typeof json.city === 'string' ? json.city : '',
+        };
+      })
+      .catch(function () { return null; })
+      .then(function (value) { clearTimeout(timer); return value; });
+  }
+
+  /* 三维度取坐标：精确到街区的那一条优先，拒绝授权就走 IP 那一条 */
+  function coords() {
+    return locate().then(function (value) { return value || ipLocate(); });
+  }
+
   /* 三天足够回答「近几日」：再长一行行数字堆进提问里，
      模型的回答反而会被数字牵着走，出行建议变得零零碎碎 */
   /* 接口在缺测的日子会给 null，直接 Math.round(null) 会写出一个 0℃，
@@ -104,7 +140,7 @@
     return typeof value === 'number' && isFinite(value) ? Math.round(value) : null;
   }
 
-  function build(data, lat, lon) {
+  function build(data, where) {
     var daily = data && data.daily;
     if (!daily || !daily.time || !daily.time.length) return null;
     var count = Math.min(3, daily.time.length);
@@ -124,17 +160,19 @@
     }
     return {
       t: Date.now(),
-      place: lat.toFixed(2) + ', ' + lon.toFixed(2),
+      /* 有城市名就用城市名，只有 GPS 坐标时退回经纬度两位小数，
+         提问里读起来是「我这边（上海）」而不是一串小数 */
+      place: where.city || (where.lat.toFixed(2) + ', ' + where.lon.toFixed(2)),
       days: lines.join(chinese ? '；' : '; '),
     };
   }
 
-  function fetchForecast(lat, lon) {
+  function fetchForecast(where) {
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, FETCH_MS);
     var url = FORECAST_URL
-      + '?latitude=' + lat.toFixed(3)
-      + '&longitude=' + lon.toFixed(3)
+      + '?latitude=' + where.lat.toFixed(3)
+      + '&longitude=' + where.lon.toFixed(3)
       + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
       + '&timezone=auto&forecast_days=3';
     return fetch(url, { signal: controller.signal })
@@ -142,7 +180,7 @@
         if (!response.ok) throw new Error('forecast failed');
         return response.json();
       })
-      .then(function (json) { return build(json, lat, lon); })
+      .then(function (json) { return build(json, where); })
       .catch(function () { return null; })
       .then(function (value) { clearTimeout(timer); return value; });
   }
@@ -150,9 +188,9 @@
   function prefetch() {
     if (cache && Date.now() - cache.t < CACHE_MS) return Promise.resolve(cache);
     if (inflight) return inflight;
-    inflight = locate().then(function (coords) {
-      if (!coords) return null;
-      return fetchForecast(coords.lat, coords.lon);
+    inflight = coords().then(function (where) {
+      if (!where) return null;
+      return fetchForecast(where);
     }).then(function (value) {
       inflight = null;
       if (value) cache = value;
@@ -165,7 +203,7 @@
     if (data && data.days) {
       return tr(
         'rail.left.card.weather.prompt.data',
-        '我这边未来三天（坐标 {place}）的天气是：{days}。请用两三句话告诉我这几天该怎么穿、要不要带伞、适不适合安排户外活动。'
+        '我这边（{place}）未来三天的天气是：{days}。先说一句这三天的天气概况，再用两三句话告诉我该怎么穿、要不要带伞、适不适合安排户外活动。'
       ).replace('{place}', data.place).replace('{days}', data.days);
     }
     return tr(
