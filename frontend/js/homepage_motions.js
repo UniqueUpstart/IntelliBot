@@ -24,7 +24,7 @@ const MOTION_BY_ID = Object.fromEntries([
   ...TIMELINE_MOTIONS.map((motion) => [motion.id, motion]),
 ]);
 
-// MuJoCo 自然站姿下的关节世界轴，已经从 (x前, y左, z上) 转到
+// Q1 自然站姿下的关节世界轴，已经从 (x前, y左, z上) 转到
 // GLB 的 (x左, y上, z前)。运行时再转换到对应骨骼的局部坐标。
 const RETARGET = {
   waist_pitch_joint: {bone: 'body1', worldAxis: [1, 0, 0]},

@@ -45,9 +45,7 @@
   let busy = false;
 
   /* 退出的两段式确认：第一下只上膛 —— 这一项染成 warning、字换成 Confirm，
-     3 秒内再点一下才真的退。3 秒与 Advance 里「断连」的确认态等长
-     （sim.js 的 armTimer 也是 3000），两处都是「留一下反悔的时间」，
-     时长不一致的话一处会显得拖、另一处像手滑 */
+     3 秒内再点一下才真的退出。 */
   const LOGOUT_HOLD = 3000;
   let logoutArmed = false;
   let logoutTimer = 0;
@@ -354,8 +352,8 @@
     if (logoutArmed) return;
     logoutArmed = true;
     paintLogout();
-    /* 固定 3 秒、不随指针进出提前收回：这里的确认靠「再点一下」完成，
-       指针停不停在按钮上都不是信号（与 sim.js 的 armDisconnect 同一条规矩） */
+    /* 固定 3 秒、不随指针进出提前收回：确认靠「再点一下」完成，
+       指针停不停在按钮上都不是信号。 */
     if (logoutTimer) clearTimeout(logoutTimer);
     logoutTimer = setTimeout(disarmLogout, LOGOUT_HOLD);
   }

@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess,tempfile,time,json
 from playwright.sync_api import sync_playwright
 r=Path(__file__).resolve().parents[2]
-p=subprocess.Popen([str(r/'backend-build/intellibot_backend'),'--legacy-dev','--port','18087','--web-root',str(r/'frontend')],stdout=subprocess.DEVNULL)
+p=subprocess.Popen([str(r/'backend-build/intellibot_backend'),'--port','18087','--web-root',str(r/'frontend')],stdout=subprocess.DEVNULL)
 try:
  with sync_playwright() as pw:
   b=pw.chromium.launch(headless=True,args=['--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader'])

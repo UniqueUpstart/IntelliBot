@@ -1116,7 +1116,7 @@ function onPointerUp(event) {
 function onWheel(event) {
   if (!ready) return;
   event.preventDefault();
-  /* 滚轮上滚（deltaY < 0）推近、下滚拉远，与仿真视角同一套方向：
+  /* 滚轮上滚（deltaY < 0）推近、下滚拉远，保持统一的 3D 视角方向：
      view.distance 是相机距离，值越小画面上的机器人越大 */
   zoom(Math.exp(event.deltaY * WHEEL_ZOOM_K));
 }

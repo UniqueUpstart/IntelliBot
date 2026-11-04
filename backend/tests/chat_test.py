@@ -186,12 +186,12 @@ ai_port = free_port()
 ai = ThreadingHTTPServer(("127.0.0.1", ai_port), FakeAiHandler)
 ai_thread = threading.Thread(target=ai.serve_forever, daemon=True)
 ai_thread.start()
-authenticated = "--authenticated" in sys.argv
 tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
 backend = subprocess.Popen(
     [
         sys.argv[1],
-        *(["--db-path", tmp.name + "/users.db"] if authenticated else ["--legacy-dev"]),
+        "--db-path",
+        tmp.name + "/users.db",
         "--port",
         str(backend_port),
         "--ai-url",
@@ -209,16 +209,15 @@ try:
     else:
         raise AssertionError("backend did not start")
 
-    if authenticated:
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 401
-        assert not seen_keys, "unauthorized request reached AI"
-        assert call(backend_port, "POST", "/auth/register",
-                    {"username":"alice", "password":"Password123"})[0] == 201
-        code, result = call(backend_port, "POST", "/auth/login",
-                            {"username":"alice", "password":"Password123"})
-        assert code == 200
-        auth_token = result["data"]["access_token"]
-        assert call(backend_port, "POST", "/motion/base", {"vx":1}, "dev-key")[0] == 403
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 401
+    assert not seen_keys, "unauthorized request reached AI"
+    assert call(backend_port, "POST", "/auth/register",
+                {"username":"alice", "password":"Password123"})[0] == 201
+    code, result = call(backend_port, "POST", "/auth/login",
+                        {"username":"alice", "password":"Password123"})
+    assert code == 200
+    auth_token = result["data"]["access_token"]
+    assert call(backend_port, "POST", "/motion/base", {"vx":1}, "dev-key")[0] == 404
 
     for action in [
         "surprised", "hug", "refuse",
@@ -274,8 +273,6 @@ try:
     ]
     status, payload = call(backend_port, "POST", "/chat", {"message": "invalid-command"}, str(uuid4()))
     assert status == 502 and payload["error"]["code"] == "AI_INVALID_RESPONSE"
-    if not authenticated:
-        assert call(backend_port, "GET", "/capabilities")[1]["data"]["chat"] is True
     status, payload = call(backend_port, "GET", "/ai/config")
     assert status == 200 and "key_hint" in payload["data"] and "api_key" not in payload["data"]
     status, payload = call(
@@ -300,26 +297,25 @@ try:
     assert time.monotonic() - started < 0.5
     thread.join(timeout=3)
     assert slow_result and slow_result[0][0] == 200
-    if authenticated:
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
-        first_key = seen_keys[-1]
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
-        assert seen_keys[-1] == first_key
-        first_token = auth_token
-        auth_token = None
-        _, login = call(backend_port, "POST", "/auth/login",
-                        {"username":"alice", "password":"Password123"})
-        auth_token = login["data"]["access_token"]
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
-        assert seen_keys[-1] != first_key and first_token not in seen_keys[-1]
-        assert call(backend_port, "POST", "/auth/logout", {})[0] == 200
-        before = len(seen_keys)
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "logout")[0] == 401
-        auth_token = first_token
-        with sqlite3.connect(tmp.name + "/users.db") as db:
-            db.execute("UPDATE sessions SET expires_at=0")
-        assert call(backend_port, "POST", "/chat", {"message":"你好"}, "expired")[0] == 401
-        assert len(seen_keys) == before
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
+    first_key = seen_keys[-1]
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
+    assert seen_keys[-1] == first_key
+    first_token = auth_token
+    auth_token = None
+    _, login = call(backend_port, "POST", "/auth/login",
+                    {"username":"alice", "password":"Password123"})
+    auth_token = login["data"]["access_token"]
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "shared-key")[0] == 200
+    assert seen_keys[-1] != first_key and first_token not in seen_keys[-1]
+    assert call(backend_port, "POST", "/auth/logout", {})[0] == 200
+    before = len(seen_keys)
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "logout")[0] == 401
+    auth_token = first_token
+    with sqlite3.connect(tmp.name + "/users.db") as db:
+        db.execute("UPDATE sessions SET expires_at=0")
+    assert call(backend_port, "POST", "/chat", {"message":"你好"}, "expired")[0] == 401
+    assert len(seen_keys) == before
     print("PASS: chat validation, AI proxy, error mapping, capabilities, non-blocking requests")
 finally:
     backend.terminate()

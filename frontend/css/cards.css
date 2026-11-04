@@ -243,7 +243,7 @@
 .sc-group--dialog{--sc:var(--series-blue-light)}
 
 /* 窄屏放不下两张 240 并排：卡片退回一列，栏宽也跟着收 */
-/* 居中弹窗：Connect / Preference / Advance / Settings 共用的一块空面板。
+/* 居中弹窗：Preference / Settings / Privacy 共用的一块空面板。
    宽高比 3:2（宽 = 高 × 1.5），高取侧栏高减 48，比侧栏略矮；
    内边距 16，里面暂时没有任何内容物。
    宽度写成 min()：视口不够宽时按可用宽反推高度，比例始终是 3:2，

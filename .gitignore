@@ -71,10 +71,8 @@ evidence/
 # Frontend personal tool history
 .workbuddy/
 
-# 本地依赖与模型：用 scripts/fetch_deps.sh 与 scripts/fetch_model.sh 拉取，
-# 不进 git（模型 25 MB 网格 + 两个第三方头文件仓库）
+# 本地构建依赖由 scripts/fetch_deps.sh 拉取，不进入版本库。
 third_party/
-sim/assets/q1-urdf/
 .tmp_preview/
 
 # Local archives and migration leftovers

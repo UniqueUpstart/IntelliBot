@@ -1,4 +1,4 @@
-// Generated from sim/motion_library.py. Run `python scripts/generate_web_motion_data.py` after editing the library.
+// Static motion data used by the browser-side Q1 robot.
 export const Q1_REST_POSE = Object.freeze({
   "waist_roll_joint": 0.0,
   "waist_yaw_joint": 0.0,

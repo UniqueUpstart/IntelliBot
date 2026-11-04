@@ -342,7 +342,7 @@
    hover 的右移与箭头一并停掉 —— 字已经顶到右边，再右移会把开头推出胶囊，
    箭头也会压在地址上。
    字色不另设：与 Contact 同色（.pill 的 --text-reduced），换字前后只有内容变，
-   颜色不动；hover 仍照全站的规矩反白，与 Settings / Privacy / Advance 同一个反馈 */
+   颜色不动；hover 仍照全站的规矩反白，与 Settings / Privacy 同一个反馈 */
 .user__menu .pill.is-link:hover{color:var(--text-invert)}
 .user__menu .pill.is-link .pill__label{
   left:12px; right:12px;
@@ -354,7 +354,7 @@
 
 /* 退出登录的确认态：第一下不真退，只把这一项染成 warning、字换成 Confirm。
    底片复用 hover / is-active 那层 ::before，只把颜色换成 --warning ——
-   与 Advance 里「断连」那颗按钮的确认态是同一套说法（modal.css 的 is-arm）。
+   与退出登录按钮的确认态保持同一套反馈。
    字反白、位置不动：这是「再点一次就真退」，不是要滑向下一页，所以 hover 的
    右移与箭头一并停掉，免得箭头压在新字上 */
 .user__menu .pill[data-auth-logout].is-arm,
