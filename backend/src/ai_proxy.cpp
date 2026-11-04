@@ -47,6 +47,10 @@ AiResponse AiProxy::list_models(const std::string& body) const {
   return request("POST", "/models", body);
 }
 
+AiResponse AiProxy::speech(const std::string& body) const {
+  return request("POST", "/speech", body);
+}
+
 AiResponse AiProxy::request(const std::string& method, const std::string& path,
                             const std::string& body,
                             const httplib::Headers& headers) const {

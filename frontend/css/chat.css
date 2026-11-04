@@ -1001,6 +1001,64 @@
 .composer__history.is-open .composer__menu-line:first-child{transform:rotate(45deg) translateY(5px)}
 .composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
 .composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
+/* 语音按钮与历史按钮共用同一组尺寸和主题填色；麦克风监听时用缓慢扩散圈提示，
+   扬声器关闭时只隐藏声波并显示斜线，不额外增加浮层。 */
+.composer__voice{
+  position:relative;
+  flex:0 0 auto;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text-primary);
+  box-shadow:none;
+  cursor:pointer;
+  isolation:isolate;
+  transition:background-color .16s ease,color .16s ease,transform .1s ease;
+}
+.composer__voice[hidden]{display:none}
+.composer__voice:hover,
+.composer__voice:focus-visible,
+.composer__voice.is-listening{
+  border-color:transparent;
+  background:var(--theme);
+  color:var(--text-invert);
+  outline:none;
+}
+.composer__voice:active:not(:disabled){transform:scale(.96)}
+.composer__voice:disabled{
+  cursor:default;
+  opacity:.45;
+}
+.composer__voice svg{
+  width:19px;
+  height:19px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.composer__voice.is-listening::after{
+  content:'';
+  position:absolute;
+  inset:-5px;
+  border:1px solid color-mix(in srgb,var(--theme) 72%,transparent);
+  border-radius:50%;
+  pointer-events:none;
+  animation:composer-voice-pulse 1.25s ease-out infinite;
+}
+.composer__sound-slash{display:none}
+.composer__voice.is-muted .composer__sound-wave{display:none}
+.composer__voice.is-muted .composer__sound-slash{display:block}
+@keyframes composer-voice-pulse{
+  0%{opacity:.7;transform:scale(.86)}
+  70%,100%{opacity:0;transform:scale(1.18)}
+}
 /* 模型入口的宽度随名称内容自适应，并受右侧可用空间限制。
    候选项放在独立的向上浮层里，触发钮自身不再变宽或左移。 */
 .composer__model{
@@ -1337,8 +1395,9 @@
     bottom:calc(12px + 64px + 12px);
   }
   .composer__input{padding:16px 18px 4px}
-  .composer__footer{padding:0 8px 8px}
-  .composer__model-trigger{max-width:150px}
+  .composer__footer{padding:0 8px 8px;gap:6px}
+  .composer__history,.composer__voice{width:34px;height:34px}
+  .composer__model-trigger{max-width:108px}
   /* 窄屏面板跟输入框同宽：底板 / 列表 / 底下那行都读同一个变量 */
   .composer__starters{
     width:min(100%,calc(100vw - 24px));
@@ -1350,6 +1409,7 @@
 @media(prefers-reduced-motion:reduce){
   .composer__model-surface,
   .model-menu{transition:none}
+  .composer__voice.is-listening::after{animation:none}
 }
 
 /* ============================================================

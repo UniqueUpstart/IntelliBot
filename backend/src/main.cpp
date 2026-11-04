@@ -344,6 +344,54 @@ int main(int argc, char** argv) {
       }
       return;
     }
+    if (req.method == "POST" && req.path == "/api/v1/ai/speech") {
+      const auto request_id = "req-ai-speech-" + std::to_string(ai_serial.fetch_add(1) + 1);
+      auto fail = [&](int status, const std::string& code, const std::string& message) {
+        response(res, status, request_id, nullptr, code, message);
+      };
+      if (!ai) {
+        fail(503, "AI_NOT_CONFIGURED", "本地 AI 服务尚未启动");
+        return;
+      }
+      if (req.body.empty() || req.body.size() > 8192) {
+        fail(413, "BODY_TOO_LARGE", "语音请求需为 1 至 8192 字节");
+        return;
+      }
+      try {
+        const auto value = json::parse(req.body);
+        if (!value.is_object() || !value.contains("text") || !value["text"].is_string() ||
+            value["text"].get<std::string>().empty()) {
+          throw std::runtime_error("invalid speech request");
+        }
+        if (value.contains("voice") && !value["voice"].is_string()) {
+          throw std::runtime_error("invalid speech voice");
+        }
+      } catch (...) {
+        fail(400, "INVALID_SPEECH_REQUEST", "语音请求格式不正确");
+        return;
+      }
+      const auto upstream = ai->speech(req.body);
+      if (!upstream.connected) {
+        fail(502, "AI_UNAVAILABLE", "本地语音服务未响应");
+        return;
+      }
+      if (upstream.status != 200) {
+        int status = upstream.status;
+        if (status != 400 && status != 413 && status != 502 && status != 503) status = 502;
+        try {
+          const auto error = json::parse(upstream.body).at("error");
+          fail(status, error.value("code", "TTS_UPSTREAM_ERROR"),
+               error.value("message", "自然语音服务暂时不可用"));
+        } catch (...) {
+          fail(502, "TTS_UPSTREAM_ERROR", "自然语音服务返回异常");
+        }
+        return;
+      }
+      res.status = 200;
+      res.set_content(upstream.body, "audio/mpeg");
+      res.set_header("Cache-Control", "no-store");
+      return;
+    }
     if (req.method == "POST" && req.path == "/api/v1/chat") {
       const auto request_id = "req-ai-" + std::to_string(ai_serial.fetch_add(1) + 1);
       auto fail = [&](int status, const std::string& code, const std::string& message) {

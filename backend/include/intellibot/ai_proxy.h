@@ -19,6 +19,7 @@ class AiProxy {
   AiResponse get_config() const;
   AiResponse configure(const std::string& body) const;
   AiResponse list_models(const std::string& body) const;
+  AiResponse speech(const std::string& body) const;
 
  private:
   AiResponse request(const std::string& method, const std::string& path,

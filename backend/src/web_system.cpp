@@ -274,7 +274,9 @@ struct WebSystem::Impl {
         return true;
       }
       // Release the database lock before the potentially slow AI proxy request.
-      if (p == "/api/v1/chat" && req.method == "POST") return false;
+      if ((p == "/api/v1/chat" || p == "/api/v1/ai/speech") &&
+          req.method == "POST")
+        return false;
       J info = {{"id", user.num(0)}, {"username", user.text(1)}, {"display_name", user.text(2)}};
       if (p == "/api/v1/auth/me" && req.method == "GET") {
         reply(res, 200, {{"user", info}});

@@ -29,6 +29,10 @@
      整个脚本退掉，快捷胶囊、发送、清空就全没反应。这里补一层文档兜底 */
   var stopButton = findInPanel('[data-assistant-stop]') ||
     document.querySelector('[data-assistant-stop]');
+  var voiceButton = composer.querySelector('[data-assistant-voice]');
+  var speechToggle = composer.querySelector('[data-assistant-speech-toggle]');
+  var speechStop = findInPanel('[data-assistant-speech-stop]') ||
+    document.querySelector('[data-assistant-speech-stop]');
   var suggestions = document.querySelector('[data-chat-suggestions]');
   var historyButton = composer.querySelector('[data-chat-history]');
   var stage = document.querySelector('[data-stage-chat]');
@@ -52,6 +56,23 @@
   var STARTED_KEY = 'intellibot.chat.started';
   var welcomeShown = false;
   var welcomeMotionPlayed = false;
+  var SPEECH_KEY = 'intellibot.chat.speech.enabled';
+  var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var recognition = null;
+  var listening = false;
+  var voiceStarting = false;
+  var voiceBaseText = '';
+  var activeUtterance = null;
+  var activeAudio = null;
+  var activeAudioUrl = '';
+  var speechRequestToken = 0;
+  var speechAbort = null;
+  var browserSpeechSupported = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+  var speechSupported = !!window.Audio || browserSpeechSupported;
+  var speechEnabled = true;
+  try {
+    if (localStorage.getItem(SPEECH_KEY) === '0') speechEnabled = false;
+  } catch (_error) {}
 
   function tr(key, fallback) {
     var value = typeof window.t === 'function' ? window.t(key) : '';
@@ -246,6 +267,261 @@
     scrollBottom();
   }
 
+  function speechLanguage() {
+    var lang = document.documentElement.lang || navigator.language || 'en';
+    return lang.toLowerCase().indexOf('zh') === 0 ? 'zh-CN' : 'en';
+  }
+
+  function updateVoiceButton() {
+    if (!voiceButton) return;
+    var active = listening || voiceStarting;
+    var key = active ? 'chat.voice.stop' : 'chat.voice.start';
+    var fallback = active ? '停止语音输入' : '开始语音输入';
+    voiceButton.classList.toggle('is-listening', active);
+    voiceButton.setAttribute('aria-pressed', String(active));
+    voiceButton.setAttribute('data-i18n-aria', key);
+    voiceButton.setAttribute('aria-label', tr(key, fallback));
+    voiceButton.disabled = pending;
+  }
+
+  function refreshSpeechControls() {
+    if (voiceButton) voiceButton.hidden = !SpeechRecognitionCtor;
+    if (speechToggle) {
+      speechToggle.hidden = !speechSupported;
+      speechToggle.classList.toggle('is-muted', !speechEnabled);
+      speechToggle.setAttribute('aria-pressed', String(speechEnabled));
+      var key = speechEnabled ? 'chat.speech.on' : 'chat.speech.off';
+      var fallback = speechEnabled ? '关闭自动朗读' : '开启自动朗读';
+      speechToggle.setAttribute('data-i18n-aria', key);
+      speechToggle.setAttribute('aria-label', tr(key, fallback));
+    }
+    if (speechStop && !speechSupported) speechStop.hidden = true;
+    updateVoiceButton();
+  }
+
+  function stopSpeaking() {
+    speechRequestToken += 1;
+    if (speechAbort) {
+      try { speechAbort.abort(); } catch (_error) {}
+      speechAbort = null;
+    }
+    if (activeAudio) {
+      try { activeAudio.pause(); } catch (_error) {}
+      activeAudio = null;
+    }
+    if (activeAudioUrl) {
+      try { URL.revokeObjectURL(activeAudioUrl); } catch (_error) {}
+      activeAudioUrl = '';
+    }
+    activeUtterance = null;
+    if (browserSpeechSupported) {
+      try { window.speechSynthesis.cancel(); } catch (_error) {}
+    }
+    if (speechStop) speechStop.hidden = true;
+  }
+
+  function chooseSpeechVoice(language) {
+    if (!browserSpeechSupported || typeof window.speechSynthesis.getVoices !== 'function') return null;
+    var voices = [];
+    try { voices = window.speechSynthesis.getVoices() || []; } catch (_error) {}
+    var target = language.toLowerCase();
+    var prefix = target.split('-')[0];
+    var fallback = null;
+    for (var i = 0; i < voices.length; i += 1) {
+      var code = String(voices[i].lang || '').replace('_', '-').toLowerCase();
+      if (code === target) return voices[i];
+      if (!fallback && code.indexOf(prefix) === 0) fallback = voices[i];
+    }
+    return fallback;
+  }
+
+  function hideSpeechStop(token) {
+    if (token !== speechRequestToken || activeAudio || activeUtterance) return;
+    if (speechStop) speechStop.hidden = true;
+  }
+
+  function speakWithBrowser(text, token) {
+    if (!browserSpeechSupported || token !== speechRequestToken || !speechEnabled) return false;
+    if (activeUtterance) return true;
+    var language = speechLanguage();
+    var utterance = new window.SpeechSynthesisUtterance(text);
+    var voice = chooseSpeechVoice(language);
+    utterance.lang = language;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    if (voice) utterance.voice = voice;
+    activeUtterance = utterance;
+    if (speechStop) speechStop.hidden = false;
+    function finish() {
+      if (activeUtterance !== utterance) return;
+      activeUtterance = null;
+      hideSpeechStop(token);
+    }
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    try {
+      window.speechSynthesis.speak(utterance);
+      return true;
+    } catch (_error) {
+      finish();
+      return false;
+    }
+  }
+
+  function speakReply(text) {
+    text = String(text || '').trim();
+    if (!speechSupported || !speechEnabled || !text) return false;
+    stopSpeaking();
+    var token = speechRequestToken;
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 20000);
+    speechAbort = controller;
+    if (speechStop) speechStop.hidden = false;
+    var voice = speechLanguage() === 'zh-CN' ? 'zh-CN-XiaoxiaoNeural' : 'en-US-AriaNeural';
+    var headers = {'Content-Type': 'application/json'};
+    var authToken = sessionStorage.getItem('intellibot.auth.token');
+    if (authToken) headers.Authorization = 'Bearer ' + authToken;
+    fetch(api + '/ai/speech', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({text: text, voice: voice}),
+      signal: controller.signal,
+    }).then(function (response) {
+      if (!response.ok) throw new Error('natural speech unavailable');
+      return response.blob();
+    }).then(function (blob) {
+      if (!blob.size) throw new Error('empty speech');
+      if (token !== speechRequestToken || !speechEnabled) return;
+      activeAudioUrl = URL.createObjectURL(blob);
+      activeAudio = new Audio(activeAudioUrl);
+      activeAudio.onended = function () {
+        if (activeAudioUrl) URL.revokeObjectURL(activeAudioUrl);
+        activeAudioUrl = '';
+        activeAudio = null;
+        hideSpeechStop(token);
+      };
+      activeAudio.onerror = function () {
+        if (activeAudioUrl) URL.revokeObjectURL(activeAudioUrl);
+        activeAudioUrl = '';
+        activeAudio = null;
+        if (!speakWithBrowser(text, token)) hideSpeechStop(token);
+      };
+      return activeAudio.play().catch(function () {
+        if (activeAudioUrl) URL.revokeObjectURL(activeAudioUrl);
+        activeAudioUrl = '';
+        activeAudio = null;
+        if (!speakWithBrowser(text, token)) hideSpeechStop(token);
+      });
+    }).catch(function () {
+      if (token === speechRequestToken && speechEnabled && !speakWithBrowser(text, token)) {
+        hideSpeechStop(token);
+      }
+    }).finally(function () {
+      clearTimeout(timer);
+      if (speechAbort === controller) speechAbort = null;
+    });
+    return true;
+  }
+
+  function setVoiceListening(value) {
+    listening = value;
+    if (input) input.readOnly = value;
+    updateVoiceButton();
+    paintSend();
+  }
+
+  function applyVoiceTranscript(finalText, interimText) {
+    var spoken = String(finalText || '').trim();
+    var interim = String(interimText || '').trim();
+    if (interim) spoken = spoken ? spoken + ' ' + interim : interim;
+    if (!spoken) return;
+    var joined = voiceBaseText && spoken ? voiceBaseText + ' ' + spoken : spoken;
+    var limit = input.maxLength > 0 ? input.maxLength : 500;
+    input.value = joined.slice(0, limit);
+    input.dispatchEvent(new Event('input'));
+    input.focus();
+    try { input.setSelectionRange(input.value.length, input.value.length); } catch (_error) {}
+  }
+
+  if (SpeechRecognitionCtor) {
+    try {
+      recognition = new SpeechRecognitionCtor();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = function () {
+        voiceStarting = false;
+        voiceBaseText = input.value.trimEnd();
+        setVoiceListening(true);
+      };
+      recognition.onresult = function (event) {
+        var finalText = '';
+        var interimText = '';
+        for (var i = 0; i < event.results.length; i += 1) {
+          var result = event.results[i];
+          var transcript = result[0] && result[0].transcript ? result[0].transcript : '';
+          if (result.isFinal) finalText += transcript;
+          else interimText += transcript;
+        }
+        applyVoiceTranscript(finalText, interimText);
+      };
+      recognition.onerror = function (event) {
+        voiceStarting = false;
+        if (event.error === 'aborted') {
+          setVoiceListening(false);
+          return;
+        }
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed' ||
+            event.error === 'audio-capture') {
+          note(tr('chat.voice.denied', '麦克风权限被拒绝，请在浏览器中允许麦克风后重试。'));
+        } else if (event.error === 'no-speech') {
+          note(tr('chat.voice.noSpeech', '没有识别到语音，请重试。'));
+        } else {
+          note(tr('chat.voice.error', '语音识别失败，请重试。'));
+        }
+        setVoiceListening(false);
+      };
+      recognition.onend = function () {
+        voiceStarting = false;
+        setVoiceListening(false);
+      };
+    } catch (_error) {
+      SpeechRecognitionCtor = null;
+      recognition = null;
+    }
+  }
+
+  function startVoiceInput() {
+    if (!recognition || pending) return false;
+    if (listening || voiceStarting) {
+      stopVoiceInput();
+      return true;
+    }
+    stopSpeaking();
+    recognition.lang = speechLanguage();
+    voiceStarting = true;
+    updateVoiceButton();
+    paintSend();
+    try {
+      recognition.start();
+      return true;
+    } catch (_error) {
+      voiceStarting = false;
+      updateVoiceButton();
+      paintSend();
+      note(tr('chat.voice.error', '语音识别失败，请重试。'));
+      return false;
+    }
+  }
+
+  function stopVoiceInput() {
+    if (!recognition || (!listening && !voiceStarting)) return;
+    voiceStarting = false;
+    try { recognition.stop(); } catch (_error) {}
+    setVoiceListening(false);
+  }
+
   function setStarted() {
     try { sessionStorage.setItem(STARTED_KEY, '1'); } catch (_error) {}
     if (suggestions) suggestions.hidden = true;
@@ -264,7 +540,7 @@
     if (sendIcon && sendIcon.classList.contains('is-flying')) return;
     var hasText = input.value.trim().length > 0;
     sendButton.classList.toggle('is-filled', hasText);
-    if (!pending) sendButton.disabled = !hasText;
+    if (!pending) sendButton.disabled = listening || !hasText;
   }
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -297,8 +573,10 @@
 
   function setPending(value) {
     pending = value;
+    if (value) stopVoiceInput();
     input.disabled = value;
-    sendButton.disabled = value || !input.value.trim();
+    sendButton.disabled = value || listening || !input.value.trim();
+    if (voiceButton) voiceButton.disabled = value;
     composer.setAttribute('aria-busy', value ? 'true' : 'false');
     if (!value) input.focus();
   }
@@ -339,6 +617,7 @@
     sequenceToken += 1;
     if (window.robot3d && window.robot3d.ready) window.robot3d.stopGesture();
     stopButton.hidden = true;
+    stopSpeaking();
   }
 
   function wait(milliseconds) { return new Promise(function (resolve) { setTimeout(resolve, milliseconds); }); }
@@ -445,6 +724,8 @@
   async function send(text) {
     text = String(text || '').trim();
     if (!text || pending) return false;
+    stopVoiceInput();
+    stopSpeaking();
     /* 空框与「正在等回复」都退到上面去了，所以箭头只在真的发出东西时才飞 */
     flySendIcon();
     setStarted();
@@ -457,6 +738,7 @@
     try {
       var data = await requestReply(text, previous);
       updateRecord(thinking, data.reply);
+      speakReply(data.reply);
       var commands = commandsFromResponse(data);
       var commandRecord = commands.map(function (command) {
         return command.type + ':' + (command.id || command.preset || '');
@@ -537,6 +819,8 @@
   }
 
   function clear() {
+    stopVoiceInput();
+    stopSpeaking();
     history = [];
     records = [];
     log.replaceChildren();
@@ -567,6 +851,19 @@
   });
   sendButton.addEventListener('click', function () { send(input.value); });
   stopButton.addEventListener('click', function () { stopActions(); });
+  if (voiceButton) {
+    voiceButton.addEventListener('click', function () { startVoiceInput(); });
+  }
+  if (speechToggle) {
+    speechToggle.addEventListener('click', function () {
+      if (!speechSupported) return;
+      speechEnabled = !speechEnabled;
+      try { localStorage.setItem(SPEECH_KEY, speechEnabled ? '1' : '0'); } catch (_error) {}
+      if (!speechEnabled) stopSpeaking();
+      refreshSpeechControls();
+    });
+  }
+  if (speechStop) speechStop.addEventListener('click', stopSpeaking);
   settingsButton.addEventListener('click', toggleHistoryMenu);
   clearButton.addEventListener('click', clear);
   if (exportButton) exportButton.addEventListener('click', exportHistory);
@@ -666,6 +963,11 @@
     document.addEventListener('langchange', syncHistoryButton);
     syncHistoryButton();
   }
+  document.addEventListener('langchange', function () {
+    stopVoiceInput();
+    stopSpeaking();
+    refreshSpeechControls();
+  });
   if (window.addEventListener) {
     window.addEventListener('robot-manual-motion', function () {
       sequenceToken += 1; stopButton.hidden = true;
@@ -692,13 +994,19 @@
   paintSuggestions();
   paintSend();
   syncHistoryActions();
+  refreshSpeechControls();
 
   window.intellibotChat = {
     send: send,
     submit: function () { return send(input.value); },
     clear: clear,
     stopActions: stopActions,
+    startVoiceInput: startVoiceInput,
+    stopVoiceInput: stopVoiceInput,
+    stopSpeaking: stopSpeaking,
     getHistory: function () { return history.slice(); },
     get history() { return history.slice(); },
+    get speechEnabled() { return speechEnabled; },
+    get listening() { return listening; },
   };
 })();
