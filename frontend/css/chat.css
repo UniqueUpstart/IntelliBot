@@ -1285,17 +1285,26 @@ body:has(.rail.is-open) .composer{
 }
 
 /* ============================================================
-   舞台两侧的聊天记录板
-   机器人左边是 IntelliBot 说的话，右边是你说的话。整块舞台是一次透视投影，
-   消失点压在屏幕正中 —— 也就是机器人站的这条中轴线上，两块板朝同一个点收。
+   舞台聊天记录：一条竖向时间轴，问答左右分栏
+   读法照微信那套 —— 谁说的往哪边站，消息按时间从上往下排，最新一条贴着底边。
+   区别只在横向：整幅画面从中间劈成两半，机器人占左半、你占右半，
+   两组气泡不会在中线上撞到一起，但竖直方向的先后完全不受影响。
 
-   每块板绕自己靠中轴的那条竖边转一个角度（assistant 正转、user 反转），
-   让外侧朝屏幕外掀起来。转轴上的那条边位置和大小都不动，越往外越靠近眼睛，
-   于是外缘更高更宽、内缘保持原样，整块板呈梯形；绕竖轴转不改变 x 与 y 的
-   对应关系，两条竖边投影后仍然竖直，只有上下两条边朝中轴那个点倾斜。
+   透视给的是整列，不是单条：perspective 挂在 .stage-chat__flow 上，
+   气泡是它的直接子元素，于是整列共用一台相机 —— 相机落在屏幕中轴、
+   视口中线上（--stage-ox / --stage-oy，由 assistant_chat.js 按列的位置算），
+   镜头距离 --stage-d 跟着视口高度走。气泡在屏幕上的位置越远离这台相机，
+   投影出来的梯形就越明显；气泡越高，上下两条边的收缩差越大；内容越宽，
+   外缘推出的那截越多。这三件事都不用写死，几何自己会长出来。
 
-   每块板自己上下滚：往上滑就是更早的记录，新消息只在还贴着底的时候
-   把板带下去，翻旧记录的人不会被拽回底部（判定在 assistant_chat.js
+   每个气泡绕自己靠屏幕边的那条竖边转（左半是左边、右半是右边），
+   也就是绕自己的对齐线转：这条边零位移，所有气泡不论长短都落在同一条
+   竖线上；靠中轴的内侧随倾角往里收，越往中间越远离相机。
+   绕竖轴转不改 x 与 y 的对应关系，两条竖边投影后仍然竖直，
+   只有上下两条边朝中轴收。
+
+   整列一起滚：往上滑就是更早的记录，新消息只在还贴着底的时候
+   把整列带下去，翻旧记录的人不会被拽回底部（判定在 assistant_chat.js
    的 atStageBottom）。边上不加渐隐遮罩，滚到哪就露到哪。
    ============================================================ */
 .stage-chat{
@@ -1303,63 +1312,40 @@ body:has(.rail.is-open) .composer{
   inset:0;
   z-index:18;
   pointer-events:none;
-  /* 透视只能作用于直接子元素，板正好是子元素；中心取整屏中点，
-     两块板的外侧才会朝同一个消失点舒展 */
-  perspective:1200px;
-  perspective-origin:50% 50%;
 }
-.stage-chat__side{
+/* 流本身不接指针：中间那条带给三维场景留着，滚轮由 assistant_chat.js
+   转发（指针落在这一列里就把 deltaY 交给 scrollTop），气泡自己再接回来 */
+.stage-chat__flow{
   position:absolute;
-  top:22%;
-  bottom:24%;
+  top:20%;
+  bottom:26%;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(920px,calc(100vw - 48px));
   display:flex;
   flex-direction:column;
-  justify-content:flex-end;
-  width:min(300px,calc(50vw - 190px));
-  pointer-events:none;
-  /* 转轴钉在内侧竖边：这条边零位移，外侧翻出来 */
-  transform-origin:100% 50%;
-  transform:rotateY(30deg);
-  backface-visibility:hidden;
-}
-/* 两侧不等高、也不齐底：左边这块的底边比右边高出一截，顶边也跟着低一点，
-   两块板在纵向上错开半个身位。板内是 justify-content:flex-end，记录贴着
-   底边往上叠，所以 bottom 那一档直接决定这摞字的落脚线，改动即刻可见 */
-.stage-chat__side--assistant{
-  right:calc(50% + clamp(150px,17vw,260px));
-  top:18%;
-  bottom:31%;
-}
-.stage-chat__side--user{
-  left:calc(50% + clamp(150px,17vw,260px));
-  top:26%;
-  bottom:20%;
-  transform-origin:0 50%;
-  transform:rotateY(-30deg);
-}
-/* 记录流本身才是滚动区：短的时候按内容收高、由外层贴底放，
-   长过一板高度才封顶并出现滚动 —— 不走 justify-content:flex-end 那条
-   在滚动容器上会把顶部内容裁掉、滚不到的老路 */
-.stage-chat__stream{
-  flex:0 1 auto;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  min-height:0;
-  max-height:100%;
-  padding:2px;
+  gap:12px;
+  /* 左右这点内边距是给透视留的余量：气泡外缘绕内侧竖边转过来会放大，
+     没有这段留白，掀起来的那半截会被滚动区的边界裁掉 */
+  padding:4px 44px;
   overflow-y:auto;
   overscroll-behavior:contain;
-  pointer-events:auto;
+  pointer-events:none;
   scrollbar-width:none;
+  /* 相机参数由脚本写进这三个变量；这里的值只是第一帧的兜底 */
+  perspective:var(--stage-d,1200px);
+  perspective-origin:var(--stage-ox,50%) var(--stage-oy,50%);
 }
-.stage-chat__stream::-webkit-scrollbar{width:0;height:0}
-.stage-chat__side--assistant .stage-chat__stream{align-items:flex-start}
-.stage-chat__side--user .stage-chat__stream{align-items:flex-end}
+.stage-chat__flow::-webkit-scrollbar{width:0;height:0}
+/* 内容不满一列时贴在底边：第一条的 auto 上边距把整列推下去，溢出时它归零。
+   不用 justify-content:flex-end —— 那一条在滚动容器上会把顶部内容裁掉、
+   滚不到 */
+.stage-chat__flow > :first-child{margin-top:auto}
 
 .stage-chat__bubble{
+  --tilt:16deg;
   flex:0 0 auto;
-  max-width:100%;
+  max-width:min(46%,380px);
   border:0;
   border-radius:24px;
   padding:16px;
@@ -1374,41 +1360,60 @@ body:has(.rail.is-open) .composer{
   white-space:pre-wrap;
   overflow-wrap:anywhere;
   cursor:pointer;
+  pointer-events:auto;
+  /* 转轴钉在外侧竖边，也就是靠屏幕边的那条对齐线：这条边在投影里零位移，
+     气泡多宽多短，这一侧的缘都落在同一条竖线上（thinking 那种短气泡
+     不会因为外扩少而显得缩进去）。靠中轴的内侧随倾角往里收，
+     外宽内窄的观感留在原处 */
+  transform-origin:0 50%;
+  transform:rotateY(var(--tilt));
+  backface-visibility:hidden;
+  /* 弹出时那一下横向弹性：--sx 由 js 补间（1 → 1.02 → 1，elastic.out），
+     --sy 压在 1 不动 —— 账号面板是两轴等比鼓，这里只让它朝左右撑。
+     scale 是独立属性，不写进 transform，那边还挂着 rotateY */
+  --sx:1;
+  --sy:1;
+  scale:var(--sx) var(--sy);
   animation:stage-bubble-in .3s var(--ease) both;
 }
 .stage-chat__bubble span{display:block}
 /* 只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角收圆 24 */
-.stage-chat__bubble--assistant{border-bottom-left-radius:0}
+.stage-chat__bubble--assistant{
+  align-self:flex-start;
+  border-bottom-left-radius:0;
+}
 .stage-chat__bubble--user{
+  --tilt:-16deg;
+  align-self:flex-end;
   border-bottom-right-radius:0;
+  /* 右半的对齐线是右缘，转轴跟着换到 100% */
+  transform-origin:100% 50%;
   background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
   color:var(--text-primary);
 }
+/* 入场只做淡入与轻微上浮，缩放留给 --sx 那条弹性补间：
+   两边都写 scale 会叠乘，弹回时按两份比例一起缩，幅度翻倍 */
 @keyframes stage-bubble-in{
-  from{opacity:0;transform:translateY(8px) scale(.96)}
-  to{opacity:1;transform:none}
+  from{opacity:0;transform:translateY(8px) rotateY(var(--tilt))}
+  to{opacity:1;transform:rotateY(var(--tilt))}
 }
 
-/* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这块板不必叠着 */
+/* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这一列不必叠着 */
 body:has(.rail.is-open) .stage-chat,
 body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 
-@media(max-width:1100px){
-  .stage-chat{perspective:800px}
-  .stage-chat__side{width:min(220px,calc(50vw - 110px))}
-  .stage-chat__side--assistant{right:calc(50% + clamp(110px,14vw,170px))}
-  .stage-chat__side--user{left:calc(50% + clamp(110px,14vw,170px))}
-}
 @media(max-width:900px){
-  .stage-chat__side{
-    bottom:auto;
-    height:31vh;
-    width:calc(50vw - 14px);
-    transform:rotateY(10deg);
+  .stage-chat__flow{
+    top:16%;
+    bottom:26%;
+    width:calc(100vw - 24px);
+    gap:10px;
+    padding:4px 30px;
   }
-  /* 手机上一左一右各占半幅，同样错开：左边高一点、右边低一点，不并列在一条线上 */
-  .stage-chat__side--assistant{right:auto;left:8px;top:10%;height:32vh}
-  .stage-chat__side--user{left:auto;right:8px;top:21%;height:29vh;transform:rotateY(-10deg)}
+  /* 窄屏两半很窄，气泡放宽到 74%，角度由脚本按屏宽调小，
+     才不会一句话被拆成七八行 */
+  .stage-chat__bubble{--tilt:8deg; max-width:min(74%,340px)}
+  .stage-chat__bubble--user{--tilt:-8deg}
 }
 @media(prefers-reduced-motion:reduce){
   .stage-chat__bubble{animation:none}
