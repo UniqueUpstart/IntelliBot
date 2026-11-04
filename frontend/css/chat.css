@@ -433,111 +433,6 @@
 
 /* 聊天框内的模型选择与发送钮：采用现代聊天界面的紧凑工具条节奏。 */
 .composer__input{padding-left:154px}
-.composer__model{
-  position:absolute;
-  left:7px;
-  bottom:7px;
-  z-index:2;
-  height:34px;
-  max-width:138px;
-  display:flex;
-  align-items:center;
-  gap:7px;
-  padding:0 10px;
-  border:0;
-  border-radius:17px;
-  background:var(--bg);
-  color:var(--text-secondary);
-  font:inherit;
-  font-size:var(--fs-12);
-  cursor:pointer;
-}
-.composer__model:hover,
-.composer__model[aria-expanded="true"]{background:color-mix(in srgb,var(--theme) 22%,var(--bg))}
-.composer__model:focus-visible{outline:2px solid var(--theme);outline-offset:2px}
-.composer__model-dot{
-  flex:0 0 auto;
-  width:7px; height:7px;
-  border-radius:50%;
-  background:var(--text-muted);
-}
-.composer__model.is-ready .composer__model-dot{background:var(--hint)}
-.composer__model-label{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.composer__model > svg{
-  flex:0 0 auto;
-  width:12px; height:12px;
-  fill:none; stroke:currentColor; stroke-width:1.8;
-  stroke-linecap:round; stroke-linejoin:round;
-}
-.model-menu{
-  position:absolute;
-  left:0;
-  bottom:calc(100% + 10px);
-  z-index:30;
-  width:min(300px,calc(100vw - 32px));
-  padding:10px;
-  border-radius:18px;
-  background:var(--card-solid);
-  box-shadow:0 16px 42px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 2));
-}
-.model-menu[hidden]{display:none}
-.model-menu__title{
-  padding:3px 8px 9px;
-  color:var(--text-muted);
-  font-size:var(--fs-12);
-}
-.model-menu__list{display:grid;gap:4px;max-height:220px;overflow-y:auto}
-.model-menu__item,
-.model-menu__manage{
-  appearance:none;-webkit-appearance:none;
-  width:100%;
-  border:0;
-  background:transparent;
-  color:var(--text-secondary);
-  font:inherit;
-  cursor:pointer;
-  text-align:left;
-}
-.model-menu__item{
-  display:grid;
-  grid-template-columns:minmax(0,1fr);
-  align-items:center;
-  gap:10px;
-  min-height:42px;
-  padding:7px 10px;
-  border-radius:12px;
-}
-.model-menu__item:hover,
-.model-menu__item.is-on{background:var(--bg)}
-.model-menu__item.is-on{color:var(--text-primary)}
-.model-menu__name{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  font-size:var(--fs-14);
-}
-.model-menu__item.is-on .model-menu__name::after{content:'  ✓';color:var(--theme-dark)}
-.model-menu__manage{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  min-height:40px;
-  margin-top:6px;
-  padding:0 10px;
-  font-size:var(--fs-14);
-}
-.model-menu__manage:hover{color:var(--theme-dark)}
-.model-menu__manage svg{
-  width:16px;height:16px;fill:currentColor;
-  transform:rotate(180deg);
-}
 
 /* 悬停不做任何变化：这是常驻在页面底部的一格，光标扫过它就等于扫过
    大片空白，回回亮一下反而吵；能输入这件事由光标（cursor:text）说明就够。
@@ -811,11 +706,7 @@
     0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .7)),
     inset 0 0 0 1px color-mix(in srgb,var(--border) 76%,transparent);
 }
-.composer__model{
-  border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
-  background:color-mix(in srgb,var(--card-solid) 72%,transparent);
-}
-.composer__model.is-ready{
+.composer__model.is-ready > .composer__model-surface{
   border-color:color-mix(in srgb,var(--hint) 27%,var(--border));
 }
 .composer__send.is-filled{
@@ -996,36 +887,93 @@ body:has(.rail.is-open) .composer{
 .composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
 .composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
 /* 模型胶囊：高与右边发送钮同档（38），圆角取半高 —— 两端是完整的圆头，
-   和方形的三横钮、圆形的发送钮并排时，这一条是中间唯一的长条 */
+   和方形的三横钮、圆形的发送钮并排时，这一条是中间唯一的长条。
+   点开时胶囊自己长成面板：底板 .composer__model-surface 贴在胶囊原位，
+   以下边界锚定向上长（bottom:0），宽度从胶囊宽撑到面板宽、圆角从半高收成 18，
+   所以看上去是这枚胶囊被拉开了，而不是旁边冒出一块浮层。
+   外层 .composer__model 只负责占位，尺寸恒等于胶囊，展开时输入条不重排。 */
 .composer__model{
-  position:static;
-  z-index:auto;
+  --model-panel-w:236px;    /* 展开后的面板宽，窄屏那档在文件末尾改 */
+  position:relative;
+  flex:0 0 auto;
   width:auto;
   height:38px;
+  display:flex;
+  align-items:center;
+  z-index:2;
+}
+.composer__model-surface{
+  position:absolute;
+  right:0;
+  bottom:0;
+  width:100%;
+  height:38px;
+  border:1px solid color-mix(in srgb,#e8e8e8 84%,var(--border));
+  border-radius:999px;
+  background:color-mix(in srgb,var(--bg) 72%,var(--card-solid));
+  /* 列表挂在这块底板里、由它裁切：展开途中底板还没长够时，露出来的只是
+     已经排好版的那一段，不会有一条列表先探到面板外头去 */
+  overflow:hidden;
+  pointer-events:none;
+  transition:
+    width var(--dur) var(--ease),
+    height var(--dur) var(--ease),
+    border-radius var(--dur) var(--ease),
+    border-color .16s ease,
+    background-color .16s ease,
+    box-shadow var(--dur) var(--ease);
+}
+.composer__model:hover > .composer__model-surface{
+  border-color:color-mix(in srgb,var(--text-primary) 14%,var(--border));
+  background:color-mix(in srgb,var(--text-primary) 5%,transparent);
+}
+/* 展开：宽取「胶囊宽」与 --model-panel-w 的大者，高由 js 量出来的 --model-h 定
+   （38 + 列表高）；右侧边不动，面板整个往左长出来 */
+.composer__model.is-open > .composer__model-surface{
+  width:max(100%,var(--model-panel-w));
+  height:var(--model-h,38px);
+  border-radius:18px;
+  border-color:color-mix(in srgb,var(--text-primary) 12%,var(--border));
+  background:var(--card-solid);
+  box-shadow:
+    0 16px 42px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 2)),
+    0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .8));
+}
+.composer__model-trigger{
+  position:relative;
+  z-index:1;
+  min-width:0;
   max-width:min(280px,38vw);
+  height:38px;
   display:flex;
   align-items:center;
   gap:5px;
   padding:0 12px;
-  border:1px solid color-mix(in srgb,#e8e8e8 84%,var(--border));
+  border:0;
   border-radius:999px;
-  background:color-mix(in srgb,var(--bg) 72%,var(--card-solid));
+  background:transparent;
   color:var(--text-primary);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-size:13px;
   font-weight:400;
   cursor:pointer;
-  transition:border-color .16s ease,background-color .16s ease,color .16s ease;
+  appearance:none;
+  -webkit-appearance:none;
 }
-.composer__model:hover,
-.composer__model[aria-expanded="true"]{
-  border-color:color-mix(in srgb,var(--text-primary) 14%,var(--border));
-  background:color-mix(in srgb,var(--text-primary) 5%,transparent);
-  color:var(--text-primary);
-}
-.composer__model:focus-visible{
+.composer__model-trigger:focus-visible{
   outline:2px solid color-mix(in srgb,var(--theme) 72%,transparent);
   outline-offset:1px;
+}
+/* 展开后这枚钮变成面板最下面那一行：横跨整块底板，但内容仍旧靠右 ——
+   它原来就在胶囊里靠右停着，这么写开合时字一个像素都不挪，长的只是左边那段空板。
+   （靠左对齐会让字在展开的一瞬间弹到面板左缘，反而是个跳。） */
+.composer__model.is-open .composer__model-trigger{
+  position:absolute;
+  right:0;
+  bottom:0;
+  width:max(100%,var(--model-panel-w));
+  max-width:none;
+  justify-content:flex-end;
 }
 .composer__model-label{
   min-width:0;
@@ -1039,7 +987,7 @@ body:has(.rail.is-open) .composer{
   font-size:12px;
 }
 .composer__model-effort[hidden]{display:none}
-.composer__model > svg{
+.composer__model-trigger > svg{
   flex:0 0 auto;
   width:12px;
   height:12px;
@@ -1048,9 +996,9 @@ body:has(.rail.is-open) .composer{
   stroke-width:1.55;
   stroke-linecap:round;
   stroke-linejoin:round;
-  transition:transform .16s ease;
+  transition:transform .24s var(--ease);
 }
-.composer__model[aria-expanded="true"] > svg{transform:rotate(180deg)}
+.composer__model.is-open .composer__model-trigger > svg{transform:rotate(180deg)}
 /* 发送钮：不可用时只有一枚淡的箭头（--text-muted），底子是透明的；
    一旦输入框里有字，底色整片涨成主题色、箭头反白 —— 颜色过渡和
    顶栏那几枚圆钮同一条曲线，看起来是「填上了」而不是换了个灰块 */
@@ -1124,79 +1072,77 @@ body:has(.rail.is-open) .composer{
 @media(prefers-reduced-motion:reduce){
   .composer__send-icon.is-flying > .composer__send-arrow{animation:none}
 }
+/* 待选模型：挂在底板里面、贴着胶囊那 38 的上边界，宽度跟底板走。
+   静止时透明且不接指针，展开后再淡入 —— 底板的 height 是 js 量它算出来的
+   （38 + 本块高度），所以这里的 padding / 行高 / gap 改动会连带底板一起变。
+   min-width 让它在底板还没长够的那 0.3 秒里也按终态排版，字不会先挤再松。
+   当前模型不在这张表里：它永远是下面那条胶囊本身 */
 .model-menu{
-  right:10px;
-  left:auto;
-  bottom:calc(100% + 10px);
-  z-index:40;
-  width:min(292px,calc(100vw - 24px));
-  padding:8px;
-  border:1px solid color-mix(in srgb,#ececec 90%,var(--border));
-  border-radius:15px;
-  background:var(--card-solid);
-  box-shadow:
-    0 12px 30px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .82)),
-    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .3));
-  transform-origin:100% 100%;
-  animation:model-menu-in .18s cubic-bezier(.16,1,.3,1) both;
+  position:absolute;
+  right:0;
+  bottom:38px;
+  width:100%;
+  min-width:var(--model-panel-w);
+  padding:8px 6px 6px;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(4px);
+  transition:opacity .16s ease, transform .26s var(--ease);
 }
-.model-menu__title{
-  padding:2px 6px 6px;
-  color:var(--text-muted);
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:12px;
-  font-weight:400;
-  line-height:1.4;
-  letter-spacing:.02em;
+.model-menu[hidden]{display:none}
+.composer__model.is-open .model-menu{
+  opacity:1;
+  pointer-events:auto;
+  transform:none;
+  transition-delay:.06s;
 }
 .model-menu__list{
-  gap:0;
-  max-height:260px;
+  display:grid;
+  gap:2px;
+  max-height:min(260px,34vh);
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 .model-menu__item{
-  grid-template-columns:minmax(0,1fr) 22px;
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:center;
   gap:8px;
   min-height:34px;
   padding:4px 6px;
   border:0;
   border-radius:8px;
-  transition:border-color .15s ease,background-color .15s ease,transform .15s ease;
+  background:transparent;
+  color:var(--text-secondary);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  transition:background-color .15s ease, color .15s ease;
 }
 .model-menu__item:hover,
 .model-menu__item:focus-visible{
   background:color-mix(in srgb,var(--bg) 82%,transparent);
-  outline:none;
-  transform:none;
-}
-.model-menu__item.is-on,
-.model-menu__item.is-on:hover,
-.model-menu__item.is-on:focus-visible{
   color:var(--text-primary);
-  background:transparent;
+  outline:none;
 }
+.model-menu__item.is-on{color:var(--text-primary)}
 .model-menu__name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-size:12.5px;
   font-weight:400;
   line-height:1.4;
 }
-.model-menu__check{
-  width:22px;
-  height:22px;
-  display:grid;
-  place-items:center;
-  align-self:center;
-  background:transparent;
-  color:var(--text-primary);
-  font-size:14px;
-  font-weight:400;
-  opacity:0;
-  transition:opacity .15s ease;
+.model-menu__item.is-on .model-menu__name::after{
+  content:'  ✓';
+  color:var(--theme-dark);
 }
-.model-menu__item.is-on .model-menu__check{
-  opacity:1;
-}
-.model-menu__item.is-on .model-menu__name::after{content:none}
 /* 快捷胶囊贴着输入面板的左缘排一行：不要再居中，也不要前面那枚圆点标签 */
 .composer__starters{
   right:auto;
@@ -1316,10 +1262,6 @@ body:has(.rail.is-open) .composer{
   from{opacity:0;transform:translateY(4px)}
   to{opacity:1;transform:translateY(0)}
 }
-@keyframes model-menu-in{
-  from{opacity:0;transform:translateY(6px) scale(.97)}
-  to{opacity:1;transform:translateY(0) scale(1)}
-}
 @media(max-width:640px){
   .composer{
     width:calc(100vw - 24px);
@@ -1327,11 +1269,9 @@ body:has(.rail.is-open) .composer{
   }
   .composer__input{padding:16px 18px 4px}
   .composer__footer{padding:0 8px 8px}
-  .composer__model{max-width:150px}
-  .model-menu{
-    right:0;
-    width:min(330px,calc(100vw - 24px));
-  }
+  .composer__model-trigger{max-width:150px}
+  /* 窄屏面板跟输入框同宽：底板 / 列表 / 底下那行都读同一个变量 */
+  .composer__model{--model-panel-w:min(320px,calc(100vw - 24px))}
   .composer__starters{
     width:min(100%,calc(100vw - 24px));
     flex-wrap:wrap;
@@ -1340,7 +1280,8 @@ body:has(.rail.is-open) .composer{
   .composer__starters button{flex:1 1 auto}
 }
 @media(prefers-reduced-motion:reduce){
-  .model-menu{animation:none}
+  .composer__model-surface,
+  .model-menu{transition:none}
 }
 
 /* ============================================================
@@ -1381,11 +1322,18 @@ body:has(.rail.is-open) .composer{
   transform:rotateY(30deg);
   backface-visibility:hidden;
 }
+/* 两侧不等高、也不齐底：左边这块的底边比右边高出一截，顶边也跟着低一点，
+   两块板在纵向上错开半个身位。板内是 justify-content:flex-end，记录贴着
+   底边往上叠，所以 bottom 那一档直接决定这摞字的落脚线，改动即刻可见 */
 .stage-chat__side--assistant{
   right:calc(50% + clamp(150px,17vw,260px));
+  top:18%;
+  bottom:31%;
 }
 .stage-chat__side--user{
   left:calc(50% + clamp(150px,17vw,260px));
+  top:26%;
+  bottom:20%;
   transform-origin:0 50%;
   transform:rotateY(-30deg);
 }
@@ -1453,14 +1401,14 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 }
 @media(max-width:900px){
   .stage-chat__side{
-    top:14%;
     bottom:auto;
-    height:34vh;
+    height:31vh;
     width:calc(50vw - 14px);
     transform:rotateY(10deg);
   }
-  .stage-chat__side--assistant{right:auto;left:8px}
-  .stage-chat__side--user{left:auto;right:8px;transform:rotateY(-10deg)}
+  /* 手机上一左一右各占半幅，同样错开：左边高一点、右边低一点，不并列在一条线上 */
+  .stage-chat__side--assistant{right:auto;left:8px;top:10%;height:32vh}
+  .stage-chat__side--user{left:auto;right:8px;top:21%;height:29vh;transform:rotateY(-10deg)}
 }
 @media(prefers-reduced-motion:reduce){
   .stage-chat__bubble{animation:none}

@@ -19,14 +19,14 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=35"></script>
+<script src="js/i18n.js?v=36"></script>
   <link rel="stylesheet" href="css/base.css?v=15">
   <link rel="stylesheet" href="css/topbar.css?v=20">
-  <link rel="stylesheet" href="css/rail.css?v=44">
+  <link rel="stylesheet" href="css/rail.css?v=45">
   <link rel="stylesheet" href="css/workspace.css?v=22">
   <link rel="stylesheet" href="css/cards.css?v=25">
   <link rel="stylesheet" href="css/modal.css?v=35">
-  <link rel="stylesheet" href="css/chat.css?v=76">
+  <link rel="stylesheet" href="css/chat.css?v=78">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -393,13 +393,25 @@
                 </svg>
               </button>
               <div class="composer__trail">
-                <button class="composer__model" type="button" data-model-trigger
-                        aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
-                  <span class="composer__model-label" data-model-label>选择模型</span>
-                  <span class="composer__model-effort" data-model-effort
-                        data-i18n="model.effort.high" hidden>高</span>
-                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-                </button>
+                <!-- 模型胶囊：点开后不是弹一块浮层，而是胶囊自己长成面板 ——
+                     底板 .composer__model-surface 以下边界锚定向上长，宽度从
+                     胶囊宽撑到面板宽、圆角从半高收成 18。当前模型永远是最下面
+                     这条（就是这枚钮本身），待选的几条列在它上面，点了即切换。
+                     外层只负责占位，尺寸恒等于胶囊，展开时输入条不重排 -->
+                <div class="composer__model" data-model-switch>
+                  <div class="composer__model-surface">
+                    <div class="model-menu" id="composer-model-menu" data-model-menu role="menu" hidden>
+                      <div class="model-menu__list" data-model-menu-list></div>
+                    </div>
+                  </div>
+                  <button class="composer__model-trigger" type="button" data-model-trigger
+                          aria-haspopup="menu" aria-expanded="false" aria-controls="composer-model-menu">
+                    <span class="composer__model-label" data-model-label>选择模型</span>
+                    <span class="composer__model-effort" data-model-effort
+                          data-i18n="model.effort.high" hidden>高</span>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+                  </button>
+                </div>
                 <!-- 发送钮：路径取自 icon/arrow.svg（右指箭头，CSS 里放倒 90 度朝上），
                      画两遍叠在同一格：一枚飞出去，一枚在下面等着落回来 -->
                 <button class="composer__send" type="button" data-assistant-send
@@ -415,12 +427,6 @@
                 </button>
               </div>
             </div>
-          </div>
-          <div class="model-menu" id="composer-model-menu" data-model-menu role="menu"
-               aria-labelledby="composer-model-title" hidden>
-            <div class="model-menu__title" id="composer-model-title"
-                 data-i18n="model.choose">选择模型</div>
-            <div class="model-menu__list" data-model-menu-list></div>
           </div>
         </div>
       </div>
@@ -468,7 +474,7 @@
         <span class="item__btn">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
         </span>
-        <span class="item__label" data-i18n="nav.preference">Preference</span>
+        <span class="item__label" data-i18n="nav.preference">Costume</span>
       </button>
 
       <button class="item item--edit" type="button" data-panel="Edit"
@@ -547,7 +553,7 @@
            导入过程的提示挂在最末一行。两个 data-skin-* 钩子原样保留，
            q1skin.js 无需改动 -->
       <div class="rail__view rail__view--pref" data-rail-view="preference">
-        <div class="rail__title" data-i18n="nav.preference">Preference</div>
+        <div class="rail__title" data-i18n="nav.preference">Costume</div>
         <div class="pref" data-skin-panel>
           <div class="pref__group pref__group--skin">
             <div class="skin-grid" data-skin-pick role="group"
@@ -1139,7 +1145,7 @@
 <script src="js/modal.js?v=35"></script>
 <script src="js/contact.js?v=3"></script>
 <script src="js/composer.js?v=7"></script>
-<script src="js/model_config.js?v=13"></script>
+<script src="js/model_config.js?v=14"></script>
 <script src="js/persona.js?v=4"></script>
 <script src="js/assistant_chat.js?v=19"></script>
 <script src="js/pose_controls.js?v=1"></script>

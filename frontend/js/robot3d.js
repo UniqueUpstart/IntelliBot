@@ -24,7 +24,7 @@ import {sampleIdle, idleState} from './idle_motion.js?v=3';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=23';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=24';
 import { Q1_REST_POSE } from './q1_motion_data.js?v=3';
 
 const MODEL_URL = 'model/q1_ff.glb';
