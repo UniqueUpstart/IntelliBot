@@ -113,17 +113,6 @@
 .modal__act-btn.is-arm{color:var(--text-invert)}
 .modal__act-btn.is-arm::before{scale:1; background:var(--warning)}
 
-/* Preference 的导入钮：壳是同一颗（胶囊、主题色底常驻、悬停文字让位、按住回弹），
-   但它不是「一次动作两种状态」的开关 —— 按下去只唤起文件选择，
-   文案与底色都不跟着变，所以没有 is-on / is-cut / is-arm 那三档；
-   宽度与连接钮同为 128，两颗主动作在各自弹窗里落在同一处 */
-.pref__import{
-  display:block;
-  padding:0;
-  user-select:none;                  /* 连点两下不要选中文字 */
-}
-/* 焦点环走 hint 那一档深绿：底色本身就是主题色，拿主题色描边会看不见 */
-.pref__import:focus-visible{outline:2px solid var(--hint); outline-offset:2px}
 .modal__title{
   font-size:var(--fs-28); line-height:1; letter-spacing:.2px;
   /* line-height:1 的盒高只有 1em，比字体的内容区（约 1.2em）小，

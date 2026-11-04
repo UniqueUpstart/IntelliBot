@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { buildClockwork } from './clockwork.js?v=2';
 import { buildPixelBuddy } from './pixel_buddy.js?v=2';
-import {idleState} from './idle_motion.js?v=2';
+import {idleState} from './idle_motion.js?v=3';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
 import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=3';
 import { BELLY_LAUGH, BELLY_LAUGH_REST_POSE } from './belly_laugh_data.js?v=3';

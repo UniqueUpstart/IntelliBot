@@ -571,14 +571,16 @@
 }
 
 /* 右栏聊天历史与舞台最新消息 */
-.rail__view--chat{height:100%;min-height:0}
-[data-panel-body][data-view="chat"]{overflow:hidden;padding-bottom:18px}
+.rail__view--chat{position:relative;height:100%;min-height:0}
+/* 聊天页不让面板上内边距（32）把表头推下去：标题顶边与右栏 Emotions 页的
+   --title-top（12）对齐，雾带、宽度、左右留白都沿用同一套 */
+[data-panel-body][data-view="chat"]{overflow:hidden;padding-top:0;padding-bottom:18px}
 [data-panel-body][data-view="chat"] .rail__view--chat{display:flex;flex-direction:column}
 .rail__view--chat .assistant-chat{
   position:static;display:flex;flex:1 1 auto;width:100%;max-height:none;min-height:0;
   padding:0;background:transparent;box-shadow:none
 }
-.rail__view--chat .assistant-chat__log{max-height:none}
+.rail__view--chat .assistant-chat__log{max-height:none;padding-top:56px}
 
 /* ============================================================
    Conversation polish
@@ -623,10 +625,16 @@
 }
 .composer__starters button:focus-visible{outline:none}
 .chat-view__head{
-  flex:0 0 auto;
   align-items:center;
   gap:12px;
-  padding:2px 2px 14px;
+  /* 表头脱离流，整条压在记录流上面：高 48 = 面板顶部雾带的总高（16 平台
+     + 32 渐隐），标题顶边 12 与右栏 .rail__title 的吸顶位同高。
+     z-index 抬到雾带（3）之上，标题始终清楚；记录往上滚时从雾带下面过，
+     和 Emotions 页卡片从标题下过是同一种读法 */
+  position:absolute;
+  inset:0 0 auto 0;
+  z-index:4;
+  padding:12px 0 8px;
 }
 .chat-view__actions{
   position:relative;
@@ -702,32 +710,6 @@
   align-items:center;
   gap:11px;
 }
-.chat-view__mark{
-  position:relative;
-  flex:0 0 auto;
-  width:40px;
-  height:40px;
-  display:grid;
-  place-items:center;
-  border-radius:14px;
-  background:
-    radial-gradient(circle at 28% 20%,rgba(255,255,255,.88),transparent 34%),
-    linear-gradient(145deg,color-mix(in srgb,var(--theme) 74%,#fff),var(--theme));
-  box-shadow:
-    0 9px 22px color-mix(in srgb,var(--theme) 30%,transparent),
-    inset 0 0 0 1px rgba(255,255,255,.45);
-}
-.chat-view__mark::after{
-  display:none;
-}
-.chat-view__mark svg{
-  width:24px;
-  height:24px;
-  fill:var(--text-invert);
-  color:var(--text-invert);
-}
-.chat-view__mark svg path:first-child{fill:currentColor}
-.chat-view__mark svg path:last-child{fill:currentColor;opacity:.72}
 .chat-view__identity .view-title{
   font-size:20px;
   line-height:1.05;
@@ -739,7 +721,6 @@
   margin-top:5px;
   line-height:1.35;
 }
-.rail__view--chat .assistant-chat{padding:12px 0 0}
 .rail__view--chat .assistant-chat__toolbar{
   min-height:30px;
   padding:0 2px 10px;
@@ -1258,41 +1239,60 @@ body:has(.rail.is-open) .composer{
 }
 
 /* Keep the transcript crisp: flat surfaces, restrained corners and no blur. */
-.chat-view__mark{
-  border-radius:13px;
-  background:var(--theme);
-  box-shadow:none;
-}
-.chat-view__mark::after{box-shadow:none}
 .assistant-chat__log{
-  gap:12px;
-  padding:8px 2px 16px;
+  gap:24px;
+  /* 底部留出悬停时间戳那一行，最后一条的时间不会被滚动区裁掉 */
+  padding:8px 2px 30px;
 }
 .assistant-chat__message{
+  position:relative;
   width:fit-content;
   min-width:0;
   max-width:min(84%,300px);
-  padding:10px 13px;
+  padding:8px;
   border:1px solid color-mix(in srgb,#d7d7d4 82%,var(--border));
-  border-radius:15px;
+  /* 靠中轴那侧的下角压成直角：助手在左、用户在右 */
+  border-radius:24px 24px 24px 0;
   background:color-mix(in srgb,var(--bg) 56%,var(--card-solid));
   box-shadow:0 2px 8px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .08));
   color:var(--text-secondary);
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:13px;
+  font-family:"Source Han Sans SC","Noto Sans SC","Segoe UI",sans-serif;
+  font-size:14px;
   font-weight:400;
   line-height:1.55;
+  text-align:justify;
   overflow-wrap:break-word;
   word-break:normal;
   transform:none;
   animation:chat-message-in .22s ease-out both;
 }
 .assistant-chat__message::before{display:none}
+/* 悬停时才露出的时间戳：贴在气泡下方靠外的一侧，14px muted */
+.assistant-chat__message::after{
+  content:attr(data-time);
+  position:absolute;
+  left:8px;
+  bottom:-1.5em;
+  color:var(--text-muted);
+  font-family:"Barlow","Barlow Condensed",sans-serif;
+  font-size:14px;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+  letter-spacing:.02em;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .16s ease;
+}
+.assistant-chat__message--user::after{left:auto;right:8px}
+.assistant-chat__message:hover::after{opacity:1}
 .assistant-chat__message:hover{
+  z-index:2;
   box-shadow:none;
   transform:none;
 }
 .assistant-chat__message--user{
+  border-radius:24px 24px 0 24px;
   border-color:color-mix(in srgb,var(--theme) 66%,var(--border));
   background:color-mix(in srgb,var(--theme) 42%,var(--card-solid));
   color:var(--text-primary);
@@ -1364,7 +1364,7 @@ body:has(.rail.is-open) .composer{
   pointer-events:none;
   /* 透视只能作用于直接子元素，板正好是子元素；中心取整屏中点，
      两块板的外侧才会朝同一个消失点舒展 */
-  perspective:1300px;
+  perspective:1200px;
   perspective-origin:50% 50%;
 }
 .stage-chat__side{
@@ -1378,7 +1378,7 @@ body:has(.rail.is-open) .composer{
   pointer-events:none;
   /* 转轴钉在内侧竖边：这条边零位移，外侧翻出来 */
   transform-origin:100% 50%;
-  transform:rotateY(15deg);
+  transform:rotateY(30deg);
   backface-visibility:hidden;
 }
 .stage-chat__side--assistant{
@@ -1387,7 +1387,7 @@ body:has(.rail.is-open) .composer{
 .stage-chat__side--user{
   left:calc(50% + clamp(150px,17vw,260px));
   transform-origin:0 50%;
-  transform:rotateY(-15deg);
+  transform:rotateY(-30deg);
 }
 /* 记录流本身才是滚动区：短的时候按内容收高、由外层贴底放，
    长过一板高度才封顶并出现滚动 —— 不走 justify-content:flex-end 那条
@@ -1412,34 +1412,29 @@ body:has(.rail.is-open) .composer{
 .stage-chat__bubble{
   flex:0 0 auto;
   max-width:100%;
-  border:1px solid color-mix(in srgb,var(--border) 76%,transparent);
-  border-radius:999px;
-  padding:9px 16px;
+  border:0;
+  border-radius:24px;
+  padding:16px;
   background:var(--card-solid);
   box-shadow:none;
   color:var(--text-secondary);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:13px;
+  font-size:14px;
   font-weight:500;
   line-height:1.5;
-  text-align:left;
+  text-align:justify;
   white-space:pre-wrap;
   overflow-wrap:anywhere;
   cursor:pointer;
   animation:stage-bubble-in .3s var(--ease) both;
-  transition:border-color .18s ease;
 }
 .stage-chat__bubble span{display:block}
-/* 胶囊只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角照旧收圆 */
+/* 只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角收圆 24 */
 .stage-chat__bubble--assistant{border-bottom-left-radius:0}
 .stage-chat__bubble--user{
   border-bottom-right-radius:0;
-  border-color:color-mix(in srgb,var(--theme) 55%,var(--border));
   background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
   color:var(--text-primary);
-}
-.stage-chat__bubble:hover{
-  border-color:color-mix(in srgb,var(--theme) 38%,var(--border));
 }
 @keyframes stage-bubble-in{
   from{opacity:0;transform:translateY(8px) scale(.96)}
@@ -1451,22 +1446,21 @@ body:has(.rail.is-open) .stage-chat,
 body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 
 @media(max-width:1100px){
+  .stage-chat{perspective:800px}
   .stage-chat__side{width:min(220px,calc(50vw - 110px))}
   .stage-chat__side--assistant{right:calc(50% + clamp(110px,14vw,170px))}
   .stage-chat__side--user{left:calc(50% + clamp(110px,14vw,170px))}
 }
-@media(max-width:760px){
-  .stage-chat{perspective:1000px}
+@media(max-width:900px){
   .stage-chat__side{
     top:14%;
     bottom:auto;
     height:34vh;
     width:calc(50vw - 14px);
-    transform:rotateY(7deg);
+    transform:rotateY(10deg);
   }
   .stage-chat__side--assistant{right:auto;left:8px}
-  .stage-chat__side--user{left:auto;right:8px;transform:rotateY(-7deg)}
-  .stage-chat__bubble{padding:8px 13px;font-size:12px}
+  .stage-chat__side--user{left:auto;right:8px;transform:rotateY(-10deg)}
 }
 @media(prefers-reduced-motion:reduce){
   .stage-chat__bubble{animation:none}

@@ -111,6 +111,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 [data-panel-body][data-view="gestures"] [data-rail-view="gestures"],
 [data-panel-body][data-view="emotions"] [data-rail-view="emotions"],
 [data-panel-body][data-view="shortcuts"] [data-rail-view="shortcuts"],
+[data-panel-body][data-view="preference"] [data-rail-view="preference"],
 [data-panel-body][data-view="edit"] [data-rail-view="edit"],
 [data-panel-body][data-view="chat"] [data-rail-view="chat"],
 [data-panel-body]:not([data-view]) [data-rail-view="gestures"]{display:block}
@@ -378,6 +379,47 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   padding-bottom:var(--pad-y);
 }
 
+/* ── 偏好页：机器人外观 ───────────────────────────────────────────
+   这一页只做一件事：换机器人外观。四张内置卡 + 导入进来的模型，
+   与上面三页同一套 1fr 网格、同样的 8px 间隔，一行四张（导入到第五、
+   第六张时换第二行）。卡是方的、图标 34、名字 14，选中那枚涨满主题色。
+   面板自己就是滚动区，所以这块不再自带 overflow —— 弹窗里那套
+   .pref 的 flex:1 + overflow-y:auto 在这里只留纵向排布 */
+.rail--right .rail__view--pref .pref{
+  display:block;
+  flex:0 0 auto;
+  min-height:0;
+  overflow:visible;
+}
+.rail--right .rail__view--pref .pref__group--skin{width:100%}
+.rail--right .rail__view--pref .skin-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+/* 导入 / 删除两行与卡左缘对齐：.pref__row 自带 12 的左右内边距，
+   那一截是给 hover 底色留的，把行整体左移同样的量，文字才落在网格线上 */
+.rail--right .rail__view--pref .pref__row{
+  margin-left:-12px;
+  margin-top:4px;
+  color:var(--text-reduced);
+  transition:color .12s linear, background .12s linear;
+}
+/* 这一行是设置项不是提交动作：hover 只把字提到主色，不铺底片 */
+.rail--right .rail__view--pref .pref__row:hover{
+  background:none;
+  color:var(--theme);
+}
+.rail--right .rail__view--pref .pref__note{margin-top:4px}
+@media(max-width:900px){
+  .rail--right .rail__view--pref .skin-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+@media(max-width:520px){
+  .rail--right .rail__view--pref .skin-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
 /* 图标列（始终贴锚定侧） */
 .rail__bar{
   flex:0 0 var(--rail-w);
@@ -457,6 +499,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item[data-panel="Gestures"],
 .item[data-panel="Emotions"],
 .item[data-panel="Shortcuts"],
+.item[data-panel="Preference"],
 .item[data-panel="Edit"],
 .item[data-panel="Chat"],
 .item[data-panel="Persona"]{--itc:var(--theme)}
@@ -570,8 +613,9 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   .rail--right .rail__panel > .panel__body{right:0}
 }
 
-/* 角色页头部是静态内容，不需要用滚动卡片的雾化遮罩盖住。 */
-.rail__panel:has(> [data-panel-body][data-view="persona"]) > .frost--top{display:none}
+/* 角色页与右栏各页共用同一条顶部雾带：表头吸在雾带里，卡片与表单从下面滚过。
+   表头自身的定位与层级写在 workspace.css 的 .persona-view .view-head，
+   这里只负责把这条雾带放出来 */
 
 /* 滚动区首尾的雾化遮罩。
    染色与模糊必须拆成两层：染色在下（绷在模糊层的 backdrop 里），模糊在上、由 mask 收口。
@@ -654,6 +698,17 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   background-size:100% calc(var(--frost-head) + var(--frost-h));
   background-position:0 var(--frost-over);
   background-repeat:no-repeat;
+}
+/* 角色页顶部雾带去掉了平台段。平台这段是满浓度（16px），压在白色角色卡上
+   就是一整条没有模糊的白杠，看着像栏顶裂了一条缝；右栏底下多为彩色卡片，
+   同样的平台不显眼。这里改成就从第一像素开始退，总高仍是 48（渐隐由 32 拉到
+   48、平台给 0），栏顶即见模糊，与右栏观感一致。
+   只挂在角色页：其它页（指令卡、聊天）的顶部平台保持原样。
+   变量写在雾带自身而不是 .rail__panel 上 —— 面板里指令卡的图片遮罩同样读这
+   两个值，改到面板上会连累卡片的渐隐 */
+.rail--left .rail__panel:has(> [data-panel-body][data-view="persona"]) > .frost--top{
+  --frost-head:0px;
+  --frost-h:48px;
 }
 /* 模糊层：前 18% 满强度，之后 smoothstep 放到 0 ——
    起步和落点斜率都接近 0，卡片是从雾里慢慢解析出来的，不是被一刀切开。
