@@ -1,6 +1,6 @@
 /* 主页皮肤。
-   下拉里的「原模型」是 q1_ff.glb，自己播片段。
-   「示意人形」和导入的 Mixamo / glTF 跟右侧 Motions（含街舞）的同一套关节角走。
+   「原模型」是 q1_ff.glb，自己播片段。
+   导入的 Mixamo / glTF 跟右侧 Motions（含街舞）的同一套关节角走。
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
 import { buildClockwork } from './clockwork.js?v=2';
@@ -124,7 +124,7 @@ function init() {
   const clockwork = buildClockwork(root, bones);
 
   /* 脚底原来有一块半径 0.22 的深色圆盘当接触阴影。它的尺寸和落点是按 Q1 的脚距
-     量死的，而这套舞台画的是 xbot / clockwork / pixel / figure 与用户导入的模型，
+     量死的，而这套舞台画的是 xbot / clockwork / pixel 与用户导入的模型，
      它们各有自己的体量与站位 —— 固定半径、固定在原点的圆盘压下去落不到脚下，
      只会变成脚底一块黑斑，透视一拉开还会浮在空中。阴影已整体去掉，不再绘制 */
 
@@ -166,6 +166,82 @@ function init() {
     'builtin:ink': palette(0x1f8a78, 0x8fd9c8, 0xe7f6f2, 0x14332e, 0x2f5e54, 0x0d1c19, 0x9dffd8, 0x3ddc97),
   };
 
+  const LIVERIES = {
+    'builtin:livery': {
+      color: 'model/livery_orange.png',
+      glow: null,
+      led: 0xff7a1a,
+      metal: 0.04,
+      rough: 0.58,
+      glowStrength: 0,
+    },
+    'builtin:ion': {
+      color: 'model/livery_ion.png',
+      glow: 'model/livery_ion_glow.png',
+      led: 0x5ef6ff,
+      metal: 0.62,
+      rough: 0.28,
+      glowStrength: 2.4,
+    },
+    'builtin:medal': {
+      color: 'model/livery_medal.png?v=3',
+      glow: null,
+      led: 0xe8b040,
+      metal: 0.22,
+      rough: 0.46,
+      glowStrength: 0,
+    },
+  };
+  const liveryTextures = new Map();
+  function loadMap(url) {
+    return new Promise((resolve, reject) => {
+      new THREE.TextureLoader().load(url, (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.flipY = false;
+        tex.anisotropy = 8;
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        resolve(tex);
+      }, undefined, reject);
+    });
+  }
+  function ensureLivery(id) {
+    if (liveryTextures.has(id)) return Promise.resolve(liveryTextures.get(id));
+    const spec = LIVERIES[id];
+    const pending = Promise.all([
+      loadMap(spec.color),
+      spec.glow ? loadMap(spec.glow) : Promise.resolve(null),
+    ]).then(([color, glow]) => {
+      const pack = { ...spec, colorMap: color, glowMap: glow };
+      liveryTextures.set(id, pack);
+      return pack;
+    });
+    liveryTextures.set(id, pending);
+    return pending;
+  }
+  function applyLiveryMaterial(material, pack) {
+    const name = material.name || '';
+    /* face 是表情屏：emissiveMap 上挂着 faces.js 的画布，贴图不能盖住它。 */
+    if (name === 'face') return;
+    if (name === 'emissive') {
+      if (material.color) material.color.setHex(0xffffff);
+      material.map = null;
+      material.emissiveMap = null;
+      if (material.emissive) material.emissive.setHex(pack.led);
+      material.emissiveIntensity = 1.4;
+    } else {
+      if (material.color) material.color.setHex(0xffffff);
+      material.map = pack.colorMap;
+      material.emissiveMap = pack.glowMap;
+      if (material.emissive) material.emissive.setHex(pack.glowMap ? 0xffffff : 0x000000);
+      material.emissiveIntensity = pack.glowStrength;
+      if (Number.isFinite(material.metalness)) material.metalness = pack.metal;
+      if (Number.isFinite(material.roughness)) material.roughness = pack.rough;
+      if (pack.glowMap && Number.isFinite(material.aoMapIntensity)) material.aoMapIntensity = 1;
+    }
+    material.needsUpdate = true;
+  }
+
   function setOriginalMaterialTheme(themeId) {
     themeWanted = themeId || null;
     const robot = window.robot3d;
@@ -188,14 +264,28 @@ function init() {
         if (Number.isFinite(state.emissiveIntensity)) {
           material.emissiveIntensity = state.emissiveIntensity;
         }
+        if ('map' in state) material.map = state.map;
+        if ('emissiveMap' in state) material.emissiveMap = state.emissiveMap;
+        if (Number.isFinite(state.metalness)) material.metalness = state.metalness;
+        if (Number.isFinite(state.roughness)) material.roughness = state.roughness;
+        if (Number.isFinite(state.aoMapIntensity)) material.aoMapIntensity = state.aoMapIntensity;
         material.needsUpdate = true;
       });
       originalMaterialColors.clear();
       return;
     }
 
+    const liveryId = LIVERIES[themeWanted] ? themeWanted : null;
+    const liveryPack = liveryId ? liveryTextures.get(liveryId) : null;
+    if (liveryId && (!liveryPack || typeof liveryPack.then === 'function')) {
+      ensureLivery(liveryId).then(() => {
+        if (themeWanted === liveryId) setOriginalMaterialTheme(liveryId);
+      });
+      return;
+    }
+
     const theme = MATERIAL_THEMES[themeWanted];
-    if (!theme) return;
+    if (!theme && !liveryPack) return;
     const seen = new Set();
     model.traverse((node) => {
       if (!node.isMesh) return;
@@ -208,8 +298,23 @@ function init() {
             color: material.color ? material.color.clone() : null,
             emissive: material.emissive ? material.emissive.clone() : null,
             emissiveIntensity: material.emissiveIntensity,
+            map: material.map || null,
+            emissiveMap: material.emissiveMap || null,
+            metalness: material.metalness,
+            roughness: material.roughness,
+            aoMapIntensity: material.aoMapIntensity,
           });
         }
+        if (liveryPack) {
+          applyLiveryMaterial(material, liveryPack);
+          return;
+        }
+        const saved = originalMaterialColors.get(material);
+        if (saved && material.map !== saved.map) material.map = saved.map;
+        if (saved && material.emissiveMap !== saved.emissiveMap) material.emissiveMap = saved.emissiveMap;
+        if (saved && Number.isFinite(saved.metalness)) material.metalness = saved.metalness;
+        if (saved && Number.isFinite(saved.roughness)) material.roughness = saved.roughness;
+        if (saved && Number.isFinite(saved.aoMapIntensity)) material.aoMapIntensity = saved.aoMapIntensity;
         const color = theme.map.get(material.name);
         if (color !== undefined && material.color) material.color.setHex(color);
         if (material.name === 'face' && material.emissive) {
@@ -901,10 +1006,10 @@ function init() {
     if (active) active.object.visible = false;
     active = null;
     removeBtn.hidden = !id.startsWith('file:');
-    if (id === 'builtin:q1' || MATERIAL_THEMES[id]) {
+    if (id === 'builtin:q1' || MATERIAL_THEMES[id] || LIVERIES[id]) {
       setFigureVisible(false);
       showStage(false);
-      setOriginalMaterialTheme(MATERIAL_THEMES[id] ? id : null);
+      setOriginalMaterialTheme(id === 'builtin:q1' ? null : id);
       setNote('');
       return;
     }
@@ -935,8 +1040,7 @@ function init() {
       return;
     }
     if (id === 'builtin:figure') {
-      setFigureVisible(true);
-      setNote('');
+      await selectSkin('builtin:q1');
       return;
     }
     setFigureVisible(false);
