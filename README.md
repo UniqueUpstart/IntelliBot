@@ -66,9 +66,9 @@ py -3.12 -m venv .venv
 
 如果安装的是 Python 3.11，把 `py -3.12` 改为 `py -3.11`。后续直接使用 `.venv\Scripts\python.exe`，无需激活环境。
 
-### 3. 配置 DeepSeek（可选）
+### 3. 配置 ai
 
-不使用 AI 对话时可以跳过。需要时复制配置模板并填写自己的 API Key：
+复制配置模板并填写自己的 API Key：
 
 ```powershell
 Copy-Item .env.example .env
