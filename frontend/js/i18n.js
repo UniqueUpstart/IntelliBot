@@ -489,7 +489,7 @@ function getLang() {
     const v = localStorage.getItem(I18N_KEY);
     if (v === "zh" || v === "en") return v;
   } catch (e) {}
-  return "en";
+  return "zh";
 }
 
 function t(key) {

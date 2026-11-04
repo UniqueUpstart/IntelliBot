@@ -174,7 +174,13 @@
   }
   .composer__surface{border-radius:22px}
   .composer__input{width:100%!important;max-width:100%;font-size:16px}
+  .composer__model{
+    --model-panel-w:min(228px,calc(100vw - 112px));
+  }
   .composer__model-trigger{max-width:132px}
+  .composer__model.is-open > .composer__model-surface{border-radius:18px}
+  .model-menu__list{max-height:min(176px,26dvh)}
+  .model-menu .pill{font-size:13px}
   body:has(.rail.is-open) .composer{
     opacity:0;
     pointer-events:none;
