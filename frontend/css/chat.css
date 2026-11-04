@@ -490,46 +490,66 @@
 
 /* ============================================================
    Conversation polish
-   The history is a quiet transcript; starter prompts live beside
+   The history is a quiet transcript; starter prompts sit above
    the composer so the log never mixes guidance with the thread.
    ============================================================ */
 .composer__starters{
-  position:absolute;
-  left:0;
-  bottom:calc(100% + 14px);
+  position:relative;
   z-index:2;
   display:flex;
   align-items:center;
-  gap:7px;
-  max-width:min(660px,calc(100vw - 40px));
-  padding:7px;
-  border:1px solid color-mix(in srgb,var(--border) 74%,transparent);
-  border-radius:999px;
-  background:color-mix(in srgb,var(--card-solid) 88%,transparent);
-  box-shadow:
-    0 16px 40px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.5)),
-    inset 0 1px 0 rgba(255,255,255,.48);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
+  gap:8px;
+  width:100%;
+  min-height:38px;
+  padding:0 4px;
+  overflow:hidden;
   animation:starters-arrive .55s cubic-bezier(.16,1,.3,1) both;
 }
 .composer__starters[hidden]{display:none}
+.composer__starters-label{
+  flex:0 0 auto;
+  margin-right:2px;
+  color:var(--text-reduced);
+  font-family:"Noto Sans SC","Segoe UI",sans-serif;
+  font-size:14px;
+  line-height:1.2;
+  white-space:nowrap;
+}
 .composer__starters button{
   appearance:none;
   -webkit-appearance:none;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
   min-width:0;
-  padding:7px 11px;
+  padding:8px 13px;
+  border:0;
   border-radius:999px;
+  background:var(--card-solid);
+  color:var(--text-primary);
   font:inherit;
-  font-size:var(--fs-12);
-  line-height:1.2;
+  font-family:"Noto Sans SC","Segoe UI",sans-serif;
+  font-size:14px;
+  line-height:1.25;
   white-space:nowrap;
   cursor:pointer;
-  /* 盒形与节奏留在这儿，颜色和底片在文件后段统一给（词条要跟左右边栏
-     同一层玻璃），一处写一半会看不出哪边在生效 */
-  transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .18s var(--ease);
+  box-shadow:0 2px 8px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .22));
+  transition:background-color .18s ease,color .18s ease,transform .18s var(--ease),box-shadow .18s ease;
 }
-.composer__starters button:focus-visible{outline:none}
+.composer__starters-emoji{
+  flex:0 0 auto;
+  font-size:16px;
+  line-height:1;
+}
+.composer__starters button:hover,
+.composer__starters button:focus-visible{
+  background:var(--card-solid);
+  color:var(--text-primary);
+  outline:2px solid color-mix(in srgb,var(--theme) 62%,transparent);
+  outline-offset:1px;
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .32));
+}
 .chat-view__head{
   /* 顶对齐而不是居中：右端那排工具钮最低 30，比 24 的标题盒高，
      center 会把标题往下推 3px，和左右栏其它页的标题错开一档 */
@@ -830,6 +850,9 @@
    ============================================================ */
 .composer{
   width:min(720px,calc(100vw - 220px));
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
 /* 栏体展开时输入框整块向下让位：同一条弹性曲线、同样的 .95 缩量，
    只是方向朝下（输入框的「外沿」在屏幕底部）。
@@ -842,6 +865,7 @@
 .composer__surface{
   position:relative;
   z-index:2;
+  width:100%;
   overflow:visible;
   border:1px solid color-mix(in srgb,#e8e8e8 88%,var(--border));
   border-radius:26px;
@@ -1243,63 +1267,9 @@
 /* 只有当前模型会在列表里露头（整个 provider 没有别的候选时），
    它按选中态停在深墨，不铺底片 */
 .model-menu .pill.is-on{color:var(--text-primary)}
-/* 快捷胶囊排在卡片底行、左下角三横钮的右手边：不再越过卡片顶缘压到舞台上。
-   锚点按 footer 的盒模型算 —— 左内边距 16 + 圆钮直径 38 + 间距 10 = 64；
-   纵向让 28 高的胶囊与 38 高的圆钮同心，底距就是 10 + (38 − 28) / 2 = 15。
-   right 仍写 auto，right:auto 时宽度才由 max-content 撑开 */
-.composer__starters{
-  right:auto;
-  left:calc(16px + 38px + 10px);
-  bottom:calc(10px + (38px - 28px) / 2);
-  width:max-content;
-  /* 右侧给模型胶囊与发送钮留出位置：这一行两枚钮加起来约 133 宽，
-     再留一点余量。语言包换成长词条时宁可裁字，也不要压到钮上 */
-  max-width:calc(100% - 64px - 160px);
-  overflow:hidden;
-  gap:8px;
-  justify-content:flex-start;
-  padding:0;
-  border:0;
-  background:transparent;
-  box-shadow:none;
-  backdrop-filter:none;
-  -webkit-backdrop-filter:none;
-}
-/* 余量被吃掉时收成省略号，胶囊轮廓不跟着变形 */
-.composer__starters button{min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* 词条的皮肤：跟左右边栏同一层玻璃 —— 半透明的 --panel 加背后的高斯模糊，
-   浮在舞台上时背后有什么就透出一点被磨开的颜色，静止时描边与字都取 muted，
-   安静地停在输入框上方 */
-.composer__starters button{
-  padding:6px 10px;
-  border:1px solid var(--text-muted);
-  background:var(--panel);
-  color:var(--text-muted);
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-weight:400;
-  box-shadow:none;
-  -webkit-backdrop-filter:blur(var(--blur));
-  backdrop-filter:blur(var(--blur));
-}
-/* 指针压上来：描边与字一起转主题色，底片收成不透明的一层，和输入框同一种实底。
-   描边始终 1px（与输入框那条同宽），换色不加粗，胶囊的轮廓和这一行的排布都不跳 */
-.composer__starters button:hover,
-.composer__starters button:focus-visible{
-  border-color:var(--theme);
-  background:var(--card-solid);
-  color:var(--theme);
-  outline:none;
-  transform:none;
-}
-/* 卡片收到 840 及以下时底行放不下这两枚词条（父级宽度 = 100vw − 220，
-   留给字条的部分跟着缩），退回原来的位置：浮在卡片上方、允许折行。
-   断点按最长的英文词条 379 宽反推，再留一档余量 */
+/* 窄屏时提示行允许折到第二排，输入框仍保持整块宽度。 */
 @media (max-width:840px){
   .composer__starters{
-    left:0;
-    bottom:calc(100% + 12px);
-    max-width:100%;
-    overflow:visible;
     flex-wrap:wrap;
   }
 }

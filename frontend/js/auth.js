@@ -448,6 +448,12 @@
     skipEls.forEach(function (el) {
       el.addEventListener('click', skip);
     });
+    /* 登录卡片外的遮罩空白也算一次明确的退出动作。
+       面板内部交给表单自己处理，点击输入框、页签和按钮都不会误关。 */
+    root.addEventListener('click', function (event) {
+      if (event.target.closest('.auth__panel')) return;
+      skip();
+    });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && root.classList.contains('is-open')) skip();
     });

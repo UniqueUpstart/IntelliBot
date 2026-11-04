@@ -26,12 +26,12 @@
   <link rel="stylesheet" href="css/workspace.css?v=29">
   <link rel="stylesheet" href="css/cards.css?v=31">
   <link rel="stylesheet" href="css/modal.css?v=35">
-  <link rel="stylesheet" href="css/chat.css?v=105">
+  <link rel="stylesheet" href="css/chat.css?v=106">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
-<link rel="stylesheet" href="css/auth.css?v=12">
+<link rel="stylesheet" href="css/auth.css?v=13">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -385,6 +385,22 @@
           <div class="assistant-chat__log" data-assistant-log role="log" aria-live="polite"></div>
         </section>
         <div class="composer">
+          <div class="composer__starters" data-chat-suggestions role="group"
+               data-i18n-aria="chat.starters" aria-label="Try asking">
+            <span class="composer__starters-label" data-i18n="chat.starters">Try asking</span>
+            <button type="button" data-chat-example="Introduce yourself"
+                    data-i18n-aria="chat.example.intro"
+                    aria-label="Introduce yourself">
+              <span class="composer__starters-emoji" aria-hidden="true">💡</span>
+              <span data-i18n="chat.example.intro">Introduce yourself</span>
+            </button>
+            <button type="button" data-chat-example="Show me a dance"
+                    data-i18n-aria="chat.example.motion"
+                    aria-label="Show me a dance">
+              <span class="composer__starters-emoji" aria-hidden="true">🙋</span>
+              <span data-i18n="chat.example.motion">Show me a dance</span>
+            </button>
+          </div>
           <div class="composer__surface">
             <textarea class="composer__input" rows="1" autocomplete="off" spellcheck="false"
                       maxlength="500" data-assistant-input
@@ -402,14 +418,6 @@
                   <path class="composer__menu-line" d="M4 17h16"/>
                 </svg>
               </button>
-              <!-- 只留两枚快捷胶囊，贴在左下角三横钮的右侧；早先挂在输入面板
-                   上方、越过卡片顶缘压到舞台上，位置改到卡内一行后由
-                   css/chat.css 的 left / bottom 对齐这枚 38 见方的圆钮 -->
-              <div class="composer__starters" data-chat-suggestions role="group"
-                   data-i18n-aria="chat.starters" aria-label="试试这样问">
-                <button type="button" data-chat-example="介绍一下你自己" data-chat-prompt="介绍一下你自己" data-i18n="chat.example.intro">介绍一下你自己</button>
-                <button type="button" data-chat-example="向我挥手，然后跳一支街舞" data-chat-prompt="向我挥手，然后跳一支街舞" data-i18n="chat.example.motion">向我挥手，然后跳一支街舞</button>
-              </div>
               <div class="composer__trail">
                 <!-- 模型胶囊：点开后不是弹一块浮层，而是胶囊自己长成面板 ——
                      底板 .composer__model-surface 以下边界锚定向上长，宽度从
@@ -466,6 +474,13 @@
   <div class="rail__surface">
   <div class="rail__bar">
     <div class="rail__items">
+      <button class="item" type="button" data-panel="Preference" aria-expanded="false" aria-controls="panel-tools">
+        <span class="item__btn">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
+        </span>
+        <span class="item__label" data-i18n="nav.preference">Costume</span>
+      </button>
+
       <button class="item" type="button" data-panel="Gestures" aria-expanded="false" aria-controls="panel-tools">
         <span class="item__btn">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12.1 3.6c-.9 0-1.6.7-1.6 1.6v10.2l-1.8-2.4c-.5-.7-1.5-.9-2.2-.4-.7.5-.8 1.4-.4 2.1l4.6 6.9c1.1 1.7 3 2.7 5 2.7h3.4c2.9 0 5.2-2.3 5.2-5.2v-6.7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v2.9h-.6V8.5c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v6.4h-.6V7c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v8h-.6V5.2c0-.9-.7-1.6-1.6-1.6Z"/></svg>
@@ -485,13 +500,6 @@
           <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M18.4 3.6 7.2 18.2h6.6L12.6 28.4 24.6 13.4h-7l.8-9.8Z"/></svg>
         </span>
         <span class="item__label" data-i18n="rail.left.shortcuts">Shortcuts</span>
-      </button>
-
-      <button class="item" type="button" data-panel="Preference" aria-expanded="false" aria-controls="panel-tools">
-        <span class="item__btn">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill-rule="evenodd" d="M8.2 9h15.6a4.2 4.2 0 0 1 4.2 4.2v7.6a4.2 4.2 0 0 1-4.2 4.2H8.2A4.2 4.2 0 0 1 4 20.8v-7.6A4.2 4.2 0 0 1 8.2 9Zm3.6 6a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Zm8.4 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/><path d="M14.8 4.6h2.4V9.4h-2.4z"/><circle cx="16" cy="4.4" r="2.2"/></svg>
-        </span>
-        <span class="item__label" data-i18n="nav.preference">Costume</span>
       </button>
 
       <button class="item item--edit" type="button" data-panel="Edit"
@@ -789,7 +797,7 @@
 </div>
 
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
-<script src="js/auth.js?v=11"></script>
+<script src="js/auth.js?v=12"></script>
 
 <!-- 居中弹窗：Preference / Advance / Settings / Privacy 四枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
@@ -1153,7 +1161,7 @@
 <script src="js/composer.js?v=8"></script>
 <script src="js/model_config.js?v=16"></script>
 <script src="js/persona.js?v=5"></script>
-<script src="js/assistant_chat.js?v=35"></script>
+<script src="js/assistant_chat.js?v=36"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
