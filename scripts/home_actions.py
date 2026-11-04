@@ -27,4 +27,6 @@ HOME_ACTIONS = (
         "aliases": ["迪斯科", "迪斯科舞步", "蹦迪", "disco", "disco dance"],
         "duration_s": 15.0,
     },
+    {'id': 'bow_thanks', 'name': '鞠躬致谢', 'description': '短暂蓄势后明显鞠躬，手臂自然垂落，停留致谢后缓慢起身', 'aliases': ['鞠躬', '致谢', '鞠躬致谢', '谢谢'], 'duration_s': 3},
+    {'id': 'happy_steps', 'name': '开心小舞步', 'description': '120 BPM 交替抬脚踏步、大幅摆臂与左右转身，最后平稳收势', 'aliases': ['开心小舞步', '开心舞', '庆祝舞', '小舞步'], 'duration_s': 6},
 )

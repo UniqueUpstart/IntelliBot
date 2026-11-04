@@ -6,11 +6,14 @@ import {BELLY_LAUGH, BELLY_LAUGH_REST_POSE} from './belly_laugh_data.js?v=3';
 import {MECHANICAL_DANCE, MECHANICAL_DANCE_REST_POSE} from './mechanical_dance_data.js?v=3';
 import {DISCO_DANCE, DISCO_DANCE_REST_POSE} from './disco_dance_data.js?v=3';
 
+import {COMPANION_MOTIONS, COMPANION_REST} from './companion_motion_data.js?v=2';
+
 const TIMELINE_MOTIONS = [
-  STREET_DANCE, BELLY_LAUGH, MECHANICAL_DANCE, DISCO_DANCE,
+  STREET_DANCE, BELLY_LAUGH, MECHANICAL_DANCE, DISCO_DANCE, ...COMPANION_MOTIONS,
 ];
 const TIMELINE_BY_ID = Object.fromEntries(TIMELINE_MOTIONS.map((motion) => [motion.id, motion]));
 const TIMELINE_REST_POSES = new Map([
+  ...COMPANION_MOTIONS.map(motion => [motion.id, COMPANION_REST]),
   [STREET_DANCE.id, STREET_DANCE_REST_POSE],
   [BELLY_LAUGH.id, BELLY_LAUGH_REST_POSE],
   [MECHANICAL_DANCE.id, MECHANICAL_DANCE_REST_POSE],
@@ -24,6 +27,7 @@ const MOTION_BY_ID = Object.fromEntries([
 // MuJoCo 自然站姿下的关节世界轴，已经从 (x前, y左, z上) 转到
 // GLB 的 (x左, y上, z前)。运行时再转换到对应骨骼的局部坐标。
 const RETARGET = {
+  waist_pitch_joint: {bone: 'body1', worldAxis: [1, 0, 0]},
   waist_roll_joint: {bone: 'body1', worldAxis: [0, 0, 1]},
   waist_yaw_joint: {bone: 'body1', worldAxis: [0, 1, 0]},
   left_shoulder_pitch_joint: {bone: 'Bone.005', worldAxis: [0.99619473, 0.08715539, 0]},
@@ -179,13 +183,19 @@ function buildClip(motion, groups) {
       const pose = samplePose(motion.id, time / motion.duration);
       const result = group.rest.clone();
       group.bindings.forEach(({joint, axis}) => {
-        const angle = pose[joint] - Q1_REST_POSE[joint];
+        const baseline = Q1_REST_POSE[joint] ?? 0;
+        const angle = (pose[joint] ?? baseline) - baseline;
         result.multiply(new THREE.Quaternion().setFromAxisAngle(axis, angle));
       });
       values.push(result.x, result.y, result.z, result.w);
     });
     return new THREE.QuaternionKeyframeTrack(`${group.bone.name}.quaternion`, times, values);
   });
+  for (const track of tracks) {
+    if (!track.values.every(Number.isFinite)) {
+      throw new Error(`动作 ${motion.id} 包含无效关节旋转：${track.name}`);
+    }
+  }
   return new THREE.AnimationClip(`q1_${motion.id}`, motion.duration, tracks);
 }
 
@@ -199,13 +209,19 @@ function buildTimelineClip(motion, groups) {
       const pose = sampleTimelinePose(time, motion);
       const result = group.rest.clone();
       group.bindings.forEach(({joint, axis}) => {
-        const angle = pose[joint] - rest[joint];
+        const baseline = rest[joint] ?? 0;
+        const angle = (pose[joint] ?? baseline) - baseline;
         result.multiply(new THREE.Quaternion().setFromAxisAngle(axis, angle));
       });
       values.push(result.x, result.y, result.z, result.w);
     });
     return new THREE.QuaternionKeyframeTrack(`${group.bone.name}.quaternion`, times, values);
   });
+  for (const track of tracks) {
+    if (!track.values.every(Number.isFinite)) {
+      throw new Error(`动作 ${motion.id} 包含无效关节旋转：${track.name}`);
+    }
+  }
   return new THREE.AnimationClip(`q1_${motion.id}`, motion.duration, tracks);
 }
 

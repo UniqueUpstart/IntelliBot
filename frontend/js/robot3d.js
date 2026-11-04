@@ -24,7 +24,7 @@ import {sampleIdle, idleState} from './idle_motion.js?v=3';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=33';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=34';
 import { Q1_REST_POSE } from './q1_motion_data.js?v=3';
 
 const MODEL_URL = 'model/q1_ff.glb';
@@ -1091,6 +1091,12 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     fit(true);
     ready = true;
     playback = {clip: 'idle', state: 'playing'};
+    // Paint a complete fitted frame before revealing the canvas or allowing
+    // ready listeners to perform offscreen thumbnail rendering.
+    rig.rotation.y = FRAMES[frame].baseYaw;
+    screen.drawNow();
+    faceTex.needsUpdate = true;
+    renderer.render(scene, camera);
     window.dispatchEvent(new Event('robot-ready'));
     wrap.classList.add('is-ready');
 

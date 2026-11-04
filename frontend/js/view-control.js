@@ -254,7 +254,9 @@ function boot() {
   bindResetAndDefaultControls();
   wrap.classList.add('vc-enabled');
   window.__robotView = { step };
-  step(0, 1);
+  // Preserve the fitted camera on handoff. A zero-height, unit-distance
+  // camera points at the legs until the next animation frame repairs it.
+  step(camera.position.y, camera.position.z);
 }
 
 function step(camY, camD) {

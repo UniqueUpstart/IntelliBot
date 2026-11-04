@@ -13,13 +13,17 @@ import { MECHANICAL_DANCE, MECHANICAL_DANCE_REST_POSE } from './mechanical_dance
 import { DISCO_DANCE, DISCO_DANCE_REST_POSE } from './disco_dance_data.js?v=3';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
 
+import {COMPANION_MOTIONS, COMPANION_REST} from './companion_motion_data.js?v=2';
+
 const TIMELINE_MOTIONS = new Map([
+  ...COMPANION_MOTIONS.map(motion => [motion.id, motion]),
   [STREET_DANCE.id, STREET_DANCE],
   [BELLY_LAUGH.id, BELLY_LAUGH],
   [MECHANICAL_DANCE.id, MECHANICAL_DANCE],
   [DISCO_DANCE.id, DISCO_DANCE],
 ]);
 const TIMELINE_REST_POSES = new Map([
+  ...COMPANION_MOTIONS.map(motion => [motion.id, COMPANION_REST]),
   [STREET_DANCE.id, STREET_DANCE_REST_POSE],
   [BELLY_LAUGH.id, BELLY_LAUGH_REST_POSE],
   [MECHANICAL_DANCE.id, MECHANICAL_DANCE_REST_POSE],
@@ -60,6 +64,7 @@ const HINGES = [
   ['right_knee_joint', 'rKnee', 'y'],
   ['right_ankle_pitch_joint', 'rAnklePitch', 'y'],
   ['right_ankle_roll_joint', 'rAnkleRoll', 'x'],
+  ['waist_pitch_joint', 'waistPitch', 'y'],
   ['waist_roll_joint', 'waistRoll', 'x'],
   ['waist_yaw_joint', 'waistYaw', 'z'],
   ['left_shoulder_pitch_joint', 'lShPitch', 'y'],
@@ -1158,7 +1163,9 @@ function buildFigure(mat) {
   root.add(limb('right', bones, mat.pants, mat.sole));
   const waistRoll = pivot(root, 'x');
   waistRoll.position.z = 0.08;
-  const waistYaw = pivot(waistRoll, 'z');
+  const waistPitch = pivot(waistRoll, 'y');
+  bones.waistPitch = waistPitch;
+  const waistYaw = pivot(waistPitch, 'z');
   waistYaw.add(rod(0.28, 0.09, mat.shirt, '+z'));
   bones.waistRoll = waistRoll;
   bones.waistYaw = waistYaw;
