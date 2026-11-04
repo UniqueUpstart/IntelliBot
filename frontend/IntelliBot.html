@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="css/rail.css?v=55">
   <link rel="stylesheet" href="css/workspace.css?v=29">
   <link rel="stylesheet" href="css/cards.css?v=31">
-  <link rel="stylesheet" href="css/modal.css?v=35">
+  <link rel="stylesheet" href="css/modal.css?v=36">
   <link rel="stylesheet" href="css/chat.css?v=111">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
@@ -562,11 +562,10 @@
 
       </div>
 
-      <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组方卡、最多 6 张，
-           选中的那枚涨满主题色，导入进来的模型由 js/q1skin.js 追加到末尾。
-           导入与「删除当前导入」都排在卡下面，后者只在选中导入的模型时出现，
-           导入过程的提示挂在最末一行。两个 data-skin-* 钩子原样保留，
-           q1skin.js 无需改动 -->
+      <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组自适应方卡，
+           选中的那枚涨满主题色，导入卡固定在模型网格末尾，新导入的模型由
+           js/q1skin.js 插在导入卡前面。「删除当前导入」排在卡下面，只在选中
+           导入的模型时出现，导入过程的提示挂在最末一行 -->
       <div class="rail__view rail__view--pref" data-rail-view="preference">
         <div class="pref" data-skin-panel>
           <div class="pref__group pref__group--skin">
@@ -632,11 +631,14 @@
                 </span>
                 <span class="skin-card__name" data-i18n="rail.left.skin.figure">示意人形</span>
               </button>
+              <label class="skin-card skin-card--import" role="button" tabindex="0" data-skin-import>
+                <span class="skin-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32"><path d="M6 10h8l3 3h9v13H6V10Z"/><path d="M16 14v7m-3.5-3.5L16 21l3.5-3.5"/></svg>
+                </span>
+                <span class="skin-card__name" data-i18n="rail.left.skin.import">导入</span>
+                <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
+              </label>
             </div>
-            <label class="pref__row" role="button" tabindex="0" data-skin-import>
-              <span data-i18n="rail.left.skin.import">Import</span>
-              <input data-skin-file type="file" accept=".glb,.gltf,.fbx" hidden>
-            </label>
             <button class="pref__row" type="button" data-skin-delete hidden>
               <span data-i18n="rail.left.skin.delete">删除当前导入</span>
             </button>
@@ -1175,7 +1177,7 @@
 </script>
 <script type="module" src="js/robot3d.js?v=80"></script>
 <script type="module" src="js/view-control.js?v=51"></script>
-<script type="module" src="js/q1skin.js?v=44"></script>
+<script type="module" src="js/q1skin.js?v=45"></script>
 
 </body>
 </html>

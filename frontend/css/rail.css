@@ -478,9 +478,9 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 
 /* ── 偏好页：机器人外观 ───────────────────────────────────────────
-   这一页只做一件事：换机器人外观。四张内置卡 + 导入进来的模型，
-   与上面三页同一套 1fr 网格、同样的 8px 间隔，一行四张（导入到第五、
-   第六张时换第二行）。卡是方的、图标 34、名字 14，选中那枚涨满主题色。
+   这一页只做一件事：换机器人外观。内置卡、导入进来的模型与末尾的导入卡，
+   与上面三页同一套 1fr 网格、同样的 8px 间隔，一行四张。
+   卡是方的、图标 34、名字 14，选中那枚涨满主题色。
    面板自己就是滚动区，所以这块不再自带 overflow —— 弹窗里那套
    .pref 的 flex:1 + overflow-y:auto 在这里只留纵向排布 */
 .rail--right .rail__view--pref .pref{
@@ -493,7 +493,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .rail--right .rail__view--pref .skin-grid{
   grid-template-columns:repeat(4,minmax(0,1fr));
 }
-/* 导入 / 删除两行与卡左缘对齐：.pref__row 自带 12 的左右内边距，
+/* 删除行与卡左缘对齐：.pref__row 自带 12 的左右内边距，
    那一截是给 hover 底色留的，把行整体左移同样的量，文字才落在网格线上 */
 .rail--right .rail__view--pref .pref__row{
   margin-left:-12px;
