@@ -73,6 +73,7 @@
 
   function save(v) {
     try { localStorage.setItem(KEY, v); } catch (e) {}
+    window.dispatchEvent(new CustomEvent('intellibot-state-dirty'));
   }
 
   function pick(v) {
@@ -168,7 +169,11 @@
   });
 
   document.addEventListener('authchange', function (e) {
-    setGuestState(!(e.detail && e.detail.user));
+    var signedIn = !!(e.detail && e.detail.user);
+    if (signedIn) {
+      try { current = localStorage.getItem(KEY) || 'a1'; } catch (_error) { current = 'a1'; }
+    }
+    setGuestState(!signedIn);
   });
 
   /* 初始态跟着标记走：#account 默认带 is-guest，登录后由 auth.js 摘掉 */

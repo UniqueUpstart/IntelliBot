@@ -50,6 +50,7 @@
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
   var history = [];
   var records = [];
+  var restoring = false;
   var pending = false;
   var sequenceToken = 0;
   var STAGE_LIMIT = 60;   /* 舞台每侧最多留 60 条，更早的看左栏完整对话流 */
@@ -73,6 +74,12 @@
   try {
     if (localStorage.getItem(SPEECH_KEY) === '0') speechEnabled = false;
   } catch (_error) {}
+
+  function stateDirty() {
+    if (!restoring && window.dispatchEvent && typeof CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('intellibot-state-dirty'));
+    }
+  }
 
   function tr(key, fallback) {
     var value = typeof window.t === 'function' ? window.t(key) : '';
@@ -233,8 +240,13 @@
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
-  function addRecord(role, text, modifier) {
-    var record = {id: records.length + 1, role: role, content: text, time: Date.now()};
+  function addRecord(role, text, modifier, saved) {
+    var record = {
+      id: records.length + 1,
+      role: role,
+      content: text,
+      time: saved && Number.isFinite(saved.time) ? saved.time : Date.now(),
+    };
     records.push(record);
     var node = document.createElement('div');
     node.className = 'assistant-chat__message assistant-chat__message--' + role;
@@ -247,6 +259,7 @@
     scrollBottom();
     showStage(role === 'ai' ? 'assistant' : role, text, record.id);
     syncHistoryActions();
+    stateDirty();
     return {node: node, record: record};
   }
 
@@ -257,6 +270,7 @@
     if (modifier) entry.node.classList.add('assistant-chat__message--' + modifier);
     showStage('assistant', text, entry.record.id);
     scrollBottom();
+    stateDirty();
   }
 
   function note(text) {
@@ -586,7 +600,7 @@
     var timer = setTimeout(function () { controller.abort(); }, 35000);
     try {
       var headers = {'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID()};
-      var token = sessionStorage.getItem('intellibot.auth.token');
+      var token = window.intellibotAuth ? window.intellibotAuth.token : '';
       if (token) headers.Authorization = 'Bearer ' + token;
       var body = {message: text, history: previous};
       var persona = window.intellibotPersona && window.intellibotPersona.active;
@@ -598,7 +612,7 @@
       });
       var payload = await response.json().catch(function () { throw new Error('AI 服务返回了无法解析的响应'); });
       if (response.status === 401) {
-        sessionStorage.removeItem('intellibot.auth.token');
+        try { localStorage.removeItem('intellibot.auth.token'); } catch (_error) {}
         stopActions();
         window.dispatchEvent(new CustomEvent('intellibot-auth-required'));
       }
@@ -748,6 +762,7 @@
         {role: 'user', content: text},
         {role: 'assistant', content: data.reply.slice(0, 500 - actionRecord.length) + actionRecord},
       ]).slice(-10);
+      stateDirty();
       if (data.stop) stopActions();
       else if (commands.length) playCommands(commands);
       return true;
@@ -829,7 +844,50 @@
     if (suggestions) suggestions.hidden = false;
     setHistoryMenu(false);
     syncHistoryActions();
+    stateDirty();
     input.focus();
+  }
+
+  function exportState() {
+    return {
+      history: history.slice(-10).map(function (item) {
+        return {role: item.role, content: String(item.content || '').slice(0, 500)};
+      }),
+      records: records.slice(-50).map(function (item) {
+        return {
+          role: item.role,
+          content: String(item.content || '').slice(0, 1000),
+          time: item.time,
+        };
+      }),
+    };
+  }
+
+  function restoreState(state) {
+    if (!state || !Array.isArray(state.records) || !Array.isArray(state.history)) return false;
+    restoring = true;
+    history = state.history.filter(function (item) {
+      return item && (item.role === 'user' || item.role === 'assistant') &&
+        typeof item.content === 'string';
+    }).slice(-10).map(function (item) {
+      return {role: item.role, content: item.content.slice(0, 500)};
+    });
+    records = [];
+    log.replaceChildren();
+    hideStage();
+    state.records.filter(function (item) {
+      return item && (item.role === 'user' || item.role === 'ai') &&
+        typeof item.content === 'string';
+    }).slice(-50).forEach(function (item) {
+      addRecord(item.role, item.content.slice(0, 1000), '', {time: Number(item.time) || Date.now()});
+    });
+    restoring = false;
+    welcomeShown = records.length > 0;
+    if (records.length) setStarted();
+    paintSuggestions();
+    syncHistoryActions();
+    scrollBottom();
+    return true;
   }
 
   function welcome(playMotion) {
@@ -1003,6 +1061,8 @@
     stopVoiceInput: stopVoiceInput,
     stopSpeaking: stopSpeaking,
     getHistory: function () { return history.slice(); },
+    exportState: exportState,
+    restoreState: restoreState,
     get history() { return history.slice(); },
     get speechEnabled() { return speechEnabled; },
     get listening() { return listening; },

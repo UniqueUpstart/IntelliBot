@@ -23,6 +23,8 @@ ctest --test-dir backend-build --output-on-failure
 | `POST /auth/register` | username、password、可选 display_name；成功201，不自动登录 |
 | `POST /auth/login` | username、password；返回 access_token、expires_in、user |
 | `GET /auth/me` | 返回当前 user |
+| `GET /auth/state` | 返回当前账号保存的对话、外观与界面状态 |
+| `PUT /auth/state` | 保存当前账号状态，JSON 上限 256KB |
 | `POST /auth/logout` | 作废当前登录及其页面会话 |
 | `GET /browser/actions` | 返回公共动作目录 items |
 | `POST /browser/sessions` | 创建独立页面，返回 session_id |
@@ -32,13 +34,13 @@ ctest --test-dir backend-build --output-on-failure
 | `GET /ai/config` | 读取当前模型配置（不返回 API Key） |
 | `PUT /ai/config` | 更新模型配置；仅允许本机请求 |
 
-用户名3～24位字母、数字或下划线，统一小写；密码8～64位可见ASCII字符，允许空格且不自动裁剪；昵称1～32字符。令牌有效8小时，退出立即失效；数据库仅保存令牌摘要。注册与登录有请求限流。
+用户名3～24位字母、数字或下划线，统一小写；密码8～16位可见ASCII字符，允许空格且不自动裁剪；昵称1～32字符。令牌有效8小时，退出立即失效；数据库仅保存令牌摘要。注册与登录有请求限流。
 
 常见错误：400参数错误、401未登录或凭据错误、404页面会话不存在、409用户名重复、429请求过频。
 
 ## 前端接入
 
-登录令牌保存在 `sessionStorage`，401时清理并返回登录页。每次页面加载创建新的 session_id，不共享页面会话；每个登录最多保留20个页面会话，可主动DELETE释放。
+登录令牌保存在 `localStorage`，401时清理并返回登录页。账号状态采用白名单保存近期对话、压缩后的个性头像、内置外观选择、界面偏好、自定义角色与快捷指令；API Key、头像原始文件和导入模型文件不会进入账号状态。每次页面加载创建新的 session_id，不共享页面会话；每个登录最多保留20个页面会话，可主动DELETE释放。
 
 动作请求示例：`{"action_id":"raise_hand"}`。后端只授权并返回动画信息（status=authorized、robot_executed=false），浏览器调用 `window.robot3d.playClip(clip,loop)`；`robot-playback` 事件报告 playing/completed。后端查询结果不是实际播放进度。
 

@@ -36,6 +36,12 @@ with tempfile.TemporaryDirectory() as tmp:
         a=data('POST','/auth/login',{'username':'ALICE','password':'pass word123'})['access_token']
         b=data('POST','/auth/login',{'username':'bob','password':'pass word123'})['access_token']
         assert data('GET','/auth/me',token=a)['user']['username']=='alice'
+        assert data('GET','/auth/state',token=a)['state'] is None
+        saved={'version':1,'storage':{'intellibot.mode':'night'},'chat':{'records':[],'history':[]}}
+        assert data('PUT','/auth/state',{'state':saved},a)['saved'] is True
+        assert data('GET','/auth/state',token=a)['state']==saved
+        assert data('GET','/auth/state',token=b)['state'] is None
+        assert call('PUT','/auth/state',{'state':'invalid'},a)[0]==400
         pages=[data('POST','/browser/sessions',{},token=t,status=201)['session_id'] for t in [a,a,b]]
         assert len(set(pages))==3
         result=data('POST',f'/browser/sessions/{pages[0]}/actions',{'action_id':'raise_hand'},a)
@@ -56,6 +62,6 @@ with tempfile.TemporaryDirectory() as tmp:
             assert a not in str(list(con.execute('SELECT * FROM sessions')))
             con.execute('UPDATE sessions SET expires_at=0');con.commit()
         assert call('GET','/auth/me',token=b)[0]==401
-        print('PASS: registration, duplicate, wrong password, restart persistence, token hash, logout, expiry, account/page isolation, shared-control rejection')
+        print('PASS: registration, profile state, duplicate, wrong password, restart persistence, token hash, logout, expiry, account/page isolation, shared-control rejection')
     finally:
         if process and process.poll() is None:stop()

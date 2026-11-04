@@ -724,7 +724,7 @@
 <script src="js/card_pickup.js?v=15"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
-<script src="js/avatar.js?v=5"></script>
+<script src="js/avatar.js?v=6"></script>
 
 <!-- 按压反馈：GSAP 3.12.5（本地库，与 STRCAT 同版本） -->
 <script src="lib/gsap.min.js"></script>
@@ -752,9 +752,47 @@
   <form class="auth__panel" id="auth-panel" role="dialog" aria-modal="true"
         data-i18n-aria="auth.dialog" aria-label="Sign in or register" novalidate>
 
-    <!-- 左侧 2/3 留白：卡片按 3:2（宽:高）定形，右列占 1/3 放表单。
-         这块现在空着，占位是为了让右列落在三分之一上，以后要放插画或品牌图也在这里 -->
-    <div class="auth__aside" aria-hidden="true"></div>
+    <section class="auth__aside" aria-labelledby="auth-aside-title">
+      <div class="auth__brand">
+        <img src="icon/logo.svg" alt="" aria-hidden="true">
+        <span>IntelliBot</span>
+      </div>
+
+      <div class="auth__story">
+        <p class="auth__signal"><span aria-hidden="true"></span><span data-i18n="auth.aside.signal">智能机器人交互平台</span></p>
+        <h2 id="auth-aside-title" data-i18n="auth.aside.title">让语言变成表情与动作</h2>
+        <p data-i18n="auth.aside.body">与智能机器人自然交流，用一句话触发回应、表情和动作。</p>
+      </div>
+
+      <div class="auth__robot-scene" aria-hidden="true">
+        <span class="auth__orbit auth__orbit--one"></span>
+        <span class="auth__orbit auth__orbit--two"></span>
+        <span class="auth__greeting" data-i18n="auth.aside.greeting">你好，很高兴见到你！</span>
+        <svg class="auth__robot" viewBox="0 0 260 360">
+          <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect class="auth__robot-shell" x="94" y="22" width="72" height="62" rx="29"/>
+            <rect class="auth__robot-face" x="102" y="30" width="56" height="43" rx="20"/>
+            <path d="M117 49h6m14 0h6m-22 12c6 4 12 4 18 0"/>
+            <path class="auth__robot-shell" d="M94 102c13-12 59-12 72 0l17 105c-27 23-79 23-106 0z"/>
+            <path d="M107 88v14m46-14v14M91 126c-18 1-28 12-31 30l-15 87m124-117c18 1 28 12 31 30l15 87"/>
+            <path class="auth__robot-shell" d="M60 150l-14 79m154-79l14 79"/>
+            <circle cx="45" cy="244" r="14"/><circle cx="215" cy="244" r="14"/>
+            <path d="M101 226l-17 35-4 68m79-103l17 35 4 68"/>
+            <path class="auth__robot-shell" d="M84 261l-4 68m96-68l4 68"/>
+            <path d="M65 337h34m62 0h34"/>
+            <circle cx="91" cy="128" r="13"/><circle cx="169" cy="128" r="13"/>
+            <circle cx="82" cy="258" r="13"/><circle cx="178" cy="258" r="13"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="auth__continuity" aria-label="产品能力">
+        <span data-i18n="auth.aside.chat">智能对话</span>
+        <span data-i18n="auth.aside.skin">动作交互</span>
+        <span data-i18n="auth.aside.settings">本地仿真</span>
+      </div>
+      <p class="auth__privacy" data-i18n="auth.aside.privacy">登录后可继续上次的对话与个性化体验。</p>
+    </section>
 
     <div class="auth__body">
       <!-- 页签：纯文字，登录 / 注册，两者平分列宽、字居中。选中与 hover
@@ -933,23 +971,23 @@
       <div class="doc__body">
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">01</span>定义</div>
-          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面及其姿态控制、动作演示与本地仿真联动功能；「本地存储」指浏览器提供的 localStorage 机制；「你」指访问并使用本服务的自然人。</p>
+          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面、账号、智能对话、姿态控制、动作演示与本地仿真联动功能；「本地存储」包括浏览器 localStorage 与运行本服务的电脑上的 SQLite 数据库；「你」指访问并使用本服务的自然人。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">02</span>适用范围</div>
-          <p class="doc__text">本政策适用于你访问本服务并使用上述功能的全过程。本服务不提供账号注册、云端同步、在线支付与广告投放，涉及此类场景的处理规则不适用本政策；本服务之外的外部网站适用其各自的隐私政策。</p>
+          <p class="doc__text">本政策适用于你访问本服务并使用上述功能的全过程。本服务提供本机账号注册与状态保存，但不提供互联网云端同步、在线支付与广告投放；本服务之外的外部网站适用其各自的隐私政策。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
-          <p class="doc__text">本服务不设账号体系，不收集姓名、联系方式、设备标识符、精确位置、生物识别信息等可识别你身份的信息，亦不通过 Cookie、像素标签或类似技术进行跨站追踪。仅在本地写入界面偏好：<span class="doc__code">intellibot.mode</span>（显示模式）、<span class="doc__code">intellibot.bg</span>（背景样式）、<span class="doc__code">intellibot:avatar</span>（所选头像）、<span class="doc__code">intellibot:personas</span> 与 <span class="doc__code">intellibot:persona</span>（自定义 AI 角色及其样式），以及模型历史和机器人外观选择。</p>
+          <p class="doc__text">本服务保存你主动创建的用户名、昵称、密码哈希和登录会话，并可按账号保存近期对话、压缩后的个性头像、内置机器人外观、界面偏好、自定义 AI 角色与快捷指令。本服务不收集联系方式、设备标识符、精确位置或生物识别信息，也不通过 Cookie、像素标签等技术进行跨站追踪。API Key 与导入模型文件不进入账号状态。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
-          <p class="doc__text">上述本地信息的用途是在你下次访问时还原界面、角色和机器人外观，处理依据为你对相应设置的主动选择。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务，以生成回复；本服务不会基于这些信息开展用户画像、个性化推荐、广告投放或自动化决策，也不会将其用于模型训练。</p>
+          <p class="doc__text">上述信息用于验证登录身份，并在你再次登录时还原近期对话、界面、角色、快捷指令和机器人外观。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务以生成回复；本服务不会基于这些信息开展用户画像、广告投放或模型训练。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">05</span>头像信息的处理</div>
-          <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换，结果以 dataURL 形式写入上述存储项。原始文件不会被二次读取、不会被复制到其他位置，也不经网络传输；你可随时替换或清除该头像。</p>
+          <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换；登录后仅将压缩结果随账号状态保存到本机数据库。原始文件不会被复制或上传到外部服务，你可随时替换该头像。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">06</span>仿真数据的传输范围</div>
@@ -957,7 +995,7 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">07</span>存储位置与留存期限</div>
-          <p class="doc__text">上述数据仅存于你的终端设备，不设固定留存期限，保存至你主动清除为止。你可通过浏览器设置清除该站点的数据，或在开发者工具中移除对应键值；删除后相关偏好恢复初始状态。</p>
+          <p class="doc__text">浏览器偏好保存在当前浏览器；账号、登录会话与账号状态保存在运行本服务的电脑上。数据保存至你主动清除浏览器站点数据或删除本地数据库为止；清除后对应内容恢复初始状态。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">08</span>对外提供与共享</div>
@@ -965,11 +1003,11 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">09</span>安全措施与风险提示</div>
-          <p class="doc__text">本服务通过限制对外请求、不持久化敏感数据等方式降低风险。但请理解，任何本地存储都可能因设备共用、浏览器漏洞或恶意扩展而被他人读取，请在共享设备上谨慎保存个人信息，并在使用后及时清除。</p>
+          <p class="doc__text">密码只保存 Argon2id 哈希，登录令牌只保存摘要，API Key 不进入账号状态；账号数据库默认仅由本机服务访问。任何本地数据仍可能因设备共用、浏览器漏洞或恶意扩展而被读取，请在共享设备上使用后退出登录。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">10</span>你的权利</div>
-          <p class="doc__text">在适用法律允许的范围内，你有权知悉、访问、更正与删除上述数据。由于本服务不持有你的数据副本，上述权利均通过你的浏览器直接行使；我们无法代为查阅、导出、更正或删除。</p>
+          <p class="doc__text">你可以在界面中查看、修改或清除对话与偏好，并通过退出登录作废当前会话。浏览器数据可在浏览器设置中清除；账号数据库由本机项目维护者管理，可按需查看或删除。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">11</span>未成年人保护</div>
@@ -1176,6 +1214,7 @@
 <script src="js/model_config.js?v=18"></script>
 <script src="js/persona.js?v=5"></script>
 <script src="js/assistant_chat.js?v=39"></script>
+<script src="js/profile_state.js?v=3"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->

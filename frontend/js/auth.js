@@ -363,6 +363,9 @@
   async function logout() {
     disarmLogout();
     if (logoutBtn) logoutBtn.disabled = true;
+    if (window.intellibotProfile && typeof window.intellibotProfile.flush === 'function') {
+      try { await window.intellibotProfile.flush(); } catch (err) {}
+    }
     try {
       await api('/auth/logout', { method: 'POST', body: {} });
     } catch (err) {
@@ -518,6 +521,7 @@
   /* 给别的脚本留个读口：当前登录用户与手动开合 */
   window.intellibotAuth = {
     get user() { return user; },
+    get token() { return readToken(); },
     open: openPanel,
     close: closePanel,
     logout: logout
