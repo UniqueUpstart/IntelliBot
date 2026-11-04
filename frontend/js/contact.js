@@ -2,8 +2,7 @@
    第一下不跳转，只把按钮上的字换成仓库地址 —— 先让你看清要去哪；
    在同一个按钮上再点一次，才真的在新标签页打开 GitHub。
    点完把指针移开、在按钮外停满 3 秒，文字退回 Contact。
-   这个 3 秒与 Advance 里「断连」确认态的停留时间等长（sim.js 的 armTimer）：
-   两处都是「留一下反悔的时间」，时长一致才不会一处急、一处慢。 */
+   这段停留给用户留下确认与反悔的时间。 */
 (function () {
   var pill = document.querySelector('.pill[data-contact]');
   if (!pill) return;

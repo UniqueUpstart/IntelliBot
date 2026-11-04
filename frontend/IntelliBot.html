@@ -28,7 +28,6 @@
   <link rel="stylesheet" href="css/modal.css?v=36">
   <link rel="stylesheet" href="css/chat.css?v=137">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
-  <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
 <link rel="stylesheet" href="css/auth.css?v=14">
@@ -850,114 +849,25 @@
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
 <script src="js/auth.js?v=12"></script>
 
-<!-- 居中弹窗：Preference / Advance / Settings / Privacy 四枚胶囊共用。
+<!-- 居中弹窗：Preference / Settings / Privacy 三枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
-     Preference 装机器人外观（换皮与导入）；Advance 装仿真面板；
+     Preference 装机器人外观（换皮与导入）；
      Settings 是左区标题与目录 + 右区选项页；Privacy 是一段纯文本（.doc）。
      Contact 不在这一套里 —— 它是账号菜单里的两段式链接入口（js/contact.js） -->
 <div class="modal" id="modal" aria-hidden="true">
-  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Advance">
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="IntelliBot">
     <!-- 柔光两层：常态 16px 一层，展开时再把 32px 那层淡入叠上去（浓度合计 .2×k）。
          都画在独立元素上，弹窗呼吸时改的只有 opacity —— 合成器就能做，
          不必每帧重画一道 32px 的模糊阴影（见 cards.css） -->
     <div class="modal__glow" aria-hidden="true"></div>
     <div class="modal__glow modal__glow--up" aria-hidden="true"></div>
     <!-- 顶部 64 为标题区：左列标题 + 说明；
-         文案由尾部脚本按所点的胶囊写入，这里放 Advance 一套做初始值 -->
+         文案由尾部脚本按所点的胶囊写入。 -->
     <div class="modal__head">
       <div class="modal__col">
-        <div class="modal__title" data-modal-title data-i18n="modal.advance.title">Advance</div>
-      </div>
-      <!-- Advance 的主动作挂在标题区右上角：连接仿真只在仿真面板里有意义。
-           其余弹窗由脚本按 data-advance-only 收掉 -->
-      <div class="modal__act" data-advance-only hidden>
-        <button class="modal__act-btn" type="button" data-sim-connect>
-          <span class="modal__act-label">连接</span>
-          <svg class="modal__act-arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3,.3.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42.35,.77.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-        </button>
+        <div class="modal__title" data-modal-title>IntelliBot</div>
       </div>
     </div>
-
-    <!-- Advance：MuJoCo 仿真联调的全部操作都在这里，页面上不再有额外浮层。
-         结构只摆位，事件与轮询由 js/sim.js 绑定；与机型列表、Settings 互斥，
-         脚本按 data-advance-only 切 hidden -->
-    <div class="modal__body adv" data-advance-only hidden>
-      <div class="adv__grid">
-        <figure class="adv__stage">
-          <div class="adv__viewport" data-sim-viewport>
-            <img class="adv__frame" data-sim-frame alt="MuJoCo 仿真画面" draggable="false" data-offline>
-          </div>
-        </figure>
-        <div class="adv__side">
-          <p class="adv__empty" data-sim-empty data-i18n="sim.empty">请先连接仿真</p>
-          <!-- 速度置顶、不随分区切换：它同时缩放四个分区的操作快慢
-               （关节滑块的跟随速度、姿态过渡、动作与步态的相位） -->
-          <div class="adv__speed">
-            <span class="adv__row-lab" data-i18n="sim.speed">速度</span>
-            <input type="range" min="0.3" max="2.5" step="0.1" value="1" data-sim-speed>
-            <b data-sim-speed-val>1.0x</b>
-          </div>
-          <!-- 联动与三个关节分组并列：点它，下方内容区从关节滑块换成
-               姿态 / 动作 / 步态三行胶囊，宽度和滑块区一致，不再挤在侧栏底部 -->
-          <div class="adv__tabs" role="tablist" aria-label="调节分组">
-            <button class="adv__tab is-sel" type="button" role="tab" aria-selected="true" data-joint-group="arm">
-              <span class="adv__label" data-i18n="sim.tab.arm">手臂</span>
-              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-            </button>
-            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="waist">
-              <span class="adv__label" data-i18n="sim.tab.waist">腰</span>
-              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-            </button>
-            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="leg">
-              <span class="adv__label" data-i18n="sim.tab.leg">腿</span>
-              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-            </button>
-            <button class="adv__tab" type="button" role="tab" aria-selected="false" data-joint-group="link">
-              <span class="adv__label" data-i18n="sim.tab.link">联动</span>
-              <svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg>
-            </button>
-          </div>
-          <div class="adv__joints" data-sim-joints></div>
-          <div class="adv__link" data-sim-link hidden>
-            <div class="adv__row">
-              <span class="adv__row-lab" data-i18n="sim.row.posture">姿态</span>
-              <div class="adv__chips" data-sim-presets></div>
-            </div>
-            <div class="adv__row">
-              <span class="adv__row-lab" data-i18n="sim.row.gesture">动作</span>
-              <div class="adv__chips" data-sim-gestures></div>
-            </div>
-            <div class="adv__row">
-              <span class="adv__row-lab" data-i18n="sim.row.gait">步态</span>
-              <div class="adv__chips" data-sim-gaits></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 参数实时显示：挂在面板外侧右边（绝对定位到 left:100%），
-         高度与面板齐平，逐行一项；最底部那条是操作提示 -->
-    <div class="modal__stats" role="group" aria-label="仿真参数" data-advance-only hidden>
-      <div class="adv__stats-list" data-sim-state></div>
-      <p class="adv__msg" role="status" data-sim-message data-i18n="sim.hint">先启动 sim/mujoco_bridge.py，再点连接仿真。</p>
-    </div>
-
-    <!-- 工具按钮：与右侧参数栏同尺寸的底板，挂在面板左边框外 8px。
-         一行一个，未 hover 时无底色无描边 -->
-    <!-- 工具按钮：文字包在 .adv__label 里、另带一枚 .adv__arrow，
-         为的是复用顶栏胶囊那套 hover 文字动画（字右滑、箭头左侧浮出），
-         所以 sim.js 改写文案时写的是 .adv__label，不能直接写按钮的 textContent -->
-    <div class="adv__rail" data-advance-only hidden>
-      <button class="adv__btn" type="button" data-sim-mode><span class="adv__label" data-i18n="sim.mode.dynamic">动力学模式</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-reset><span class="adv__label" data-i18n="sim.reset_pose">重置姿态</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-cam-reset><span class="adv__label" data-i18n="sim.reset_cam">重置视角</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-turn="-0.8"><span class="adv__label" data-i18n="sim.turn_left">左转</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-turn="0.8"><span class="adv__label" data-i18n="sim.turn_right">右转</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-stop><span class="adv__label" data-i18n="sim.stop">停止</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-      <button class="adv__btn" type="button" data-sim-shot><span class="adv__label" data-i18n="sim.save_frame">保存当前帧</span><svg class="adv__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35c.3.3.3.79,0,1.09l-4.35,4.35c-.3.3-.54.89-.54,1.31v3.9c0,.42.35.77.77.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3.79-.79,1.09-1.09l4.35-4.35Z"/></svg></button>
-    </div>
-
 
     <!-- Privacy：条款体例的隐私政策。每条 = 序号 + 小标题 + 正文，序号取主题色。
          顺序按「定义 → 范围 → 信息类型 → 目的依据 → 单项说明 → 存储期限 →
@@ -970,7 +880,7 @@
       <div class="doc__body">
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">01</span>定义</div>
-          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面、账号、智能对话、姿态控制、动作演示与本地仿真联动功能；「本地存储」包括浏览器 localStorage 与运行本服务的电脑上的 SQLite 数据库；「你」指访问并使用本服务的自然人。</p>
+          <p class="doc__text">本政策中，「本服务」指 IntelliBot 项目的浏览器端界面、账号、智能对话、姿态控制与动作演示功能；「本地存储」包括浏览器 localStorage 与运行本服务的电脑上的 SQLite 数据库；「你」指访问并使用本服务的自然人。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">02</span>适用范围</div>
@@ -989,31 +899,27 @@
           <p class="doc__text">当你主动选择本地图片作为头像时，本服务在浏览器内完成居中裁剪、等比缩放与格式转换；登录后仅将压缩结果随账号状态保存到本机数据库。原始文件不会被复制或上传到外部服务，你可随时替换该头像。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">06</span>仿真数据的传输范围</div>
-          <p class="doc__text">页面与仿真桥之间的关节参数、动作指令与画面帧仅经本机回环地址传输，不经过任何外部服务器。本服务不将仿真过程写入日志或持久化存储，连接断开后相关数据不在任何位置留存。</p>
-        </section>
-        <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">07</span>存储位置与留存期限</div>
+          <div class="doc__name"><span class="doc__no">06</span>存储位置与留存期限</div>
           <p class="doc__text">浏览器偏好保存在当前浏览器；账号、登录会话与账号状态保存在运行本服务的电脑上。数据保存至你主动清除浏览器站点数据或删除本地数据库为止；清除后对应内容恢复初始状态。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">08</span>对外提供与共享</div>
+          <div class="doc__name"><span class="doc__no">07</span>对外提供与共享</div>
           <p class="doc__text">本服务不会出售、出租、转让或公开披露你的信息。唯一例外是你主动点击本服务中的外部链接：点击后你即离开本服务，该网站对其自身的处理行为负责，本服务不承担责任，亦不向其提供任何数据。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">09</span>安全措施与风险提示</div>
+          <div class="doc__name"><span class="doc__no">08</span>安全措施与风险提示</div>
           <p class="doc__text">密码只保存 Argon2id 哈希，登录令牌只保存摘要，API Key 不进入账号状态；账号数据库默认仅由本机服务访问。任何本地数据仍可能因设备共用、浏览器漏洞或恶意扩展而被读取，请在共享设备上使用后退出登录。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">10</span>你的权利</div>
+          <div class="doc__name"><span class="doc__no">09</span>你的权利</div>
           <p class="doc__text">你可以在界面中查看、修改或清除对话与偏好，并通过退出登录作废当前会话。浏览器数据可在浏览器设置中清除；账号数据库由本机项目维护者管理，可按需查看或删除。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">11</span>未成年人保护</div>
+          <div class="doc__name"><span class="doc__no">10</span>未成年人保护</div>
           <p class="doc__text">本服务不面向未成年人单独提供，也不主动收集其年龄或身份信息。若监护人认为未成年人存在不当使用情形，可通过下方所列联系方式告知，我们将在核实后作出处理。</p>
         </section>
         <section class="doc__sec">
-          <div class="doc__name"><span class="doc__no">12</span>政策变更与联系方式</div>
+          <div class="doc__name"><span class="doc__no">11</span>政策变更与联系方式</div>
           <p class="doc__text">本政策可能随功能调整而更新，更新版本在本页面发布并自发布之日起生效；涉及处理方式实质变化的，将在弹窗内以显著方式提示。对本政策有任何疑问、异议或投诉，可通过账号菜单里的 Contact 入口打开仓库地址与我们联系。</p>
         </section>
       </div>
@@ -1219,9 +1125,6 @@
 
 <!-- ===================== 背景动效 ===================== -->
 <script src="js/background.js?v=2"></script>
-<!-- MuJoCo 仿真：操作面板在 Advance 弹窗内（.adv），这里只绑事件与轮询 -->
-<script src="js/sim.js?v=26"></script>
-
 <!-- ===================== 舞台中央的机器人（q1_ff.glb） =====================
      three.js 与 addons 都放在 lib/three 下，走 importmap 解析裸模块名；
      模型 6.4MB，加载完才淡入，取不到就只留点阵背景，不影响任何交互 -->

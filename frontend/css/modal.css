@@ -21,98 +21,6 @@
 }
 .modal__col--end{align-items:flex-end; text-align:right}
 
-/* Advance 标题区右上角的主动作 */
-.modal__act{display:flex; flex:0 0 auto}
-.modal__act[hidden]{display:none}
-/* 与顶栏胶囊同一套形制：底片挂在 ::before 上，按住由 press.js 逐帧写 --press，
-   底片等比内收再 elastic 弹回，按下有压弹而不是下沉 1px。
-   区别是底片不再藏进 scale:0 —— 这是弹窗的主动作，静止也要看出是一颗按钮，
-   所以主题色底与反白字常驻；悬停不再改色（底色常驻之后再压深一档，
-   每次扫过都像闪了一下），反馈交给文字：字滑到右端、箭头从左侧浮现。
-   isolation + z-index:-1 让底片落在文字之下 —— 按钮的字是裸文本，不是子元素 */
-/* 定长 128：文案在「连接 / 已连接 / 断连」之间切换时按钮不会忽宽忽窄，
-   标题右列的对齐也就不会跟着跳。两颗主动作同宽，Import 也吃这一档。
-   字号与顶栏胶囊同一档（--pill-fs），高度跟着取 --pill-h */
-.modal__act-btn{
-  position:relative; isolation:isolate;
-  width:128px; min-width:128px; padding:0; box-sizing:border-box;
-  height:var(--pill-h);
-  white-space:nowrap;
-  border:1px solid transparent; border-radius:999px;
-  background:transparent; color:var(--text-invert);
-  font-family:inherit; font-weight:var(--fw); font-size:var(--pill-fs);
-  letter-spacing:.2px; line-height:1; cursor:pointer;
-  transition:color .1s cubic-bezier(.7,0,.84,.16), opacity .12s linear;
-}
-/* inset 取 -1px 是为了连那 1px 透明描边一起盖住，涨满时不会在边上留一道亮边 */
-.modal__act-btn::before{
-  content:''; position:absolute; inset:-1px; z-index:-1;
-  border-radius:inherit; background:var(--theme);
-  pointer-events:none;                 /* 放大后不改命中区域，免得边缘反复 over/out 闪 */
-  scale:1;
-  transform-origin:50% 50%;
-  transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
-  /* 颜色不参与过渡：浅青到暗红之间会经过一段发灰的中间值，而 hover 进出时
-     这条过渡常只跑一半就被反向，看上去就是底色在闪。状态色瞬切，底片只管缩放 */
-  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
-}
-/* 文字与箭头：与顶栏胶囊同一套位移 —— 平时字居中，悬停时滑到右端、
-   箭头从左侧淡入并归位。悬停不再碰底色：底片常驻主题色，颜色只留给状态
-   （is-on 深一档、is-cut / is-arm 换 warning），指针扫过时只有文字在动。
-   位移只走 transform，不碰 left / padding：底片 ::before 与板面同盒，
-   改布局会让底片每帧重算，也和顶栏那套的节奏对不上 */
-.modal__act-label{
-  position:absolute; top:50%; left:50%;
-  transform:translate(-50%,-50%);
-  white-space:nowrap;
-  transition:transform var(--dur) var(--ease);
-}
-.modal__act-arrow{
-  position:absolute; top:50%; left:12px;
-  width:1em; height:1em; display:block;
-  fill:currentColor;
-  transform:translateY(-50%) translateX(-4px);
-  opacity:0;
-  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-/* 按钮定宽 128，所以目标偏移可以直接写死：left:50% 让字左缘落在 64，
-   再退掉 12 的内边距与自身宽度，右缘正好贴住 116。宽度改了这里要一起改 */
-.modal__act-btn:hover:not(:disabled) .modal__act-label{
-  transform:translate(calc(64px - 12px - 100%), -50%);
-}
-.modal__act-btn:hover:not(:disabled) .modal__act-arrow{
-  opacity:1; transform:translateY(-50%) translateX(0);
-}
-/* 断连确认的两态（is-cut / is-arm）不滑：文案已经换成「断连」、底色已经转
-   warning，再叠一层让位动画，两件事会同时抢注意力，字也会在换词的瞬间偏一下 */
-.modal__act-btn.is-cut:hover .modal__act-label,
-.modal__act-btn.is-arm:hover .modal__act-label{transform:translate(-50%,-50%)}
-.modal__act-btn.is-cut:hover .modal__act-arrow,
-.modal__act-btn.is-arm:hover .modal__act-arrow{
-  opacity:0; transform:translateY(-50%) translateX(-4px);
-}
-/* 按下期间几何由 GSAP 逐帧写，只关 transform 那条过渡，scale 留着 ——
-   边按边涨的底色不会在中途冻住 */
-.modal__act-btn.is-press::before{transition:scale .1s cubic-bezier(.7,0,.84,.16)}
-.modal__act-btn:disabled{opacity:.35; cursor:not-allowed}
-
-/* 连上之后底色再压深一档：底片本来就已经铺着，这一下让「已连接」和
-   「待连接」在静止状态下也分得开，字保持反白。指针一移上来就交给下面的
-   .is-cut，底色换成 warning，不再走这条 */
-.modal__act-btn.is-on{color:var(--text-invert)}
-.modal__act-btn.is-on::before{scale:1; background:color-mix(in srgb,var(--theme) 82%,#1c1c1c)}
-
-/* 指针停在上面：底片换 warning、文案由脚本改成「断连」、字保持反白。
-   这就是点下去会发生的事，先摆出来 —— 比原来「提亮一档」诚实得多，
-   也顺带替掉了 3 秒确认：鼠标用户一下即断，不再需要先点一下试探 */
-.modal__act-btn.is-cut{color:var(--text-invert)}
-.modal__act-btn.is-cut::before{scale:1; background:var(--warning)}
-
-/* 没有 hover 的输入（触屏、键盘）走这条：第一下进入 warning 确认态，
-   再点一次才真的断开；3 秒内没有第二下就退回已连接 */
-.modal__act-btn.is-arm{color:var(--text-invert)}
-.modal__act-btn.is-arm::before{scale:1; background:var(--warning)}
-
 .modal__title{
   font-size:var(--fs-28); line-height:1; letter-spacing:.2px;
   /* line-height:1 的盒高只有 1em，比字体的内容区（约 1.2em）小，
@@ -303,7 +211,7 @@
   .seg__opt:hover .seg__arrow{opacity:0; transform:translateY(-50%) translateX(-4px)}
 }
 
-/* ── 弹窗主体：内容区（仿真面板等）铺满标题区到面板底边 ─────────────
+/* ── 弹窗主体：内容区铺满标题区到面板底边 ───────────────────────────
    里层滚动，外层不滚；display:flex 会盖掉 [hidden] 的 display:none，
    下面补一条，切到别的弹窗时整块收掉 */
 .modal__body{
@@ -314,7 +222,7 @@
   overflow:clip;
 }
 /* display:flex 会盖掉 [hidden] 自带的 display:none，这里补回来：
-   切换弹窗时机型/仿真面板整块收起 */
+   切换弹窗时整块收起 */
 .modal__body[hidden]{display:none}
 
 

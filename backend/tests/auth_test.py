@@ -50,7 +50,7 @@ with tempfile.TemporaryDirectory() as tmp:
         assert data('GET',f'/browser/sessions/{pages[2]}',token=b)['state']['action_id']=='idle'
         assert call('GET',f'/browser/sessions/{pages[0]}',token=b)[0]==404
         assert call('POST',f'/browser/sessions/{pages[0]}/actions',{'action_id':'arbitrary'},a)[0]==422
-        assert call('POST','/motion/base',{'vx':1},a)[0]==403
+        assert call('GET','/sim/state',token=a)[0]==404
         stop();start()
         assert data('GET','/auth/me',token=a)['user']['username']=='alice'
         data('POST','/auth/logout',{},a)

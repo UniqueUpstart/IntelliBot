@@ -59,5 +59,3 @@ add_test(NAME api_integration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOUR
 
 add_test(NAME auth_integration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/auth_test.py $<TARGET_FILE:intellibot_backend>)
 add_test(NAME chat_integration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/chat_test.py $<TARGET_FILE:intellibot_backend>)
-
-add_test(NAME authenticated_chat_integration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/chat_test.py $<TARGET_FILE:intellibot_backend> --authenticated)

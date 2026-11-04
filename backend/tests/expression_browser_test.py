@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 r=Path(__file__).resolve().parents[2]
 ids=['surprised','hug','refuse']
 with tempfile.TemporaryDirectory() as t:
- p=subprocess.Popen([str(r/'backend-build/intellibot_backend'),'--legacy-dev','--port','18085','--web-root',str(r/'frontend')],stdout=subprocess.DEVNULL)
+ p=subprocess.Popen([str(r/'backend-build/intellibot_backend'),'--port','18085','--web-root',str(r/'frontend')],stdout=subprocess.DEVNULL)
  try:
   time.sleep(.6)
   with sync_playwright() as pw:
