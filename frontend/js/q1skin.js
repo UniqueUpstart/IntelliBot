@@ -3,6 +3,7 @@
    「示意人形」和导入的 Mixamo / glTF 跟右侧 Motions（含街舞）的同一套关节角走。
    导入的文件存在这台浏览器的 IndexedDB 里，刷新后还在列表中。 */
 import * as THREE from 'three';
+import { buildClockwork } from './clockwork.js?v=2';
 import { buildPixelBuddy } from './pixel_buddy.js?v=2';
 import {idleState} from './idle_motion.js?v=2';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
@@ -109,6 +110,7 @@ function init() {
   motion.add(root);
   const proc = captureReference(root, bones);
   const pixelBuddy = buildPixelBuddy(root, bones);
+  const clockwork = buildClockwork(root, bones);
 
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(0.22, 32),
@@ -417,8 +419,9 @@ function init() {
 
   function setFigureVisible(on) {
     pixelBuddy.setVisible(current === 'builtin:pixel');
+    clockwork.setVisible(current === 'builtin:clockwork');
     root.traverse((node) => {
-      if (node.isMesh && !node.userData.pixelBuddy) node.visible = on;
+      if (node.isMesh && !node.userData.pixelBuddy && !node.userData.clockwork) node.visible = on;
     });
   }
 
@@ -481,6 +484,7 @@ function init() {
     }
     applyPose(displayed);
     if (current === 'builtin:pixel') pixelBuddy.update();
+    if (current === 'builtin:clockwork') clockwork.update();
     applyDanceRoot();
     if (marker.visible && marker.userData.anchor) {
       marker.userData.anchor.getWorldPosition(marker.position);
@@ -898,6 +902,11 @@ function init() {
         setFigureVisible(true);
         setNote(err.message);
       }
+      return;
+    }
+    if (id === 'builtin:clockwork') {
+      setFigureVisible(false);
+      setNote('');
       return;
     }
     if (id === 'builtin:pixel') {
