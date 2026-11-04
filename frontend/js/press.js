@@ -11,8 +11,8 @@
      右下视角条里那三枚圆钮，以及同一簇的眼睛与复位，
      同样是「底片 + --press」结构，一并接管 */
   var SEL = '.pill, .vt-round, .view-adjust-trigger, .pose-reset-trigger, .item, .seg__opt,' +
-            '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn, .persona-new,' +
-            '.edit__type, .edit__reset, .edit__add';
+            '.adv__tab, .adv__chip, .adv__btn, .modal__act-btn, .persona-new, .model-save,' +
+            '.edit__type, .edit__reset, .edit__add, .composer__model-trigger';
   var PRESS_PILL = 1.0;   // 顶栏胶囊压入档位（× --press-k 得缩放比例）
   var PRESS_MENU = 1.2;   // 账号面板菜单项
   var PRESS_ITEM = 1.2;   // 侧栏圆钮
@@ -25,7 +25,9 @@
   var pressed = null;
 
   function depth(el) {
-    if (el.closest('.user__menu')) return PRESS_MENU;
+    /* 账号面板与模型面板里的胶囊同为「面板内的选项」，压入比顶栏浅一档的反面：
+       更深一点，点起来才像按进面板里 */
+    if (el.closest('.user__menu, .model-menu')) return PRESS_MENU;
     /* 侧栏圆钮、弹窗行内圆钮、聊天区圆钮同规格，压入深度也取同一档 */
     if (el.classList.contains('item') || el.classList.contains('mrow__btn')) return PRESS_ITEM;
     return PRESS_PILL;

@@ -74,7 +74,7 @@
      视角条没有独立底片了 —— 它现在是顶栏托盘 .group 里的一格，
      投影与底片都由托盘给，所以这里对它取不到表面，只补形变那一路 */
   function surfaceOf(node) {
-    return node.querySelector('.rail__surface, .user__surface');
+    return node.querySelector('.rail__surface, .user__surface, .chat-dock__surface, .composer__model-surface');
   }
 
   function pop(node, on) {
@@ -171,7 +171,12 @@
     });
   };
 
-  var nodes = Array.prototype.slice.call(document.querySelectorAll('.rail, .user, .viewdock'));
+  /* .chat-dock 是聊天页右上角那枚齿轮：收起是正圆、点开长成面板；
+     .composer__model 是输入条右侧的模型胶囊，点开同样从胶囊长成面板。
+     两枚都走这条胀开曲线，所以一并收进来 —— 原点各自由 css 的
+     transform-origin 定（齿轮是右上、模型胶囊是右下，面板都朝远离角的方向长） */
+  var nodes = Array.prototype.slice.call(
+    document.querySelectorAll('.rail, .user, .viewdock, .chat-dock, .composer__model'));
   nodes.forEach(function (n) { n.__open = n.classList.contains('is-open'); });
 
   new MutationObserver(function (records) {

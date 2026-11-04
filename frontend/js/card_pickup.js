@@ -14,6 +14,16 @@
   var PALM_X = 0.08;      /* 手在卡片中心偏右一点，整张卡略往左让开面罩 */
   var PALM_LIFT = 22;     /* 卡片底边离手心的像素距离：掌心面本身约 9px，再留一道缝 */
   var FLOAT_AMP = 2.6;    /* 悬浮的上下浮动幅度（px） */
+  /* 归位用一根阻尼弹簧，而不是「每秒衰减一个固定比例」的指数逼近：
+     指数逼近的起步速度是凭空给的（放手那一帧直接从静止窜到最快），
+     指针还在往右甩的时候卡片会当场拐回去，读起来就是那一帧「跳」了。
+     弹簧从上一次拖动的速度接着走，方向先顺势滑一小段，再被拉回原位。
+     OMEGA —— 角频率（rad/s），越大收得越快
+     ZETA  —— 略欠阻尼，落位前只轻轻收一下，不来回晃 */
+  var RETURN_OMEGA = 17;
+  var RETURN_ZETA = 0.9;
+  /* 速度估得再准也只是估：狂甩一下能到每秒几千像素，接过来会把卡甩出屏幕 */
+  var RETURN_VMAX = 2600;
 
   var pending = null;     /* 按下但还没到阈值的候选 */
   var state = null;       /* 正在拖的影子 */
@@ -26,6 +36,23 @@
      高刷屏与软渲染掉帧时，跟手与淡出的时长都还是同一条曲线 */
   function approach(dt, perSecond) {
     return 1 - Math.pow(perSecond, dt);
+  }
+
+  /* 没被磁吸推歪的布局盒：offsetParent 的 rect + offsetLeft/Top。
+     卡片被拎着的那一瞬身上还挂着 magnet 写进去的 perspective 与 scale，
+     直接量 getBoundingClientRect 拿到的是投影后的盒 —— 宽高都大 2% 左右，
+     拿它当影子尺寸，落回原位时就比真卡整整大一圈，接缝一眼能看见。
+     这里量的盒子恰好等于卡片摘掉变换后的样子，影子按它收尾就与真卡重合 */
+  function layoutBox(el) {
+    var p = el.offsetParent || document.body;
+    var pr = p.getBoundingClientRect();
+    var left = pr.left + el.offsetLeft;
+    var top = pr.top + el.offsetTop;
+    for (var n = el.parentElement; n && n !== p; n = n.parentElement) {
+      if (n.scrollTop) top -= n.scrollTop;
+      if (n.scrollLeft) left -= n.scrollLeft;
+    }
+    return {left: left, top: top, width: el.offsetWidth, height: el.offsetHeight};
   }
 
   function hitAt(x, y) {
@@ -45,6 +72,7 @@
     var before = getComputedStyle(node, '::before');
     var id = node.querySelector('.sc__id');
     var brief = node.querySelector('.sc__brief');
+    var intro = node.querySelector('.sc__intro');
     var time = node.querySelector('.sc__time');
     var go = node.querySelector('.sc__go');
     var lit = parseFloat(before.opacity) > 0.5;
@@ -52,9 +80,11 @@
     return {
       id: id ? id.textContent.trim() : '',
       brief: brief ? brief.textContent.trim() : '',
+      intro: intro ? intro.textContent.trim() : '',
       time: time ? time.textContent.trim() : '',
       color: (lit ? before.backgroundColor : cs.backgroundColor) || '#6e9182',
       ink: id ? getComputedStyle(id).color : '#fafafa',
+      introInk: intro ? getComputedStyle(intro).color : '#fafafa',
       timeInk: time ? getComputedStyle(time).color : '#fafafa',
       btnBg: goCs ? goCs.backgroundColor : '#fafafa',
       btnInk: goCs ? goCs.color : '#6e9182',
@@ -65,16 +95,40 @@
 
   function paint(ts) {
     if (!state) return;
-    var dt = lastT ? Math.min(0.05, (ts - lastT) / 1000) : 1 / 60;
+    var dt = lastT ? Math.min(0.032, (ts - lastT) / 1000) : 1 / 60;
     lastT = ts;
 
     var node = state.node;
 
     if (state.mode === 'drag') {
       /* 影子就当长在指针上，不做跟随插值，拖起来才是 1:1 */
+      var px = state.x, py = state.y;
       state.x = state.tx;
       state.y = state.ty;
+      /* 顺手记下这一帧的速度：松手后归位就从这个速度出发。
+         单帧位移会被指针事件的疏密放大，和上一帧的估计混一混再存 */
+      state.vx = state.vx * 0.6 + ((state.x - px) / dt) * 0.4;
+      state.vy = state.vy * 0.6 + ((state.y - py) / dt) * 0.4;
       node.classList.toggle('is-over', hitAt(state.x, state.y));
+    } else if (state.mode === 'return') {
+      /* 半隐式欧拉走弹簧；一帧超过 1/120 就拆成几步，掉帧时才不会因为
+         步长太大把速度积到爆、把卡片甩过原位再弹回来 */
+      var vx = state.vx, vy = state.vy;
+      var vmax2 = RETURN_VMAX * RETURN_VMAX;
+      if (vx * vx + vy * vy > vmax2) {
+        var k0 = RETURN_VMAX / Math.sqrt(vx * vx + vy * vy);
+        vx *= k0; vy *= k0;
+      }
+      var steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      var h = dt / steps;
+      for (var s = 0; s < steps; s++) {
+        vx += (RETURN_OMEGA * RETURN_OMEGA * (state.tx - state.x) - 2 * RETURN_ZETA * RETURN_OMEGA * vx) * h;
+        state.x += vx * h;
+        vy += (RETURN_OMEGA * RETURN_OMEGA * (state.ty - state.y) - 2 * RETURN_ZETA * RETURN_OMEGA * vy) * h;
+        state.y += vy * h;
+      }
+      state.vx = vx;
+      state.vy = vy;
     } else {
       var k = approach(dt, 0.00002);
       state.x += (state.tx - state.x) * k;
@@ -109,7 +163,20 @@
       /* 回去的路上不再压暗：原卡是收起来的，这里要一路不透明地落回去，
          贴到原位的那一帧再把原卡放出来，两层才接得上 */
       node.style.opacity = 1;
-      if (Math.abs(state.tx - state.x) < 1.5 && Math.abs(state.ty - state.y) < 1.5) { stop(); return; }
+      /* 位置、余速、尺寸三样都到位才算落定。差一两个像素就换人，
+         两层之间会露一道错位的边；这里等到 0.6px 以内，最后一帧
+         直接写成原位原尺寸，真卡就在同一个像素上露出来 */
+      if (Math.abs(state.tx - state.x) < 0.6 && Math.abs(state.ty - state.y) < 0.6 &&
+          Math.abs(state.vx) < 24 && Math.abs(state.vy) < 24 &&
+          Math.abs(1 - state.scale) < 0.0015) {
+        state.x = state.tx;
+        state.y = state.ty;
+        state.scale = 1;
+        node.style.transform = 'translate3d(' + state.x + 'px,' + state.y + 'px,0)'
+          + ' translate(-50%,-50%) scale(1)';
+        stop();
+        return;
+      }
     }
 
     node.style.transform = 'translate3d(' + state.x + 'px,' + state.y + 'px,0)'
@@ -130,7 +197,9 @@
   }
 
   function begin(card, x, y) {
-    var rect = card.getBoundingClientRect();
+    /* 量的是布局盒而不是投影盒：卡片这会儿正被磁吸推着（透视 + 1.02 缩放），
+       rect 会比真实卡面大一圈，影子照它做，归位时就对不上 */
+    var rect = layoutBox(card);
     var cs = getComputedStyle(card);
     var node = card.cloneNode(true);
 
@@ -141,6 +210,11 @@
     node.classList.add('card-ghost', 'is-lit');
     node.style.width = rect.width + 'px';
     node.style.height = rect.height + 'px';
+    /* 克隆件把 magnet 写在原卡上的 perspective 与 scale 一并抄了过来：
+       不清掉的话影子自带一层 1.02 的缩放，拖起来比手上这张大一档，
+       落回原位那一刻又突然缩回去。影子的几何只由下面这条 transform 说了算 */
+    node.style.transform = '';
+    node.style.scale = '';
     /* 组的系列色来自祖先 .sc-group，影子挂到 body 下会丢，手动搬一份过来 */
     node.style.setProperty('--sc', cs.getPropertyValue('--sc').trim() || '#91d2c3');
     document.body.appendChild(node);
@@ -161,6 +235,8 @@
       y: y,
       tx: x,
       ty: y,
+      vx: 0,
+      vy: 0,
       scale: 1.04,
       tscale: 1.04,
       opacity: 1,
@@ -201,6 +277,11 @@
   function release(e) {
     if (pending) { pending = null; return; }
     if (!state || state.mode !== 'drag') return;
+
+    /* 指针可能在两次重绘之间又走了一小段：松手这一刻把影子对齐到放手点，
+       回程从指尖出发，而不是从上一帧画的落点出发 */
+    state.x = state.tx;
+    state.y = state.ty;
 
     var card = state.card;
     var over = hitAt(e.clientX, e.clientY);

@@ -87,7 +87,7 @@
      也不用再减 --pad-y。z-index:4 压过雾带（3），卡片从标题底下滑过时标题是清晰的 */
   position:sticky;
   top:0;
-  padding-top:var(--title-top,20px);
+  padding-top:var(--title-top,16px);
   z-index:4;
   /* 24 号字的行盒比字形底部多出约 3px 的降部留白，行盒下留 8 时字形到卡片约 11；
      这里给 8 的行盒间距，标题字形到卡片 = 8 + 3 的降部，视觉留白不挤 */
@@ -180,14 +180,25 @@
   color:var(--sc);
   transition:color .1s linear;
 }
-.sc__time{
-  margin-top:4px;                               /* 简介与时长按 24 / 18 的字号差收一点 */
+/* 简介：第三行，说这张卡具体做什么 */
+.sc__intro{
+  margin-top:4px;                               /* 名字与简介按 24 / 18 的字号差收一点 */
   font-size:18px; line-height:1;
   color:var(--text-reduced);
   transition:color .1s linear;
 }
+/* 动画时长的秒数单独一行，压在简介下面。它是一条元信息、不是内容，
+   所以再降一档：14 号、色取 --text-muted。扫卡片时先读到「这张卡做什么」，
+   再读到「要花多久」，两者不会被挤在同一行里互相打断 */
+.sc__time{
+  margin-top:4px;
+  font-size:14px; line-height:1;
+  color:var(--text-muted);
+  transition:color .1s linear;
+}
 .sc:is(:hover, .is-on, .is-lit) .sc__id,
 .sc:is(:hover, .is-on, .is-lit) .sc__brief,
+.sc:is(:hover, .is-on, .is-lit) .sc__intro,
 .sc:is(:hover, .is-on, .is-lit) .sc__time{color:var(--text-invert)}
 
 
@@ -214,14 +225,16 @@
 /* 覆盖层在深色下停用，避免它又以 opacity 淡入一层盖在卡面上 */
 :root[data-theme="dark"] .sc::before{opacity:0; transition:none}
 :root[data-theme="dark"] .sc__id,
-:root[data-theme="dark"] .sc__brief{color:var(--text-primary)}
-/* 第三行也走同一支：系列色本来就偏中明度，18px 再压一档透明度就掉到 3 以下了，
-   层次交给字号，不靠减淡 */
+:root[data-theme="dark"] .sc__brief,
+:root[data-theme="dark"] .sc__intro{color:var(--text-primary)}
+/* 第三、第四行也走同一支：系列色本来就偏中明度，压一档透明度就掉到 3 以下了，
+   层次交给字号，不靠减淡 —— 时长那行只有 14 号，更压不得 */
 :root[data-theme="dark"] .sc__time{color:var(--text-primary)}
 /* hover 态：系列色在暗底上直接当字色会太沉（蓝组尤其），往亮字方向提一档，
    仍是各组的色系，只是浓度降下来。右下圆钮跟着对调成系列色 */
 :root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__id,
 :root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__brief{color:color-mix(in srgb, var(--sc) 62%, var(--text-primary))}
+:root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__intro,
 :root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__time{color:var(--text-reduced)}
 :root[data-theme="dark"] .sc:is(:hover, .is-on, .is-lit) .sc__go{background:var(--sc); color:var(--text-primary)}
 
@@ -317,6 +330,11 @@
 .sc{cursor:grab}
 .sc:active{cursor:grabbing}
 .sc.is-dragging{visibility:hidden}
+/* 拎起一张卡之后，栏里其余卡片不再接指针：拖动的路径要从别的卡上划过，
+   那套 :hover（整卡填色、文字反白、右下圆钮、磁吸倾斜）会一路亮过去，
+   读起来像「这几张也要被一起拎走」。关掉命中判定，:hover 根本不会挂上，
+   不必逐条去覆盖配色；影子挂在 body 下、带 is-lit 常亮，不在这条选择器里 */
+body.is-card-drag .sc:not(.card-ghost){pointer-events:none}
 
 /* 归位：卡片从机器人手里放回栏里那一拍，先压到 0.94 再越过 1 到 1.045，
    最后收回 1 —— 读完是「被放进格子、轻轻碰到边上」，不是凭空显出来。

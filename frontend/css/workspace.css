@@ -120,8 +120,11 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 }
 .model-preset strong,
 .model-preset span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.model-preset strong{font-size:var(--fs-14)}
-.model-preset span{margin-top:6px;color:var(--text-muted);font-size:var(--fs-12)}
+/* 名称与说明的色阶、字号跟左侧 Persona 卡同一套（见本文件 .persona-card__copy）：
+   名称走主文字色、说明走 text-reduced，两行都是 14 号；原先说明比名称小两号、
+   用的是更浅的 muted，和 Persona 卡并排时像降了一级 */
+.model-preset strong{color:var(--text-primary);font-size:var(--fs-14);font-weight:var(--fw)}
+.model-preset span{margin-top:6px;color:var(--text-reduced);font-size:var(--fs-14)}
 .model-preset:hover,
 .model-preset:focus-visible{box-shadow:inset 0 0 0 1.5px var(--theme);outline:none}
 .model-preset.is-on{background:color-mix(in srgb,var(--theme) 34%,var(--card-solid));color:var(--text-primary)}
@@ -264,18 +267,23 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 .persona-card__remove.is-armed .persona-card__remove-x{width:0; opacity:0}
 .persona-card__remove.is-armed .persona-card__remove-text{max-width:72px; opacity:1}
 /* 新增角色：一枚主题色圆钮钉在标题行右端，加号反白。
-   指针压上去时就地长成胶囊 —— 右边缘不动、宽度朝左伸，加号随左缘一起左移，
-   提示文字排在加号右侧，贴着右内边距一格一格让出位置。
+   静止就是 16×16 的一个点 —— 与 24 号标题并排时只占标题的半行高，
+   不再是一颗压过标题重量的 38 圆钮；指针压上去时就地长成胶囊 ——
+   右边缘不动、宽度朝左伸，加号随左缘一起左移，提示文字排在加号右侧。
+   高度仍是 16：胶囊是横向长出来的，文字因此走 12 号那一档。
    行内的 --press 由 js/press.js 逐帧写，按下时整体缩进一格再弹回 */
 .persona-new{
   appearance:none;-webkit-appearance:none;
   position:relative;
   flex:0 0 auto;
   margin-left:auto;
-  height:38px;
+  height:16px;
+  min-width:16px;
   display:inline-flex;
   align-items:center;
-  padding:0 11px;
+  justify-content:center;
+  /* 不加左右内边距：静止时宽度就等于那枚 16 的加号，圆钮才是正圆 */
+  padding:0;
   border:0;
   border-radius:999px;
   background:var(--theme);
@@ -299,26 +307,31 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 /* 提示文字先只占 0 宽，悬停时把可用宽度与左边距一起放开，
    胶囊是被这段文字撑长的，所以不需要给按钮写死一个宽度。
    内层那枚 span 不收缩、靠右对齐：宽度不够时被裁掉的是字头，
-   露出来的字尾始终贴着右内边距，跟着胶囊一起往左展开 */
+   露出来的字尾始终贴着右内边距，跟着胶囊一起往左展开。
+   胶囊只有 16 高，字只能走 12 号那一档；右内边距落在文字上而不是按钮上，
+   静止（max-width:0）时它跟着一起被裁掉，不会把圆钮撑宽 */
 .persona-new__text{
   display:flex;
   justify-content:flex-end;
   max-width:0;
+  /* 右内边距不能写在它身上：padding 先把盒子撑到 7 宽，max-width:0 也压不下去，
+     静止的圆钮就变成 23 宽的椭圆。挪到里面那枚 span 上，由 overflow 裁掉 */
+  min-width:0;
   margin-left:0;
   opacity:0;
   overflow:hidden;
   white-space:nowrap;
-  font-size:var(--fs-14);
+  font-size:var(--fs-12);
   line-height:1;
   transition:max-width .32s var(--ease), margin-left .32s var(--ease), opacity .16s ease;
 }
-.persona-new__text > span{flex:0 0 auto}
+.persona-new__text > span{flex:0 0 auto; padding-right:7px}
 .persona-new:hover,
 .persona-new:focus-visible{outline:none}
 .persona-new:hover .persona-new__text,
 .persona-new:focus-visible .persona-new__text{
   max-width:112px;
-  margin-left:7px;
+  margin-left:6px;
   opacity:1;
   transition:max-width .32s var(--ease), margin-left .32s var(--ease),
              opacity .24s ease .06s;
@@ -345,7 +358,6 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   appearance:none;-webkit-appearance:none;
   width:100%;
   border:0;
-  border-radius:14px;
   background:var(--card);
   color:var(--text-reduced);
   caret-color:var(--theme);
@@ -355,23 +367,28 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   box-shadow:inset 0 0 0 1px transparent;
   transition:box-shadow .12s linear;
 }
-.persona-field input{height:42px;padding:0 13px}
+/* 单行框与顶栏胶囊同一条 999 圆角：42 高正好是完整胶囊 */
+.persona-field input{height:42px;padding:0 18px;border-radius:999px}
 /* 角色设定这一格随内容长高：高度由 js/persona.js 按行数写死，
-   所以关掉右下角的拖拽手柄、也不留纵向滚动条 */
-.persona-field textarea{min-height:42px;padding:10px 13px;line-height:1.5;resize:none;overflow-y:hidden}
+   所以关掉右下角的拖拽手柄、也不留纵向滚动条。
+   圆角取半高 21 而不是 999：一行时视觉上同样是胶囊，长到多行就收成圆角块，
+   左右不会各削掉一个半圆去挤文字 */
+.persona-field textarea{min-height:42px;padding:10px 18px;border-radius:21px;line-height:1.5;resize:none;overflow-y:hidden}
 .persona-field input:focus,
 .persona-field textarea:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .persona-view .view-badge{display:none}
-/* 表头与右栏 Emotions 页同一高度：视图上内边距已归零（见 rail.css 里那条
-   [data-view] 规则），表头盒顶边贴住面板顶，文字靠 padding-top 落到 20。
+/* 表头与右栏 Emotions 页同一条起算线：视图上内边距已归零（见 rail.css 里那条
+   [data-view] 规则），表头盒顶边贴住面板顶，文字靠 padding-top 落到 --title-top。
+   行高按标题那 24 算、内容顶对齐：标题文字与右上角那枚 16 的加号顶边同在
+   --title-top(16) 上，加号悬停长成胶囊也只是横向伸展，不会顶出表头。
    吸附线与静止位都是 0，滚动时表头不动 */
 .persona-view .view-head{
   position:sticky;
   top:0;
   z-index:4;
-  height:calc(24px + var(--title-top));
+  height:calc(var(--title-top) + 24px);
   padding-top:var(--title-top);
-  align-items:center;
+  align-items:flex-start;
 }
 .persona-field--color input{
   width:96px;
@@ -380,7 +397,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   justify-self:start;
 }
 .persona-field--color input::-webkit-color-swatch-wrapper{padding:0}
-.persona-field--color input::-webkit-color-swatch{border:0;border-radius:9px}
+.persona-field--color input::-webkit-color-swatch{border:0;border-radius:999px}
 .persona-note{
   margin:-2px 0 0;
   color:var(--text-muted);

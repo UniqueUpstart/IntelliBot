@@ -123,7 +123,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 /* 有页标题的视图：面板自身不留上内边距，这段留白交给固定头那一层。
    左栏 persona / 快捷指令页的标题仍留在流里（也仍是 sticky），所以这两页
    照旧写 0；右栏三页的标题已经移到滚动区外，内容从标题下沿 56 起 ——
-   20 标题上沿 + 24 行高 + 12 与首张卡片的间距 */
+   16 标题上沿 + 24 行高 + 16 与首张卡片的间距 */
 [data-panel-body][data-view="persona"],
 [data-panel-body][data-view="shortcuts"]{padding-top:0}
 [data-panel-body][data-view="gestures"],
@@ -131,7 +131,8 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 [data-panel-body][data-view="preference"]{padding-top:56px}
 
 /* 页标题：挂在不滚动的那一层（.rail__head，滚动区 .panel__body 的兄弟）上，
-   top 直接写死 20。它不参与 sticky 定位，滚动、面板开合、系统缩放都不会让它挪位，
+   top 读 --title-top（16），与左栏标题、右上角按钮同一条线。它不参与 sticky
+   定位，滚动、面板开合、系统缩放都不会让它挪位，
    也不存在「合成线程比内容晚一帧」那种相对抖动 —— 这一层根本不动。
    这一层只有定位，不带任何底色：上下两条雾带仍是面板上原来那两条，
    浓度、平台段、渐隐曲线一概不动 */
@@ -141,9 +142,13 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   pointer-events:none;
   display:none;
 }
+/* 与内容区同一条起算线：让开分割线那 1px，标题才和下方卡片的左（右）缘对齐 */
+.rail--left .rail__head{left:1px}
+.rail--right .rail__head{right:1px}
 .rail__head .rail__title{
   display:none;
-  position:absolute; top:20px; left:var(--panel-pad); right:var(--panel-pad);
+  /* 位置与左栏、角色页标题同一条线：都读 --title-top，改一处就全对齐 */
+  position:absolute; top:var(--title-top); left:var(--panel-pad); right:var(--panel-pad);
   margin:0; padding:0;
   font-size:24px; line-height:1; letter-spacing:.4px; font-weight:var(--fw);
   color:var(--text-secondary);
@@ -240,16 +245,21 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   font-size:24px; line-height:1; letter-spacing:.3px;
   color:var(--text-secondary);
 }
+/* 状态胶囊的字号跟弹窗里的小标题同档（16 号、行高 1.2、字距 .2，见 css/modal.css
+   的 .set__name）：它和 24 号的页标题并排，12 号字缩在这条 24 高的胶囊里读起来
+   像脚注。字号提上来后胶囊跟着长到 30 高，内边距也放宽一档，圆头才不被字撑满 */
 .model-view__status{
   display:inline-flex;
   align-items:center;
   gap:6px;
-  min-height:24px;
-  padding:0 10px;
+  min-height:30px;
+  padding:0 12px;
   border-radius:999px;
   background:var(--card);
   color:var(--text-muted);
-  font-size:var(--fs-12);
+  font-size:var(--fs-16);
+  line-height:1.2;
+  letter-spacing:.2px;
   white-space:nowrap;
 }
 .model-view__status::before{
@@ -270,12 +280,14 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   color:var(--text-secondary);
   font-size:var(--fs-14);
 }
+/* 四枚输入框一律做成胶囊：42 高的半高圆角，和下方保存钮同一种轮廓。
+   左右内边距放到 18，字不从圆头里探出来 */
 .model-field input,
 .model-field select{
   appearance:none; -webkit-appearance:none;
   width:100%; height:42px;
-  padding:0 14px;
-  border:0; border-radius:14px;
+  padding:0 18px;
+  border:0; border-radius:999px;
   background:var(--card);
   color:var(--text-primary);
   caret-color:var(--theme);
@@ -288,16 +300,18 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   background-image:
     linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),
     linear-gradient(135deg,var(--text-muted) 50%,transparent 50%);
-  background-position:calc(100% - 17px) 18px,calc(100% - 12px) 18px;
+  background-position:calc(100% - 20px) 18px,calc(100% - 15px) 18px;
   background-size:5px 5px,5px 5px;
   background-repeat:no-repeat;
-  padding-right:34px;
+  padding-right:38px;
 }
 .model-field input:focus,
 .model-field select:focus{box-shadow:inset 0 0 0 1px var(--theme)}
 .model-field input::placeholder{color:var(--text-muted)}
 .model-field__control{position:relative;display:block}
-.model-field__control input{padding-right:92px}
+.model-field__control input{padding-right:96px}
+/* 内嵌在胶囊输入框里的小钮也走半高圆角：42 高的框、30 高的钮、上下各留 6，
+   三者同心，圆头才对得上 */
 .model-field__fetch{
   appearance:none;-webkit-appearance:none;
   position:absolute;
@@ -307,9 +321,9 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   display:inline-flex;
   align-items:center;
   gap:5px;
-  padding:0 9px;
+  padding:0 12px;
   border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
-  border-radius:10px;
+  border-radius:999px;
   background:var(--card-solid);
   color:var(--text-secondary);
   font:inherit;
@@ -340,21 +354,65 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 /* 没有反馈要报的时候整行收掉：表单是 grid，留着空元素会多出一格 gap 和一行行高 */
 .model-view__note:empty{display:none}
 .model-view__note.is-error{color:var(--warning)}
+/* 保存钮改成 128 宽的胶囊，钉在表单右下角。底色挪到 ::before 这层底片上：
+   按下时 press.js 逐帧写 --press，底片等比内收，弹起再回弹 —— 和顶栏胶囊、
+   编辑页那几枚同一个结构，不靠按钮本体缩放，字与轮廓都不跟着抖 */
 .model-save{
   appearance:none; -webkit-appearance:none;
-  justify-self:start;
+  position:relative;
+  justify-self:end;
+  width:128px;
   min-width:0;
   height:40px;
-  padding:0 18px;
+  /* 不带左右内边距：字与箭头都是绝对定位，自己按 12 的边距摆；
+     留了内边距反而会把容器内容盒压窄，50cqw 少算一档，字滑不到右缘 */
+  padding:0;
   border:0; border-radius:999px;
-  background:var(--theme);
+  background:transparent;
   color:var(--text-invert);
-  font:inherit; font-size:var(--fs-14);
+  /* 字号取顶栏账号那一档（--pill-fs 的流体值 18–24），与胶囊同源 */
+  font:inherit; font-size:var(--pill-fs); line-height:1;
   cursor:pointer;
+  /* 文字右滑的距离要按自身宽度算，宽度写死 128 也留这条：
+     以后改宽只需动上面那一处 */
+  container-type:inline-size;
 }
-.model-save:hover{filter:brightness(.96)}
+.model-save::before{
+  content:'';
+  position:absolute; inset:0;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
+  /* 只有 transform 这一条：底片常驻铺满，按下才收 */
+  transition:transform .2s linear;
+}
+/* 悬停：文字右滑贴到内边距（右缘留 12），左侧浮出箭头，
+   位移与淡入都走全站那套 .34s 的 --dur / --ease，退场原路返回 */
+.model-save__label{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  white-space:nowrap; pointer-events:none;
+  transition:transform var(--dur) var(--ease);
+}
+.model-save__arrow{
+  position:absolute; top:50%; left:12px;
+  width:1em; height:1em; display:block;
+  fill:currentColor; pointer-events:none;
+  transform:translateY(-50%) translateX(-4px);
+  opacity:0;
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.model-save:hover .model-save__label,
+.model-save:focus-visible .model-save__label{
+  transform:translate(calc(50cqw - 12px - 100%), -50%);
+}
+.model-save:hover .model-save__arrow,
+.model-save:focus-visible .model-save__arrow{opacity:1; transform:translateY(-50%) translateX(0)}
 .model-save:focus-visible{outline:2px solid var(--theme-dark); outline-offset:2px}
 .model-save:disabled{opacity:.55;cursor:wait}
+/* 按下期间几何交给 GSAP 逐帧写，关掉这条过渡免得每帧再被平滑一次 */
+.model-save.is-press::before{transition:none}
 
 /* 手势卡：中文标签两三个字，居中。卡片比原来底栏那版（64）大了一档，
    字号跟着提到 14，不然一张 116 的方格里只剩两粒小字 */
@@ -585,8 +643,10 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
      这段距离由标题自身的 padding-top 撑出来 —— 盒顶与 sticky 的吸附线重合，
      滚动时标题不会先被内容带着走一段再钉住。
      右栏与左栏标题都读这一个值；左栏快捷指令页的组间距会减掉它来保持原来的视觉节奏。
+     取 16：与面板四周的 --panel-pad 同档，标题、右上角按钮、下方内容的左右留白
+     读的是同一根线，页头不再比正文多缩进 4px
      写死成 px 而不是 calc：尾部脚本按 px 读数值 */
-  --title-top:20px;
+  --title-top:16px;
   /* 标题盒顶边贴住面板顶，吸附线就是 0；脚本按它算淡出起止点 */
   --title-pin:0px;
   flex:0 0 auto;
@@ -595,18 +655,26 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   overflow:hidden;
   overflow:clip;
   opacity:0;
-  /* 与图标栏之间那条 1px 竖直分割线：其余描边都不要，唯独这一条留着，
-     否则图标栏和卡片区糊成一片，展开后看不出边界 */
-  border-left:1px solid var(--border);
   display:flex; flex-direction:column;
   /* 宽度过渡：展开 0 → 521、收起 521 → 0，0.3s；透明度与横移交给脚本 */
   transition:width .3s var(--ease);
 }
-/* 栏体挂在右边时，分割线翻到面板的另一侧，贴着图标栏那头 */
-.rail--right .rail__panel{
-  border-left:0;
-  border-right:1px solid var(--border);
+/* 与图标栏之间那条 1px 竖直分割线：其余描边都不要，唯独这一条留着，
+   否则图标栏和卡片区糊成一片，展开后看不出边界。
+   不写成 border —— border 会占进 padding box：面板宽是按总宽（含这 1px）算的，
+   .panel__body 又是左 0、宽等于总宽的绝对定位盒，border 一挤，body 就从右缘
+   多探出 1px，右键内边距读成 15。改成定位伪元素，这 1px 单独占一条槽位，
+   不参与内容盒计算，两侧内边距都还是 16 */
+.rail__panel::after{
+  content:'';
+  position:absolute; top:0; bottom:0; left:0;
+  width:1px;
+  background:var(--border);
+  z-index:5;              /* 压过雾带（3）和表头（4），任何滚动内容都盖不住它 */
+  pointer-events:none;
 }
+/* 栏体挂在右边时，分割线翻到面板的另一侧，贴着图标栏那头 */
+.rail--right .rail__panel::after{left:auto; right:0}
 .rail.is-open .rail__panel{
   width:calc(min(var(--rail-expanded), calc(100vw - var(--edge) * 2)) - var(--rail-w));
   opacity:1;
@@ -647,11 +715,13 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   .rail__panel > .panel__body{
     position:absolute;
     top:0; bottom:0;
-    width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
-    min-width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w));
+    /* 总宽里含分割线那 1px，内容区从槽后起算：宽减 1、并整体挪 1，
+       左右内边距（--panel-pad:16）才是相对面板边沿的真 16 */
+    width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w) - 1px);
+    min-width:calc(min(var(--rail-expanded), 78vw) - var(--rail-w) - 1px);
   }
-  .rail--left .rail__panel > .panel__body{left:0}
-  .rail--right .rail__panel > .panel__body{right:0}
+  .rail--left .rail__panel > .panel__body{left:1px}
+  .rail--right .rail__panel > .panel__body{right:1px}
 }
 
 /* 角色页与右栏各页共用同一条顶部雾带：表头吸在雾带里，卡片与表单从下面滚过。

@@ -380,10 +380,14 @@ export function mountHomeMotionControls(play) {
     const {motion, brief} = ACTION_SHORTCUTS[index];
     if (!motion) return;
     card.dataset.actionMotion = motion.id;
+    /* 三行分开写：名字、简介、时长。时长单独一行压在简介下面，
+       不再和简介拼成「定格机械舞 · 12s」那种一条 —— 扫卡片时这两件事
+       不是一回事，字号与墨色也各归各的（见 css/cards.css 的 .sc__intro / .sc__time） */
     card.innerHTML =
       '<span class="sc__id">' + String(index + 1).padStart(2, '0') + '</span>' +
       '<span class="sc__brief">' + motion.label + '</span>' +
-      '<span class="sc__time">' + brief + ' · ' + motion.duration + 's</span>' +
+      '<span class="sc__intro">' + brief + '</span>' +
+      '<span class="sc__time">' + motion.duration + 's</span>' +
       PLAY_GLYPH;
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');

@@ -18,6 +18,10 @@
   var sendButton = composer.querySelector('[data-assistant-send]');
   var settingsButton = document.querySelector('[data-chat-settings]');
   var historyMenu = document.querySelector('[data-chat-history-menu]');
+  /* 齿轮所在的那块 dock：开合时给它挂 is-open，panels.js 的 pop 与
+     CSS 的宽高过渡都认这个类。取不到（老页面 / 单测里的假 DOM）就只切
+     hidden，不影响下面任何一条逻辑 */
+  var historyDock = document.querySelector('[data-chat-dock]');
   var exportButton = document.querySelector('[data-chat-export]');
   var clearButton = document.querySelector('[data-chat-clear]');
   /* 停止动作那枚按钮挂在聊天视图的头部动作区，是 [data-assistant-chat] 的
@@ -83,70 +87,10 @@
     requestAnimationFrame(function () { stream.scrollTop = stream.scrollHeight; });
   }
 
-  /* 只有真的滚出内容时才给顶上那截渐隐：一条消息的板子不该是半透明的 */
-  function stageSync(stream) {
-    stream.classList.toggle('is-overflow', stream.scrollHeight > stream.clientHeight + 4);
-    queueStageEdges();
-  }
-
-  /* 气泡滚到列的上沿或下沿时淡出、缩一点，滚出去的过程就不是被硬切一刀。
-     位置读 offsetTop / offsetHeight，不读 getBoundingClientRect —— 气泡身上
-     挂着 rotateY 和 scale，rect 量到的是投影后的框，跟滚动量对不上。
-     两条边缘各留一个豁免：还贴在顶上时顶边不淡（第一条就是内容起点），
-     已经停在底上时底边不淡（那是刚到的最新一条，正该看清）。
-     淡出的距离取 88px，约一条半气泡，滚动时能看到它一路退场而不是突然消失 */
-  var EDGE_FADE = 88;
   /* 列的矩形快照，syncStagePerspective 每次重算时覆盖；滚轮热区判得勤，
      没有它就变成每个 wheel 事件拉一次布局 */
   var stageRect = null;
-  function syncStageEdges(flow) {
-    var stream = flow || stageStream();
-    if (!stream) return;
-    var scroll = stream.scrollTop;
-    var view = stream.clientHeight;
-    var canScroll = stream.scrollHeight > view + 4;
-    var atTop = scroll <= 4;
-    var atBottom = stream.scrollHeight - scroll - view < 8;
-    var kids = stream.children;
-    var count = kids.length;
-    var i;
-    /* 先把布局量一次读完，再进第二圈写：offsetTop 会等上一次样式写完才肯给数，
-       读一条写一条就成了交替读写，每条气泡都多付一次样式重算，条数一多就掉帧 */
-    var tops = new Array(count);
-    var bottoms = new Array(count);
-    for (i = 0; i < count; i += 1) {
-      tops[i] = kids[i].offsetTop;
-      bottoms[i] = tops[i] + kids[i].offsetHeight;
-    }
-    for (i = 0; i < count; i += 1) {
-      var edge = 1;
-      if (canScroll) {
-        if (!atTop) edge = Math.min(edge, (tops[i] - scroll) / EDGE_FADE);
-        if (!atBottom) edge = Math.min(edge, (scroll + view - bottoms[i]) / EDGE_FADE);
-      }
-      edge = edge < 0 ? 0 : (edge > 1 ? 1 : edge);
-      /* smoothstep：贴着中间那段走平，真正靠近边才明显发力，
-         不然只要一滚动，满屏都像蒙了层雾 */
-      var eased = edge * edge * (3 - 2 * edge);
-      var node = kids[i];
-      /* 只在真变了才写：滚一屏，一半以上的气泡都稳稳停在 1 或 0，
-         逐条重写会把整列的样式标脏，白重算一遍 */
-      if (node.__stageEdge !== undefined && Math.abs(node.__stageEdge - eased) < 0.004) continue;
-      node.__stageEdge = eased;
-      node.style.setProperty('--edge', eased.toFixed(3));
-    }
-  }
 
-  /* 滚动一帧写一个属性就够：scroll 事件比帧密，攒到下一帧统一算，
-     免得一长串历史每条都跟着布局抖动 */
-  var edgeFrame = 0;
-  function queueStageEdges() {
-    if (edgeFrame) return;
-    edgeFrame = window.requestAnimationFrame(function () {
-      edgeFrame = 0;
-      syncStageEdges();
-    });
-  }
 
   /* 相机跟着视口走，不写死：镜头架在屏幕中轴与视口中线上，距离取视口高度的
      1.25 倍（窄屏 0.95 倍，画面更小、透视更近），再换算成相对这一列的百分比
@@ -188,26 +132,6 @@
     for (var i = 0; i < entries.length; i += 1) syncBubbleTilt(entries[i].target);
   }) : null;
 
-  /* 弹出复用账号面板那条弹性（panels.js 的 1.02 → elastic.out(1.1, 0.8)），
-     但只让它朝横向撑：账号面板是 --sx/--sy 两轴等比鼓，这里把 y 压住在 1，
-     气泡就只往左右胀一下再弹回。走 --sx 这个独立 scale 属性、不碰 transform ——
-     transform 里挂着 rotateY(--tilt)，GSAP 一旦接管它会把倾角抹平。
-     转轴在外侧对齐线，所以横向胀开时贴边那条线不动，往中轴方向推 */
-  var POP_UP = 0.25;
-  var POP_BACK = 0.75;
-  /* 账号面板那套是 1.02，但它是整块面板、按面积看得到；气泡只有 380 宽，
-     2% 只推 7px，看不出来，所以按尺寸提到 1.03（约 11px）才和面板的观感同级 */
-  var POP_PEAK = 1.03;
-  var calmPop = window.matchMedia('(prefers-reduced-motion: reduce)');
-  function popStageBubble(node) {
-    var g = window.gsap;
-    if (!g || !node || calmPop.matches) return;
-    g.killTweensOf(node, '--sx');
-    g.timeline()
-      .to(node, { '--sx': POP_PEAK, duration: POP_UP, ease: 'power2.out' }, 0)
-      .to(node, { '--sx': 1, duration: POP_BACK, ease: 'elastic.out(1.1, 0.8)' }, POP_UP);
-  }
-
   /* 舞台只有一列：已有的气泡按 recordId 复用，新的追加到末尾 —— 时间怎么走，
      气泡就怎么往下排（流自己向上滚，最新一条总在底边），问答因此自然错位。
      同一条记录会走两遍 —— 先「正在思考…」再回填正文，所以复用优先于新建 */
@@ -229,12 +153,10 @@
       stream.appendChild(node);
       syncBubbleTilt(node);
       if (bubbleWatcher) bubbleWatcher.observe(node);
-      popStageBubble(node);
       /* 只留最近 STAGE_LIMIT 条：更早的还在左栏完整对话流里，舞台这块不必无限长 */
       while (stream.children.length > STAGE_LIMIT) {
         var oldest = stream.firstElementChild;
         if (bubbleWatcher) bubbleWatcher.unobserve(oldest);
-        if (window.gsap) window.gsap.killTweensOf(oldest);
         oldest.remove();
       }
     }
@@ -243,7 +165,6 @@
     else node.textContent = text;
     node.dataset.recordId = key;
     if (follow) stageToBottom(stream);
-    stageSync(stream);
   }
 
   function hideStage() {
@@ -585,6 +506,7 @@
 
   function setHistoryMenu(open) {
     historyMenu.hidden = !open;
+    if (historyDock) historyDock.classList.toggle('is-open', open);
     settingsButton.setAttribute('aria-expanded', String(open));
   }
 
@@ -721,11 +643,7 @@
       wheelFrame = window.requestAnimationFrame(function () { flushStageWheel(flow); });
     }
   }, { passive: false });
-  /* 滚动和补底都走程序改 scrollTop，scroll 事件照样会冒出来，接这一处就够了 */
-  if (stage) {
-    var stageFlow = stageStream();
-    if (stageFlow) stageFlow.addEventListener('scroll', queueStageEdges, { passive: true });
-  }
+
   /* 相机参数先摆好，再等字体落位重摆一次 —— 字体换了行高、列的位置也可能挪 */
   if (stage) {
     syncStagePerspective();
@@ -751,8 +669,6 @@
       sequenceToken += 1; stopButton.hidden = true;
     });
     window.addEventListener('resize', function () {
-      var stream = stageStream();
-      if (stream) stageSync(stream);
       syncStagePerspective();
     });
     window.addEventListener('intellibot-idle-reaction', function (event) {

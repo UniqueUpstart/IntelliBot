@@ -118,7 +118,8 @@
   }
 
   /* 照第一张现成的卡克隆：描边、内层排版、右下圆钮的图标全沿用，
-     只换编号、名字、简介三个文本位 */
+     只换编号、名字、简介三个文本位。表单里填的「简介」落在 .sc__intro 那一行，
+     时长那行（.sc__time）自定义卡没有，克隆过来是空的，清掉免得留一段占位文案 */
   var cardTpl = document.querySelector('[data-rail-view="shortcuts"] .sc');
 
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
@@ -140,10 +141,13 @@
     var card = cardTpl.cloneNode(true);
     var i = card.querySelector('.sc__id');
     var n = card.querySelector('.sc__brief');
-    var b = card.querySelector('.sc__time');
+    var b = card.querySelector('.sc__intro');
+    var t = card.querySelector('.sc__time');
     if (i) i.textContent = id;
     if (n) n.textContent = name;
     if (b) b.textContent = brief;
+    /* 自定义卡没有动作，也就没有时长；模板那张的秒数不能留在新卡上 */
+    if (t) t.remove();
     return card;
   }
 

@@ -271,6 +271,13 @@
       node.textContent = displayName(active);
       node.style.setProperty('--persona-color', active.color || '#91d2c3');
     });
+    /* 聊天页左上角那枚头像：与 persona 卡片同一套标记 —— 底色取角色的
+       标记色，字取缩写；没填缩写就退回名字前两位 */
+    var mark = (active.initials || displayName(active).slice(0, 2) || 'AI').slice(0, 3);
+    document.querySelectorAll('[data-chat-avatar]').forEach(function (node) {
+      node.textContent = mark;
+      node.style.setProperty('--persona-color', active.color || '#91d2c3');
+    });
     fillForm(active);
     paintList();
   }

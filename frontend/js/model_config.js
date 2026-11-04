@@ -177,18 +177,22 @@
     models.forEach(function (model) {
       var item = document.createElement('button');
       item.type = 'button';
-      item.className = 'model-menu__item';
+      /* 直接就是顶栏 / 账号面板那枚 .pill：底片、字色、hover 位移与按压全跟着
+         全站那一套走，这里只补行高与内边距（见 chat.css 的 .model-menu .pill） */
+      item.className = 'pill';
       item.dataset.modelChoice = model;
       item.setAttribute('role', 'menuitemradio');
       item.setAttribute('aria-checked', String(model === current.model));
       if (model === current.model) item.classList.add('is-on');
 
       var name = document.createElement('span');
-      name.className = 'model-menu__name';
+      name.className = 'pill__label';
       name.textContent = modelLabel(model);
 
       item.setAttribute('aria-label', model);
       item.append(name);
+      item.insertAdjacentHTML('beforeend',
+        '<svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>');
       menuList.appendChild(item);
     });
   }

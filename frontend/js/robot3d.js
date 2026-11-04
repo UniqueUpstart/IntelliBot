@@ -24,7 +24,7 @@ import {sampleIdle, idleState} from './idle_motion.js?v=3';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createScreen, onMood, moodId, setMood, flashCheck, flashDownload, clearFlash } from './faces.js?v=15';
-import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=34';
+import { createHomeMotionController, mountHomeMotionControls, createJointBindings, sampleMotionFrame } from './homepage_motions.js?v=35';
 import { Q1_REST_POSE } from './q1_motion_data.js?v=3';
 
 const MODEL_URL = 'model/q1_ff.glb';
@@ -660,8 +660,14 @@ renderer.setPixelRatio(DPR_STEPS[0]);
     ctx.font = `${weight} ${24 * s}px ${family}`;
     ctx.fillText(look.brief || '', left, y);
     y += 24 * s + 4 * s;
-    ctx.fillStyle = timeInk;
+    /* 简介 18、时长 14，与栏里那张卡的三行字号一一对应；
+       两行的墨色也各取各的（简介偏实、时长更淡） */
+    ctx.fillStyle = look.introInk || timeInk;
     ctx.font = `${weight} ${18 * s}px ${family}`;
+    ctx.fillText(look.intro || '', left, y);
+    y += 18 * s + 4 * s;
+    ctx.fillStyle = timeInk;
+    ctx.font = `${weight} ${14 * s}px ${family}`;
     ctx.fillText(look.time || '', left, y);
 
     /* 右下角那枚圆钮：配色与卡上那张一致，箭头是组里那套颜色 */

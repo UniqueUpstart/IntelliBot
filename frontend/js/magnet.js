@@ -92,6 +92,11 @@
     if (document.body.classList.contains('is-modal') ||
         document.body.classList.contains('is-auth')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
 
+    /* 正拎着一张卡时整片停手：指针从别的卡上划过去，那套倾斜与浮起
+       读起来像「这张也能拎」，而此刻手上已经有一张了。倾斜是按指针坐标算的、
+       不看 :hover，所以光靠 CSS 关掉命中判定压不住它，这里单独拦一道 */
+    if (document.body.classList.contains('is-card-drag')) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
+
     var b = boxOf(t.el);
     if (!b.width || !b.height) { t.RX = t.RY = t.Z = 0; t.S = 1; return; }
 

@@ -235,6 +235,8 @@
   }
   .rail--left.is-open .rail__panel{left:0}
   .rail--right.is-open .rail__panel{right:0}
+  /* 这一档面板是浮起来的整块，四周都是圆角，不需要那条贴图标栏的分割线 */
+  .rail.is-open .rail__panel::after{display:none}
   .rail__toggle{display:none}
   .rail.is-hidden{opacity:0; pointer-events:none}
   /* 左下角的参数显示同样让位：两栏贴底后左下角就是左栏本体 */
@@ -482,7 +484,9 @@
   position:static;display:flex;flex:1 1 auto;width:100%;max-height:none;min-height:0;
   padding:0;background:transparent;box-shadow:none
 }
-.rail__view--chat .assistant-chat__log{max-height:none;padding-top:56px}
+/* 表头 56 高（--title-top 16 + 头像 32 + 8），记录从它下面 4 起排：
+   第一条消息不会压在头像底下，也不会离表头太远 */
+.rail__view--chat .assistant-chat__log{max-height:none;padding-top:60px}
 
 /* ============================================================
    Conversation polish
@@ -531,14 +535,15 @@
      center 会把标题往下推 3px，和左右栏其它页的标题错开一档 */
   align-items:flex-start;
   gap:12px;
-  /* 表头脱离流，整条压在记录流上面：高 52 由 20 上留白 + 24 标题盒 + 8 下留白
-     叠出来，标题顶边 20 与右栏 .rail__title 的静止位置同高。
+  /* 表头脱离流，整条压在记录流上面：高 56 由 --title-top(16) 上留白 + 32 头像
+     （标题盒 24 也在这条里）+ 8 下留白叠出来。上留白与左栏角色页、右栏页标题
+     读同一个变量，齿轮顶边也就跟着落在面板内边距这条线上。
      z-index 抬到雾带（3）之上，标题始终清楚；记录往上滚时从雾带下面过，
      和 Emotions 页卡片从标题下过是同一种读法 */
   position:absolute;
   inset:0 0 auto 0;
   z-index:4;
-  padding:20px 0 8px;
+  padding:var(--title-top) 0 8px;
 }
 .chat-view__actions{
   position:relative;
@@ -548,76 +553,153 @@
   align-items:center;
   gap:6px;
 }
-.chat-history-settings{
-  appearance:none;-webkit-appearance:none;
-  width:30px;height:30px;
-  display:grid;place-items:center;
+/* 齿轮收成一枚正圆，点开后整块长成面板：外圈宽高与圆角由表面层过渡，
+   形变与柔光交给 panels.js 的 pop —— 和账号面板用的是同一条曲线
+   （先胀到 1.02 再弹性收回，柔光 16 → 32 同拍），所以两处开合读起来一样 */
+.chat-dock{
+  position:relative;
+  flex:0 0 auto;
+  width:32px; height:32px;
+  /* 与账号胶囊同一套形变变量；原点取右上角，鼓起时齿轮那一角钉住不动 */
+  --sx:1;
+  --sy:1;
+  scale:var(--sx) var(--sy);
+  transform-origin:100% 0;
+}
+/* 表面层：收起正好是 32 的正圆，展开成 176×132 的圆角面板。
+   宽度、高度、圆角各走一条 0.3s，和账号面板的 48 → 整块同长同时序；
+   面板朝左下长，右缘与齿轮右缘始终对齐 */
+.chat-dock__surface{
+  position:absolute; top:0; right:0;
+  width:32px; height:32px;
+  border-radius:16px;
+  background:var(--panel);
+  /* 柔光与 .group / .rail__surface 同一套；--sh / --sh-a 由 pop 补间 */
+  --sh:16px;
+  --sh-a:.1;
+  box-shadow:0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
+  -webkit-backdrop-filter:blur(var(--blur));
+  backdrop-filter:blur(var(--blur));
+  transition:width .3s var(--ease), height .3s var(--ease), border-radius .3s var(--ease);
+  /* 菜单就长在这一层里，超出面板的部分一律裁掉：收起时两块都是 32 的圆，
+     展开到一半菜单也不会从圆角外面漏出来 */
+  overflow:hidden;
+}
+.chat-dock.is-open .chat-dock__surface{
+  width:176px;
+  height:132px;
+  border-radius:18px;
+}
+/* 触发钮压在表面层上：收起时它就是那颗圆钮的中心，展开后仍是右上角那枚
+   关闭入口。齿轮本身不再带底片 —— 收起时已经有圆钮的表面层兜着，展开后
+   再加一层灰只会把图标糊在面板上；反馈只留字色提亮与那一转 90 度 */
+.chat-dock__trigger{
+  appearance:none; -webkit-appearance:none;
+  position:absolute; top:0; right:0;
+  width:32px; height:32px;
+  display:grid; place-items:center;
   padding:0;
-  border:1px solid transparent;
-  border-radius:9px;
+  border:0; border-radius:999px;
   background:transparent;
   color:var(--text-secondary);
   cursor:pointer;
-  transition:background-color .14s ease,border-color .14s ease,color .14s ease;
+  z-index:2;
+  transition:color .14s ease;
 }
-.chat-history-settings svg{
+.chat-dock__trigger svg{
   width:16px;height:16px;
   fill:none;stroke:currentColor;stroke-width:1.65;
   stroke-linecap:round;stroke-linejoin:round;
+  transition:transform .3s var(--ease);
 }
-.chat-history-settings:hover,
-.chat-history-settings:focus-visible,
-.chat-history-settings[aria-expanded="true"]{
-  border-color:color-mix(in srgb,var(--border) 65%,transparent);
-  background:color-mix(in srgb,var(--bg) 84%,transparent);
-  color:var(--text-primary);
-  outline:none;
-}
-.chat-history-menu{
-  position:absolute;
-  top:calc(100% + 8px);
-  right:0;
-  z-index:12;
-  width:148px;
-  padding:6px;
-  border:1px solid color-mix(in srgb,var(--border) 74%,transparent);
-  border-radius:12px;
-  background:var(--card-solid);
-  box-shadow:0 10px 26px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .95));
-}
-.chat-history-menu[hidden]{display:none}
-.chat-history-menu button{
-  appearance:none;-webkit-appearance:none;
-  width:100%;
-  min-height:34px;
-  padding:0 10px;
-  border:0;
-  border-radius:8px;
+.chat-dock__trigger:hover,
+.chat-dock__trigger:focus-visible,
+.chat-dock__trigger[aria-expanded="true"]{
   background:transparent;
-  color:var(--text-secondary);
-  font:inherit;
-  font-size:12px;
-  text-align:left;
-  cursor:pointer;
-}
-.chat-history-menu button:hover,
-.chat-history-menu button:focus-visible{
-  background:color-mix(in srgb,var(--bg) 86%,transparent);
   color:var(--text-primary);
   outline:none;
 }
-.chat-history-menu button:disabled{opacity:.42;cursor:default;background:transparent}
-.chat-history-menu button[data-chat-clear]{color:#a44e48}
+.chat-dock.is-open .chat-dock__trigger svg{transform:rotate(90deg)}
+/* 两项菜单：直接复用顶栏胶囊，满宽、40 高、字左对齐 12，hover 时字右移
+   一箭头宽 + 16、箭头从左侧淡入，按下走 press.js 的 --press 回弹。
+   字号压到 --fs-16：账号面板是 288 宽的顶栏，这里只有 176，
+   「Export history」按 --pill-fs（18–24）排会顶到右缘 */
+.chat-history-menu{
+  /* 左右都贴住表面层的内边（4），宽度由面板自己算：面板 176 时就是 168，
+     面板 32 时就是 24 —— 菜单再也不会比面板宽出去 */
+  position:absolute;
+  top:40px; right:4px; left:4px;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  /* 收起时只是隐去，不摘 DOM：展开的淡入要能从 0 起步，
+     display:none 那一档没法过渡。hidden 仍由脚本切换，
+     这里用类名压住它的默认 display，让透明度那条通道有得补 */
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .25s var(--ease), visibility 0s linear .25s;
+}
+.chat-dock.is-open .chat-history-menu{
+  opacity:1;
+  visibility:visible;
+  transition:opacity .3s var(--ease) .06s, visibility 0s;
+}
+.chat-history-menu .pill{
+  width:100%;
+  height:40px;
+  flex:0 0 40px;
+  font-size:var(--fs-16);
+}
+.chat-history-menu .pill .pill__label{left:12px; transform:translateY(-50%)}
+.chat-history-menu .pill:hover .pill__label,
+.chat-history-menu .pill:focus-visible .pill__label{transform:translate(calc(1em + 16px),-50%)}
+.chat-history-menu .pill:hover .pill__arrow,
+.chat-history-menu .pill:focus-visible .pill__arrow{opacity:1; transform:translateY(-50%) translateX(0)}
+/* 清空记录这一项保留告警色，hover 仍照全站规矩反白 */
+.chat-history-menu .pill[data-chat-clear]{color:#a44e48}
+.chat-history-menu .pill[data-chat-clear]:hover{color:var(--text-invert)}
+/* 没有记录时两枚都禁用：底片不再涨开，按压也不给反馈 */
+.chat-history-menu .pill:disabled{opacity:.42;cursor:default}
+.chat-history-menu .pill:disabled::before{scale:0}
+/* 禁用态浏览器照样认 :hover，把文字右移与箭头一并冻在静止位，
+   免得一条不能点的项目还在跟着指针滑 */
+.chat-history-menu .pill:disabled .pill__label{transform:translateY(-50%)}
+.chat-history-menu .pill:disabled .pill__arrow{opacity:0;transform:translateY(-50%) translateX(-4px)}
 .chat-view__identity{
   min-width:0;
   display:flex;
-  align-items:center;
-  gap:11px;
+  /* 顶对齐：这枚名字是页标题，不是头像的说明文字，文字顶边要和左栏角色页、
+     右栏各页的标题落在同一条 --title-top(16) 上。居中会让它比别的页低 4px */
+  align-items:flex-start;
+  gap:10px;
 }
+/* 当前角色的头像：沿用 persona 卡片那枚圆形标记的做法 —— 底色吃
+   --persona-color（persona.js 写在这枚元素上），字取反色，内容是两个缩写字母。
+   32 的头像与 24 的标题盒顶边都落在 --title-top 上，比文字多出的 8px 往下坠，
+   高度仍由它决定（表头 56 = 16 + 32 + 8） */
+.chat-view__avatar{
+  flex:0 0 auto;
+  width:32px;height:32px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--persona-color,var(--theme));
+  color:var(--text-invert);
+  font-size:var(--fs-12);
+  font-weight:600;
+  letter-spacing:.2px;
+  line-height:1;
+  user-select:none;
+}
+.chat-view__copy{min-width:0}
 .chat-view__identity .view-title{
   /* 字号、字距、颜色全部跟着 .view-title 的统一排版走（24 号、次级色），
      这一页原先单独压到 20 号、primary，是左右栏里唯一一处不一样的标题 */
   margin:0;
+  /* 自定义角色的名字可以很长，超出就收省略号，不要把齿轮挤出去 */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .chat-view__identity .view-sub{
   max-width:290px;
@@ -713,9 +795,6 @@
     0 18px 46px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 2)),
     0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .7)),
     inset 0 0 0 1px color-mix(in srgb,var(--border) 76%,transparent);
-}
-.composer__model.is-ready > .composer__model-surface{
-  border-color:color-mix(in srgb,var(--hint) 27%,var(--border));
 }
 .composer__send.is-filled{
   background:var(--text-primary);
@@ -911,6 +990,13 @@
   display:flex;
   align-items:center;
   z-index:2;
+  /* 与账号胶囊、聊天页齿轮 dock 同一套形变变量：panels.js 的 pop 补间
+     --sx / --sy，原点取右下角 —— 面板朝左上长，鼓起时右下那一角钉在
+     发送钮左边不动，另外三条边一起胀出去再弹回来 */
+  --sx:1;
+  --sy:1;
+  scale:var(--sx) var(--sy);
+  transform-origin:100% 100%;
 }
 .composer__model-surface{
   position:absolute;
@@ -918,36 +1004,37 @@
   bottom:0;
   width:100%;
   height:38px;
-  border:1px solid color-mix(in srgb,#e8e8e8 84%,var(--border));
+  /* 白底、无描边：胶囊与输入条的 --card-solid 之间只靠一点明度差分界，
+     描边与灰底都撤掉，收起时它读起来就是一片贴在输入条上的白 */
+  border:0;
   border-radius:999px;
-  background:color-mix(in srgb,var(--bg) 72%,var(--card-solid));
+  background:#fff;
   /* 列表挂在这块底板里、由它裁切：展开途中底板还没长够时，露出来的只是
      已经排好版的那一段，不会有一条列表先探到面板外头去 */
   overflow:hidden;
   pointer-events:none;
+  /* 柔光的半径与浓度：panels.js 的 pop 在这两个变量上补间，
+     常数与齿轮面板同一套（16 / .10 → 32 / .20），
+     所以展开时是同一记「胀开 + 浮起」，不是另一种浮层的入场 */
+  --sh:16px;
+  --sh-a:.1;
   transition:
     width var(--dur) var(--ease),
     height var(--dur) var(--ease),
     border-radius var(--dur) var(--ease),
-    border-color .16s ease,
-    background-color .16s ease,
     box-shadow var(--dur) var(--ease);
 }
-.composer__model:hover > .composer__model-surface{
-  border-color:color-mix(in srgb,var(--text-primary) 14%,var(--border));
-  background:color-mix(in srgb,var(--text-primary) 5%,transparent);
-}
+/* 深色底上没有白：退回卡片实色，免得这块亮片在暗背景里跳出来 */
+:root[data-theme="dark"] .composer__model-surface{background:var(--card-solid)}
 /* 展开：宽取「胶囊宽」与 --model-panel-w 的大者，高由 js 量出来的 --model-h 定
    （38 + 列表高）；右侧边不动，面板整个往左长出来 */
 .composer__model.is-open > .composer__model-surface{
   width:max(100%,var(--model-panel-w));
   height:var(--model-h,38px);
   border-radius:18px;
-  border-color:color-mix(in srgb,var(--text-primary) 12%,var(--border));
-  background:var(--card-solid);
-  box-shadow:
-    0 16px 42px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 2)),
-    0 2px 6px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .8));
+  /* 与齿轮面板同一条柔光：半径与浓度都读补间变量，
+     面板涨开时阴影一起变宽变实，收回去又淡下来 */
+  box-shadow:0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
 }
 .composer__model-trigger{
   position:relative;
@@ -969,10 +1056,36 @@
   cursor:pointer;
   appearance:none;
   -webkit-appearance:none;
+  /* 只过渡字色：底片涨开的那 0.1s 里若字色还是瞬切，会出现浅底配浅字的空档 */
+  transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
+/* 底片与账号面板里的选项胶囊同一套：常驻一层主题色，静止 scale 0 不可见，
+   hover / 键盘聚焦时从圆心涨满整盒，字跟着反白；退场沿原路缩回圆心。
+   压入仍走 --press（js/press.js 逐帧写），与全站胶囊同一档深度 */
+.composer__model-trigger::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  scale:0;
+  transform-origin:50% 50%;
+  transform:scale(calc(1 - var(--press,0) * var(--press-k)));
+  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
+}
+/* 文字与那颗「高」压在底片之上，涨色时不至于被盖住 */
+.composer__model-trigger > *{position:relative; z-index:1}
+.composer__model-trigger:hover,
 .composer__model-trigger:focus-visible{
-  outline:2px solid color-mix(in srgb,var(--theme) 72%,transparent);
-  outline-offset:1px;
+  color:var(--text-invert);
+  outline:none;
+  transition:color .1s cubic-bezier(.16,.84,.3,1);
+}
+.composer__model-trigger:hover::before,
+.composer__model-trigger:focus-visible::before{
+  scale:1;
+  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
 }
 /* 展开后这枚钮变成面板最下面那一行：横跨整块底板，但内容仍旧靠右 ——
    它原来就在胶囊里靠右停着，这么写开合时字一个像素都不挪，长的只是左边那段空板。
@@ -993,22 +1106,14 @@
 }
 .composer__model-effort{
   flex:0 0 auto;
-  color:var(--text-muted);
+  /* 跟着字色走、只压淡一档：底片涨成主题色时它也要一起反白，
+     写死 --text-muted 会在浅绿底上糊成灰 */
+  color:inherit;
+  opacity:.68;
   font-size:12px;
 }
 .composer__model-effort[hidden]{display:none}
-.composer__model-trigger > svg{
-  flex:0 0 auto;
-  width:12px;
-  height:12px;
-  fill:none;
-  stroke:currentColor;
-  stroke-width:1.55;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-  transition:transform .24s var(--ease);
-}
-.composer__model.is-open .composer__model-trigger > svg{transform:rotate(180deg)}
+
 /* 发送钮：不可用时只有一枚淡的箭头（--text-muted），底子是透明的；
    一旦输入框里有字，底色整片涨成主题色、箭头反白 —— 颜色过渡和
    顶栏那几枚圆钮同一条曲线，看起来是「填上了」而不是换了个灰块 */
@@ -1093,7 +1198,7 @@
   bottom:38px;
   width:100%;
   min-width:var(--model-panel-w);
-  padding:8px 6px 6px;
+  padding:8px 8px 6px;
   opacity:0;
   pointer-events:none;
   transform:translateY(4px);
@@ -1108,51 +1213,36 @@
 }
 .model-menu__list{
   display:grid;
-  gap:2px;
+  gap:4px;
   max-height:min(260px,34vh);
   overflow-y:auto;
   overscroll-behavior:contain;
 }
-.model-menu__item{
-  appearance:none;
-  -webkit-appearance:none;
+/* 每一行就是账号面板里那枚选项胶囊：40 高、半高圆角、左内边距 12、
+   hover 时底片从圆心涨满主题色、字反白并右移一格、箭头从左侧浮出来。
+   236 宽的面板放不下 --pill-fs（18–24），这里压到 14 号 */
+.model-menu .pill{
   width:100%;
-  display:grid;
-  grid-template-columns:minmax(0,1fr);
-  align-items:center;
-  gap:8px;
-  min-height:34px;
-  padding:4px 6px;
-  border:0;
-  border-radius:8px;
-  background:transparent;
-  color:var(--text-secondary);
-  font:inherit;
-  text-align:left;
-  cursor:pointer;
-  transition:background-color .15s ease, color .15s ease;
+  height:40px;
+  flex:0 0 40px;
+  font-size:var(--fs-14);
 }
-.model-menu__item:hover,
-.model-menu__item:focus-visible{
-  background:color-mix(in srgb,var(--bg) 82%,transparent);
-  color:var(--text-primary);
-  outline:none;
-}
-.model-menu__item.is-on{color:var(--text-primary)}
-.model-menu__name{
-  min-width:0;
+.model-menu .pill .pill__label{
+  left:12px;
+  /* 模型名比「导出记录」长得多：盒宽按内边距收住，
+     超出就省略号，撑不到圆头上 */
+  max-width:calc(100% - 24px);
   overflow:hidden;
   text-overflow:ellipsis;
-  white-space:nowrap;
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:12.5px;
-  font-weight:400;
-  line-height:1.4;
+  transform:translateY(-50%);
 }
-.model-menu__item.is-on .model-menu__name::after{
-  content:'  ✓';
-  color:var(--theme-dark);
-}
+.model-menu .pill:hover .pill__label,
+.model-menu .pill:focus-visible .pill__label{transform:translate(calc(1em + 16px),-50%)}
+.model-menu .pill:hover .pill__arrow,
+.model-menu .pill:focus-visible .pill__arrow{opacity:1;transform:translateY(-50%) translateX(0)}
+/* 只有当前模型会在列表里露头（整个 provider 没有别的候选时），
+   它按选中态停在深墨，不铺底片 */
+.model-menu .pill.is-on{color:var(--text-primary)}
 /* 快捷胶囊排在卡片底行、左下角三横钮的右手边：不再越过卡片顶缘压到舞台上。
    锚点按 footer 的盒模型算 —— 左内边距 16 + 圆钮直径 38 + 间距 10 = 64；
    纵向让 28 高的胶囊与 38 高的圆钮同心，底距就是 10 + (38 − 28) / 2 = 15。
@@ -1392,7 +1482,7 @@
   max-width:min(38%,320px);
   border:0;
   border-radius:24px;
-  padding:16px;
+  padding:12px;
   background:var(--card-solid);
   box-shadow:none;
   color:var(--text-secondary);
@@ -1412,20 +1502,6 @@
   transform-origin:0 50%;
   transform:rotateY(var(--tilt));
   backface-visibility:hidden;
-  /* 弹出时那一下横向弹性：--sx 由 js 补间（1 → 1.02 → 1，elastic.out），
-     --sy 压在 1 不动 —— 账号面板是两轴等比鼓，这里只让它朝左右撑。
-     scale 是独立属性，不写进 transform，那边还挂着 rotateY */
-  --sx:1;
-  --sy:1;
-  /* 滚到列的上下沿时渐隐渐小：--edge 由 assistant_chat.js 按气泡离那两条边
-     还剩多少余量写 0~1。scale 里把它乘进 --sx，弹性补间和边缘缩放各占各的
-     因子，谁也不覆盖谁；透明度单独一条，不塞进 transform。
-     最淡留 0.06 而不是 0：贴边那一瞬间气泡还有半截露在列里，
-     直接归零会看成被剪断 */
-  --edge:1;
-  scale:calc(var(--sx) * (0.94 + 0.06 * var(--edge))) var(--sy);
-  opacity:calc(.06 + .94 * var(--edge));
-  animation:stage-bubble-in .3s var(--ease) backwards;
 }
 .stage-chat__bubble span{display:block}
 /* 只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角收圆 24 */
@@ -1442,15 +1518,8 @@
   background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
   color:var(--text-primary);
 }
-/* 入场只做淡入与轻微上浮：终点留给元素自己的计算值 —— opacity 里挂着
-   --edge，滚动中会随时变，所以这里不写 to。写了 to 再配 fill:both，
-   动画结束后会把 opacity 锁在 1，边缘渐隐就永远不生效。
-   缩放留给 --sx 那条弹性补间，两边都写 scale 会叠乘 */
-@keyframes stage-bubble-in{
-  from{opacity:0;transform:translateY(8px) rotateY(var(--tilt))}
-}
-
-/* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这一列不必叠着 */
+/* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这一列不必叠着。
+   直接切换可见性，不做位移或淡出 —— 舞台这块只负责安静地退场 */
 body:has(.rail.is-open) .stage-chat,
 body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 
@@ -1468,7 +1537,6 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
   .stage-chat__bubble--user{--tilt:-8deg}
 }
 @media(prefers-reduced-motion:reduce){
-  .stage-chat__bubble{animation:none}
   /* 三横钮的填色不做涨开，悬停直接到位 */
   .composer__history::before,
   .composer__history:hover::before,
