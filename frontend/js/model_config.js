@@ -177,22 +177,18 @@
     models.forEach(function (model) {
       var item = document.createElement('button');
       item.type = 'button';
-      /* 直接就是顶栏 / 账号面板那枚 .pill：底片、字色、hover 位移与按压全跟着
-         全站那一套走，这里只补行高与内边距（见 chat.css 的 .model-menu .pill） */
-      item.className = 'pill';
+      item.className = 'model-menu__item';
       item.dataset.modelChoice = model;
       item.setAttribute('role', 'menuitemradio');
       item.setAttribute('aria-checked', String(model === current.model));
       if (model === current.model) item.classList.add('is-on');
 
       var name = document.createElement('span');
-      name.className = 'pill__label';
+      name.className = 'model-menu__name';
       name.textContent = modelLabel(model);
 
       item.setAttribute('aria-label', model);
       item.append(name);
-      item.insertAdjacentHTML('beforeend',
-        '<svg class="pill__arrow" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42,.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg>');
       menuList.appendChild(item);
     });
   }
@@ -347,18 +343,11 @@
     }
   }
 
-  /* 弹层和触发钮分离：按最长候选名称计算宽度，并限制在 236–340px。
-     这样触发钮原地不动，弹层又能容纳较长的模型名。 */
+  /* 胶囊长成面板：底板高度 = 胶囊 38 + 待选列表的高度，量完写到 --model-h 上，
+     由 css 的 height 过渡从 38 走到这个值。列表在展开前是透明的但已经排版，
+     没展开也能量到真实尺寸；量不到时 css 那边回落到 38 */
   function measureMenu() {
-    var widest = 0;
-    menuList.querySelectorAll('.pill__label').forEach(function (label) {
-      var range = document.createRange();
-      range.selectNodeContents(label);
-      widest = Math.max(widest, range.getBoundingClientRect().width);
-    });
-    var ceiling = Math.min(340, Math.max(180, window.innerWidth - 32));
-    var width = Math.min(ceiling, Math.max(236, wrap.offsetWidth, widest + 48));
-    menu.style.width = width + 'px';
+    wrap.style.setProperty('--model-h', (38 + menu.offsetHeight) + 'px');
   }
 
   var closeTimer = 0;
@@ -367,11 +356,10 @@
     wrap.classList.remove('is-open');
     trigger.setAttribute('aria-expanded', 'false');
     clearTimeout(closeTimer);
-    /* 等浮层退场后再收起：列表 display:none，触发钮宽度也恢复自适应 */
+    /* 等底板缩回胶囊再收尾：列表 display:none，外层那格宽度也放开 */
     closeTimer = setTimeout(function () {
       menu.hidden = true;
       wrap.style.width = '';
-      menu.style.width = '';
     }, 320);
   }
 
@@ -379,10 +367,11 @@
     renderMenu();
     clearTimeout(closeTimer);
     menu.hidden = false;
-    /* 点击期间把触发钮当前宽度钉住；浮层单独定位，触发布局不参与伸缩 */
+    /* 展开后那枚钮改成绝对定位（要横跨整块面板），外层就先按胶囊的原宽度钉住，
+       否则这一格会塌成 0，底板与列表的 100% 也就没了参照 */
     wrap.style.width = wrap.offsetWidth + 'px';
     measureMenu();
-    /* 先量好浮层宽度再挂开合类，避免第一帧按旧宽度排版后跳一下 */
+    /* 先把「胶囊态」的 38 刷成当前计算值，再加类，height 才有起点可过渡 */
     void wrap.offsetWidth;
     wrap.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
