@@ -26,11 +26,11 @@
   <link rel="stylesheet" href="css/workspace.css?v=33">
   <link rel="stylesheet" href="css/cards.css?v=32">
   <link rel="stylesheet" href="css/modal.css?v=36">
-  <link rel="stylesheet" href="css/chat.css?v=137">
+  <link rel="stylesheet" href="css/chat.css?v=142">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/robot.css?v=4">
 <link rel="stylesheet" href="css/viewtool.css?v=34">
-<link rel="stylesheet" href="css/auth.css?v=14">
+<link rel="stylesheet" href="css/auth.css?v=20">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -788,9 +788,74 @@
   <form class="auth__panel" id="auth-panel" role="dialog" aria-modal="true"
         data-i18n-aria="auth.dialog" aria-label="Sign in or register" novalidate>
 
-    <!-- 左 2/3 留白：不带任何文案与插图，只留一层纯底色，
-         预留给之后要放进去的内容（背景由 .auth__aside 自己铺）。 -->
-    <section class="auth__aside" aria-hidden="true"></section>
+    <!-- 左 2/3：情感化登录插画。三枚纯色块角色（主题色 / 粉 / Dialog 蓝）站在卡片底边，
+         身子以脚底为轴跟着指针斜过去、眼睛也跟着转，像被那颗光标牵着；
+         点进密码框就一起别过头看左边、橙色眯眼、紫色撇出波浪嘴，
+         像在吹口哨；通过校验并登录成功时全部换成笑眼与笑弧、从身后向上喷彩带；
+         被规则挡下（格式不对、账号密码不匹配）则眉毛抬起、瞳孔收紧、嘴张成小圆 —— 一副被吓到的样子。
+         状态只由 data-mood 驱动（js/auth_faces.js），几何与配色全在 css/auth.css。 -->
+    <section class="auth__aside" aria-hidden="true">
+      <!-- 彩带画在角色后面，看起来是从它们背后窜出来的 -->
+      <canvas class="auth__confetti" data-confetti></canvas>
+      <svg class="auth__cast" viewBox="0 0 400 400" preserveAspectRatio="xMidYMax meet">
+        <!-- 最高的一枚：主题色（mint），顶边斜切；块面够浅，眼睛用深色实心点 -->
+        <g class="cast__actor cast__actor--theme">
+          <g class="cast__sway">
+            <path class="cast__body" d="M132 400V152L232 122V400Z"/>
+            <g class="cast__brows"><path d="M154 164q8-9 16 0"/><path d="M186 164q8-9 16 0"/></g>
+            <g class="cast__eyes">
+              <circle class="cast__pupil" data-pupil="2.6" cx="162" cy="178" r="5"/>
+              <circle class="cast__pupil" data-pupil="2.6" cx="194" cy="178" r="5"/>
+            </g>
+            <g class="cast__lids"><path d="M154 181q8-8 16 0"/><path d="M186 181q8-8 16 0"/></g>
+            <g class="cast__mouths">
+              <path class="cast__mouth cast__mouth--idle" d="M178 194v10"/>
+              <path class="cast__mouth cast__mouth--whistle" d="M168 196q5-6 10 0t10 0"/>
+              <path class="cast__mouth cast__mouth--happy" d="M168 196q10 13 20 0"/>
+              <ellipse class="cast__mouth--shock" cx="178" cy="200" rx="5" ry="6.8"/>
+            </g>
+          </g>
+        </g>
+        <!-- 粉：最宽的一枚半圆，压在主题色那枚的下半段前面 -->
+        <g class="cast__actor cast__actor--rose">
+          <g class="cast__sway">
+            <path class="cast__body" d="M80 400A82 80 0 0 1 244 400Z"/>
+            <g class="cast__brows"><path d="M120 342q8-8 16 0"/><path d="M150 342q8-8 16 0"/></g>
+            <g class="cast__eyes cast__eyes--soft">
+              <circle class="cast__pupil" data-pupil="2.4" cx="128" cy="356" r="4.8"/>
+              <circle class="cast__pupil" data-pupil="2.4" cx="158" cy="356" r="4.8"/>
+            </g>
+            <g class="cast__lids cast__lids--soft"><path d="M119 353q9 9 18 0"/><path d="M149 353q9 9 18 0"/></g>
+            <g class="cast__lids"><path d="M120 358q8-8 16 0"/><path d="M150 358q8-8 16 0"/></g>
+            <g class="cast__mouths">
+              <path class="cast__mouth cast__mouth--happy" d="M124 370q12 11 24 0"/>
+              <ellipse class="cast__mouth--shock" cx="136" cy="373" rx="5" ry="6.5"/>
+            </g>
+          </g>
+        </g>
+        <!-- 次高的一枚：Dialog 那支蓝，白眼球配深瞳 -->
+        <g class="cast__actor cast__actor--deep">
+          <g class="cast__sway">
+            <path class="cast__body" d="M226 400V240L320 218V400Z"/>
+            <g class="cast__brows"><path d="M254 248q9-9 18 0"/><path d="M286 248q9-9 18 0"/></g>
+            <g class="cast__eyes">
+              <g class="cast__eye">
+                <circle class="cast__ball" cx="264" cy="266" r="9.5"/>
+                <circle class="cast__pupil" data-pupil="3.8" cx="264" cy="267" r="4.6"/>
+              </g>
+              <g class="cast__eye">
+                <circle class="cast__ball" cx="296" cy="266" r="9.5"/>
+                <circle class="cast__pupil" data-pupil="3.8" cx="296" cy="267" r="4.6"/>
+              </g>
+            </g>
+            <g class="cast__lids"><path d="M255 268q9-9 18 0"/><path d="M287 268q9-9 18 0"/></g>
+            <g class="cast__mouths">
+              <ellipse class="cast__mouth--shock" cx="280" cy="293" rx="5.5" ry="7"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </section>
 
     <div class="auth__body">
       <!-- 页签：纯文字，登录 / 注册，两者平分列宽、字居中。选中与 hover
@@ -847,7 +912,8 @@
 </div>
 
 <!-- 账号脚本要等 #auth 在 DOM 里才抓得到节点，所以不成对地挂在标记之后 -->
-<script src="js/auth.js?v=12"></script>
+<script src="js/auth_faces.js?v=5"></script>
+<script src="js/auth.js?v=14"></script>
 
 <!-- 居中弹窗：Preference / Settings / Privacy 三枚胶囊共用。
      3:2、高比侧栏矮 48、内边距 16。
@@ -1118,7 +1184,7 @@
 <script src="js/composer.js?v=10"></script>
 <script src="js/model_config.js?v=21"></script>
 <script src="js/persona.js?v=5"></script>
-<script src="js/assistant_chat.js?v=44"></script>
+<script src="js/assistant_chat.js?v=50"></script>
 <script src="js/dialog_card.js?v=2"></script>
 <script src="js/profile_state.js?v=3"></script>
 <script src="js/pose_controls.js?v=1"></script>
@@ -1136,7 +1202,7 @@
   }
 }
 </script>
-<script type="module" src="js/robot3d.js?v=80"></script>
+<script type="module" src="js/robot3d.js?v=82"></script>
 <script type="module" src="js/view-control.js?v=51"></script>
 <script type="module" src="js/q1skin.js?v=51"></script>
 

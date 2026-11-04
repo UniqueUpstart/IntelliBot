@@ -38,9 +38,10 @@ const FRAME_KEY = 'intellibot.bot'; /* 与 Settings 里那组按钮共用同一�
    body 的 yaw 是「指针贴到屏幕边」时多转的角度，0.08 约 4.6°；
    head 直接用 Math.PI/6，就是左右各 30°。
    drop 是机身整体在画面里下移的距离（按身高归一）：只抬相机注视点，
-   不缩取景框，所以人不会跟着变小。机身下移后脚下那片留白正好托住它 */
+   不缩取景框，所以人不会跟着变小。数值越小机身越靠上，0.1 时整台机器
+   基本居中，头顶与画布上沿之间留出一段空气 */
 const FRAMES = {
-  body: { top: 1,     bottom: 0,     fill: 0.9,  baseYaw: 0.12, yaw: 0.08,       pitch: 0.025, breathe: 0.012, drop: 0.2 },
+  body: { top: 1,     bottom: 0,     fill: 0.9,  baseYaw: 0.12, yaw: 0.08,       pitch: 0.025, breathe: 0.012, drop: 0.1 },
   head: { top: 1.03,  bottom: 0.81,  fill: 0.92, baseYaw: 0,    yaw: Math.PI / 6, pitch: 0,     breathe: 0.006, drop: 0 },
 };
 const ARM_SPAN = 0.5;       /* 含边距的臂展（归一化到身高），窄屏时用它挡横向溢出 */

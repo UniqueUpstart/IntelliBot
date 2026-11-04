@@ -130,55 +130,234 @@
   }
 
   /* 舞台不再滚动：一屏只留最近三组（一问一答算一组），更早的一条在
-     第 7 条落位时缩小淡出，把占位让出来。离场不写 transform ——
-     气泡自己还挂着 rotateY 的倾角，覆盖 transform 会把那一帧拍平；
-     这里只改三个 CSS 变量，过渡交给样式表 */
+     第 7 条落位时缩小淡出，把占位让出来。
+     退场拆成两条互不拖累的通道，都交给 GSAP 的一条时间线：
+     ① 那条气泡当场脱离文档流，一路往上飘、收到 0.78 时带一点回弹、透明度
+        慢慢减到 0。它的盒子不再参与排版，缩放就不会被「收高」碾成一条线，
+        rotateY 的倾角也不会被改写 transform 拍平 —— 全程只动三个 CSS 变量；
+     ② 原地留一枚同高的空占位，高度连同下面那 12 的缝一起折回 0，后面的
+        气泡顺着排版平滑顶上来。这条也只在占位上改高度，气泡本身不做逐帧
+        变换，两层动画各走各的，不会互相抢帧。
+
+     一次要退两条时不能同时开场：两条都被钉在原来的位置上，下面那一批又会
+     一起被顶上来，第二条就正好被后来的气泡压在下面（它自己还在原地淡出）。
+     所以退场排成队列，前一条连同占位收完，才让下一条走 —— 每一条都走完整
+     的「上浮 + 缩到 0.78 + 淡出 + 占位收高」，一屏仍是三组，只是逐条让位。
+     排队的那条不等在原地：一入队就从满格匀速淡到一半，等前面让位演完、轮到
+     它时再从一半接着淡到 0 —— 淡出跟着让位一起走，接缝处不空一拍 */
   var STAGE_GROUPS = 3;
   var STAGE_LIMIT = STAGE_GROUPS * 2;
-  var STAGE_LEAVE_MS = 440;
+  /* 上浮与收量 0.62s，占位收高 0.68s，透明度在后半段走完。
+     旧版是 0.42 / 0.3 两条 CSS 过渡，收得比读起来还快 */
+  var STAGE_LEAVE_S = 0.62;
+  var STAGE_COLLAPSE_S = 0.68;
+  var STAGE_LEAVE_Y = -20;
+  var STAGE_LEAVE_SCALE = 0.78;
+  var STAGE_REDUCE = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* 已经在退场、或者排着队等退场的气泡都不算「在流里」：计数、取最旧一条、
+     按 id 复用都只认还留在台上的那些 */
+  var STAGE_ALIVE = '.stage-chat__bubble:not(.is-leaving):not([data-stage-exit])';
 
   function stageLive(stream) {
-    var count = 0;
-    for (var i = 0; i < stream.children.length; i += 1) {
-      if (!stream.children[i].classList.contains('is-leaving')) count += 1;
-    }
-    return count;
+    return stream.querySelectorAll(STAGE_ALIVE).length;
   }
 
   function stageOldest(stream) {
-    for (var i = 0; i < stream.children.length; i += 1) {
-      if (!stream.children[i].classList.contains('is-leaving')) return stream.children[i];
-    }
-    return null;
+    return stream.querySelector(STAGE_ALIVE);
   }
 
-  function leaveStage(node) {
-    if (!node || node.classList.contains('is-leaving')) return;
-    /* 先把上限钉在这条气泡的实际高度上：不写的话 max-height 是 none，
-       收高度这一路没有起点，压缩会等到淡出结束才「咔」一下塌掉。
-       钉住之后再折到 0，压缩才落在看得见的这一段里 */
-    node.style.maxHeight = node.offsetHeight + 'px';
-    /* 读一次布局，让这个起点先落进样式表，否则两步会被合成一帧 */
-    void node.offsetHeight;
+  /* 退场队列：同一批里排第二、第三条的，等前一条把占位收完再走 —— 两条同时
+     钉在原地，下面顶上来的一头就会撞进它身上。走位排队，淡出不排队：等在
+     后面的那条一入队就先淡下去，轮到自己时接着往下走 */
+  var stageExitQueue = [];
+  var stageExitBusy = false;
+  /* 排队那条先淡到这里：前一条把占位收完要 0.68s，这段时间它匀速走到一半，
+     轮到它时后半段再从一半匀速走到 0 —— 两段斜率一样，接缝处看不出停顿 */
+  var STAGE_QUEUE_DIM = 0.5;
+
+  /* 排队期间的预淡：只动 --exit-o，不动位置。它还在流里，被前一条的占位
+     顶着往上走的那一段，同时就在变淡 —— 让位与淡出是同一段时间里的两件事，
+     不会出现「先站着不动，轮到了才开始淡」的空档 */
+  function preDimStage(node) {
+    if (!node || !window.gsap) return;
+    if (STAGE_REDUCE && STAGE_REDUCE.matches) return;
+    var from = parseFloat(
+      window.getComputedStyle(node).getPropertyValue('--exit-o')
+    );
+    if (!isFinite(from)) from = 1;
+    if (from <= STAGE_QUEUE_DIM) return;
+    node.style.setProperty('--exit-o', String(from));
+    window.gsap.to(node, {
+      '--exit-o': STAGE_QUEUE_DIM,
+      duration: STAGE_COLLAPSE_S,
+      ease: 'none'
+    });
+  }
+
+  function stageDiscard(node) {
+    if (!node) return;
+    if (bubbleWatcher) bubbleWatcher.unobserve(node);
+    if (node.parentNode) node.parentNode.removeChild(node);
+  }
+
+  function pumpStageExit() {
+    if (stageExitBusy) return;
+    while (stageExitQueue.length) {
+      var next = stageExitQueue.shift();
+      if (!next || !next.parentNode || next.classList.contains('is-leaving')) continue;
+      stageExitBusy = true;
+      leaveStage(next, function () {
+        stageExitBusy = false;
+        pumpStageExit();
+      });
+      return;
+    }
+  }
+
+  function queueStageExit(node) {
+    if (!node || node.dataset.stageExit) return;
+    /* 回放历史时一次灌进来几十条：这时候不排队做动画，直接把早的摘掉，
+       否则光让位就要演上一分多钟 */
+    if (restoring) {
+      stageDiscard(node);
+      return;
+    }
+    node.dataset.stageExit = '1';
+    stageExitQueue.push(node);
+    /* 前面还有一条在退：这条从此刻起就开始淡，而不是等轮到自己才动 */
+    if (stageExitBusy) preDimStage(node);
+    pumpStageExit();
+  }
+
+  function leaveStage(node, done) {
+    if (!node || node.classList.contains('is-leaving')) {
+      if (done) done();
+      return;
+    }
+    var stream = node.parentNode;
+    if (!stream) {
+      if (done) done();
+      return;
+    }
+
+    /* 量的是排版值，不是投影后的外框：气泡还挂着 rotateY + 父级的透视，
+       getBoundingClientRect 拿到的是被透视压过的那一圈，宽度会偏窄。
+       宽高取 computed（带小数，写回去不会让文字重排），位置取 offset*
+       （相对这一列的内边距边，正好是绝对定位的参照） */
+    var style = window.getComputedStyle(node);
+    var height = parseFloat(style.height) || node.offsetHeight;
+    var width = parseFloat(style.width) || node.offsetWidth;
+    var left = node.offsetLeft;
+    var top = node.offsetTop;
+    var gap = parseFloat(
+      window.getComputedStyle(stream).getPropertyValue('--stage-gap')
+    ) || 12;
+
+    /* 排过队的那条已经淡了一截：记下当下的不透明度，散场时从这里接着走。
+       写回 1 会让前面那段淡出白演，还会在接缝处亮跳一下 */
+    var fromO = parseFloat(style.opacity);
+    if (!isFinite(fromO) || fromO > 1) fromO = 1;
+    if (fromO < 0) fromO = 0;
+    /* 位移同理：它可能正被上一条顶上去（--exit-y 还是正数），钉成绝对定位
+       时若不认这段，会当场往上跳一截再开始退场 */
+    var fromY = parseFloat(node.style.getPropertyValue('--exit-y'));
+    if (!isFinite(fromY)) fromY = 0;
+
     node.classList.add('is-leaving');
     node.setAttribute('aria-hidden', 'true');
-    /* 目标值：缩到 0.82、往上飘 8、完全透明。CSS 里那条 transform 把这三个
-       变量叠在 rotateY 后面，所以缩小是绕着气泡自己的倾角发生的 */
-    node.style.setProperty('--exit-s', '0.82');
-    node.style.setProperty('--exit-y', '-8px');
-    node.style.setProperty('--exit-o', '0');
+    if (bubbleWatcher) bubbleWatcher.unobserve(node);
+
+    /* 占位先顶上，再让气泡离场。两步在同一帧里走完、中间不落一次绘制，
+       后面的气泡就不会先塌一下再补回来 */
+    var spacer = document.createElement('div');
+    spacer.className = 'stage-chat__spacer';
+    spacer.style.height = height + 'px';
+    stream.insertBefore(spacer, node);
+
+    node.style.position = 'absolute';
+    node.style.left = left + 'px';
+    node.style.top = top + 'px';
+    node.style.width = width + 'px';
+    node.style.margin = '0';
+
     var removed = false;
     var drop = function () {
       if (removed) return;
       removed = true;
-      if (bubbleWatcher) bubbleWatcher.unobserve(node);
+      if (window.gsap) {
+        window.gsap.killTweensOf(node);
+        window.gsap.killTweensOf(spacer);
+      }
+      if (spacer.parentNode) spacer.remove();
       node.remove();
+      /* 摘干净了才放行下一条：队列靠这一声回调往下走 */
+      if (done) done();
     };
-    node.addEventListener('transitionend', function (event) {
-      if (event.target === node) drop();
-    });
-    /* 标签页被挂起时过渡不派发 end：这条只是兜底，别让占位一直留着 */
-    setTimeout(drop, STAGE_LEAVE_MS + 120);
+
+    /* 没有动画库、或者系统要求减少动态：不留中间态，直接让位 */
+    if (!window.gsap || (STAGE_REDUCE && STAGE_REDUCE.matches)) {
+      drop();
+      return;
+    }
+
+    var engine = window.gsap;
+    /* 排队时那段淡出还挂在元素上，先收掉；下面这条时间线接管同一批变量 */
+    engine.killTweensOf(node);
+    /* 起点先落到内联样式上，补间读到的就是确定的数，不去猜样式表里的初值 */
+    node.style.setProperty('--exit-y', fromY + 'px');
+    node.style.setProperty('--exit-s', '1');
+    node.style.setProperty('--exit-o', String(fromO));
+
+    var tl = engine.timeline({ onComplete: drop });
+
+    /* 上浮距离按位置收敛：这条要是已经贴在列顶，就不能再往上顶，
+       否则会被列的 overflow 切掉一截。缩放会把上沿往下带
+       (1 - 0.78) × 高 / 2，这段余量也算进去 */
+    var room = top + (1 - STAGE_LEAVE_SCALE) * height / 2 - 2;
+    var rise = Math.max(0, Math.min(Math.abs(STAGE_LEAVE_Y), room));
+
+    /* 往上飘：两头慢、中间快，一路走满 0.62s；不要那种一上来就冲到底的收法 */
+    tl.to(node, {
+      '--exit-y': -rise + 'px',
+      duration: STAGE_LEAVE_S,
+      ease: 'power2.inOut'
+    }, 0);
+    /* 弹性缩小：一路匀匀收进来，末了过一点点再回位 —— 像被轻轻压了一下。
+       elastic 的前段太快（头 0.1 秒就把八成的量走完），和「上移一段距离」对不上，
+       所以这里用 back 的单次过冲顶替 */
+    tl.to(node, {
+      '--exit-s': STAGE_LEAVE_SCALE,
+      duration: STAGE_LEAVE_S,
+      ease: 'back.out(1.6)'
+    }, 0);
+    if (fromO < 0.999) {
+      /* 排队时已经在淡的那条：剩下的量按占位收高的节奏匀速走完，占位落到
+         底时正好归零 —— 接得上前面那半段，也不会在下一条顶到它位置时留影子 */
+      tl.to(node, {
+        '--exit-o': 0,
+        duration: STAGE_COLLAPSE_S,
+        ease: 'none'
+      }, 0);
+    } else {
+      /* 透明度：慢起、后段加速，飘到一半才明显变淡，不会一上来就发虚 */
+      tl.to(node, {
+        '--exit-o': 0,
+        duration: STAGE_LEAVE_S * 0.8,
+        ease: 'power1.in'
+      }, STAGE_LEAVE_S * 0.15);
+    }
+    /* 占位收高：高度与那 12 的缝一起折回 0，下面的气泡匀速顶上来 */
+    tl.to(spacer, {
+      height: 0,
+      marginBottom: -gap,
+      duration: STAGE_COLLAPSE_S,
+      ease: 'power2.inOut'
+    }, 0);
+
+    /* 标签页被挂起时补间停摆：这条兜底把占位收掉，别让它一直留在流里 */
+    setTimeout(drop, (STAGE_COLLAPSE_S + 0.5) * 1000);
   }
 
   function trimStage(stream) {
@@ -187,10 +366,12 @@
     /* 一次退一整组：只多出一条时也带走两条，否则裁掉半组、
        留下一开头就是机器人的半截问答，读起来像丢了问题 */
     var drop = Math.ceil((live - STAGE_LIMIT) / 2) * 2;
+    /* 进队列而不是当场开演：同一批里第二条要等第一条收完占位再走，
+       两条同时钉在原地会让下面顶上来的一头撞进它身上 */
     for (var i = 0; i < drop; i += 1) {
       var oldest = stageOldest(stream);
       if (!oldest) return;
-      leaveStage(oldest);
+      queueStageExit(oldest);
     }
   }
 
@@ -231,6 +412,87 @@
     for (var i = 0; i < entries.length; i += 1) syncBubbleTilt(entries[i].target);
   }) : null;
 
+  /* ---------- 落位：老的气泡往上让，新的从底边升上来 ---------- */
+
+  /* 排版是一帧跳过去的：新气泡一插进来，前面几条的位置立刻少了一截。
+     这里把那一截换成补间 —— 插入前量一遍位置，插完再量一遍，差多少就先按
+     差量把它们推回去、再用一段缓动放回 0，看上去就是整列被新的一条顶上去。
+     新的一条自己从底边滑上来，同一个方向，两段动作读起来是一件事 */
+  var STAGE_SHIFT_S = 0.42;
+  var STAGE_ENTER_S = 0.46;
+  var STAGE_ENTER_Y = 18;
+
+  function stageRecall(stream) {
+    var out = [];
+    if (!stream) return out;
+    for (var i = 0; i < stream.children.length; i += 1) {
+      var child = stream.children[i];
+      if (!child.classList || !child.classList.contains('stage-chat__bubble')) continue;
+      if (child.classList.contains('is-leaving') || child.dataset.stageExit) continue;
+      out.push({
+        node: child,
+        top: child.offsetTop,
+        /* 可能还挂着上一段位移：连着来两条时，第一条的让位还没走完就量了，
+           起点得把这段算进去，否则它会被拽回排版位置再重走一遍 */
+        shift: parseFloat(child.style.getPropertyValue('--exit-y')) || 0
+      });
+    }
+    return out;
+  }
+
+  /* 入场走独立的一条通道 --in-y，与让位用的 --exit-y 分开：
+     发一条消息会连着落两条，前一条还在往上浮的时候后一条就到了，
+     两条补间若写同一个变量，后者会把前者打断在半路 */
+  function enterStage(node) {
+    var engine = window.gsap;
+    if (!engine || (STAGE_REDUCE && STAGE_REDUCE.matches)) return;
+    node.classList.add('is-entering');
+    node.style.setProperty('--in-y', STAGE_ENTER_Y + 'px');
+    node.style.setProperty('--exit-o', '0');
+    engine.timeline({
+      onComplete: function () { node.classList.remove('is-entering'); }
+    })
+      .to(node, {
+        '--in-y': '0px',
+        duration: STAGE_ENTER_S,
+        ease: 'power3.out'
+      }, 0)
+      /* 淡入比位移短一点：位移先走掉大半、颜色再补满，两条糊在一起会发闷 */
+      .to(node, {
+        '--exit-o': 1,
+        duration: STAGE_ENTER_S * 0.7,
+        ease: 'power2.out'
+      }, 0);
+  }
+
+  function stageShiftIn(before, fresh) {
+    var engine = window.gsap;
+    if (!engine || (STAGE_REDUCE && STAGE_REDUCE.matches)) return;
+    var i, item, delta, node;
+    for (i = 0; i < (before ? before.length : 0); i += 1) {
+      item = before[i];
+      node = item.node;
+      if (!node.parentNode || node.classList.contains('is-leaving')) continue;
+      delta = item.top + item.shift - node.offsetTop;
+      /* 只处理被顶上去的那几条；没挪动的就不必补一段零位移 */
+      if (!(delta > 0.5)) continue;
+      node.classList.add('is-shifting');
+      node.style.setProperty('--exit-y', delta.toFixed(1) + 'px');
+      engine.to(node, {
+        '--exit-y': '0px',
+        duration: STAGE_SHIFT_S,
+        ease: 'power3.out',
+        /* 连着来两条时这条上还挂着上一段让位，只顶掉同为 --exit-y 的那条，
+           别整条收掉 —— 它可能同时在跑自己的入场 */
+        overwrite: 'auto',
+        onComplete: (function (target) {
+          return function () { target.classList.remove('is-shifting'); };
+        })(node)
+      });
+    }
+    if (fresh) enterStage(fresh);
+  }
+
   /* 舞台只有一列：已有的气泡按 recordId 复用，新的追加到末尾 —— 时间怎么走，
      气泡就怎么往下排（流自己向上滚，最新一条总在底边），问答因此自然错位。
      同一条记录会走两遍 —— 先「正在思考…」再回填正文，所以复用优先于新建 */
@@ -238,8 +500,14 @@
     var stream = stageStream();
     if (!stream) return;
     var key = String(recordId || '');
-    var node = key ? stream.querySelector('[data-record-id="' + key + '"]') : null;
+    var node = key
+      ? stream.querySelector(STAGE_ALIVE + '[data-record-id="' + key + '"]')
+      : null;
+    /* 新插一条时才记位置、才演入场；回放历史时一次灌几十条，既不量也不演 */
+    var before = null;
+    var fresh = null;
     if (!node) {
+      before = restoring ? null : stageRecall(stream);
       node = document.createElement('button');
       node.type = 'button';
       node.className = 'stage-chat__bubble stage-chat__bubble--' + role;
@@ -253,16 +521,22 @@
       if (bubbleWatcher) bubbleWatcher.observe(node);
       /* 只留最近三组：超出的那条就地缩小淡出，不再靠滚动翻旧账 */
       trimStage(stream);
+      fresh = node;
     }
     var textNode = node.querySelector('[data-stage-text]');
     if (textNode) textNode.textContent = text;
     else node.textContent = text;
     node.dataset.recordId = key;
+    /* 等文字写完再演：这一条的高度是写完才定的，早一步量出来的差值会偏小，
+       整列会先跳半截再补上剩下的 */
+    if (fresh && !restoring) stageShiftIn(before, fresh);
   }
 
   function hideStage() {
     var stream = stageStream();
     if (!stream) return;
+    /* 队列里还没走的那些跟着一起作废，否则清空后它们会挨个空转一遍 */
+    stageExitQueue.length = 0;
     if (bubbleWatcher) {
       for (var i = 0; i < stream.children.length; i += 1) {
         bubbleWatcher.unobserve(stream.children[i]);

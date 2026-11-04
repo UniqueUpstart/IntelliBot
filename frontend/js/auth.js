@@ -254,6 +254,8 @@
       if (trigger) trigger.setAttribute('aria-expanded', 'false');
     }
     if (window.robot3d && window.robot3d.suspend) window.robot3d.suspend(1200);
+    /* 每次重新浮出都从「看着你」的常态开始：上一次的吹口哨或笑脸不该带进来 */
+    if (window.intellibotAuthFaces) window.intellibotAuthFaces.idle();
     popIn();
     window.setTimeout(function () {
       if (!root.classList.contains('is-open') || closing) return;
@@ -274,6 +276,8 @@
       closing = false;
       root.classList.remove('is-open');
       document.body.classList.remove('is-auth');
+      /* 卡片走了，左栏那几枚色块和彩带也回到常态，下次开面板不会接着上一次的笑脸 */
+      if (window.intellibotAuthFaces) window.intellibotAuthFaces.idle();
       if (trigger) trigger.focus({ preventScroll: true });
     });
   }
@@ -380,6 +384,14 @@
 
   /* ---------- 提交 ---------- */
 
+  /* 被挡下来的那一下：表情先换成震惊，再去看是哪一格。
+     三种错误共用同一条出口，免得每处都抄一遍 */
+  function reject(errorKey, field) {
+    setMessage(t(errorKey), 'error');
+    if (field) field.focus();
+    if (window.intellibotAuthFaces) window.intellibotAuthFaces.shock();
+  }
+
   async function submit() {
     if (busy) return;
     const username = (usernameEl.value || '').trim();
@@ -389,18 +401,15 @@
     /* 先按后端那几条规则挡一遍：本地能立刻指出是哪一格不对，
        不必等一次往返；后端校验照旧是最后一道 */
     if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) {
-      setMessage(t('auth.error.username'), 'error');
-      usernameEl.focus();
+      reject('auth.error.username', usernameEl);
       return;
     }
     if (password.length < 8 || password.length > 16) {
-      setMessage(t('auth.error.password'), 'error');
-      passwordEl.focus();
+      reject('auth.error.password', passwordEl);
       return;
     }
     if (mode === 'register' && display.length > 32) {
-      setMessage(t('auth.error.display'), 'error');
-      displayEl.focus();
+      reject('auth.error.display', displayEl);
       return;
     }
 
@@ -418,6 +427,9 @@
         passwordEl.value = '';
         setMessage(t('auth.register.ok'), 'ok');
         passwordEl.focus();
+        /* 笑脸放在真的注册成功之后：先切回登录页、把光标放回密码框，
+           再笑 —— 不然「笑完发现用户名已被占用」比不笑更尴尬 */
+        if (window.intellibotAuthFaces) window.intellibotAuthFaces.celebrate();
       } else {
         const data = await api('/auth/login', {
           method: 'POST',
@@ -426,10 +438,16 @@
         writeToken(data.access_token);
         markSeen();
         applyUser(data.user);
-        closePanel();
+        /* 笑脸与彩带先亮一下再收起卡片：立刻 closePanel 会把刚喷出去的
+           彩带连同整块左栏一起切掉，950ms 刚好够它飞到画面上方 */
+        if (window.intellibotAuthFaces) window.intellibotAuthFaces.celebrate();
+        window.setTimeout(closePanel, 950);
       }
     } catch (err) {
       setMessage(err.message, 'error');
+      /* 账号或密码不匹配也走震惊：提交那一刻不再抢着笑，
+         笑脸与彩带只留给真的进去了的那一次 */
+      if (window.intellibotAuthFaces) window.intellibotAuthFaces.shock();
     } finally {
       busy = false;
       submitBtn.disabled = false;

@@ -1832,32 +1832,61 @@
   --exit-s:1;
   --exit-y:0px;
   --exit-o:1;
+  /* 入场专用的一条通道：新的一条从底边升上来（--in-y 由 18 回到 0）。
+     与 --exit-y 分开是因为连着来两条时，前面那条一边入场一边被顶上去，
+     两条补间写同一个变量会互相打断 */
+  --in-y:0px;
   opacity:var(--exit-o);
   /* 转轴钉在外侧竖边，也就是靠屏幕边的那条对齐线：这条边在投影里零位移，
      气泡多宽多短，这一侧的缘都落在同一条竖线上（thinking 那种短气泡
      不会因为外扩少而显得缩进去）。靠中轴的内侧随倾角往里收，
      外宽内窄的观感留在原处 */
   transform-origin:0 50%;
-  transform:rotateY(var(--tilt)) translateY(var(--exit-y)) scale(var(--exit-s));
+  transform:rotateY(var(--tilt))
+            translateY(var(--exit-y))
+            translateY(var(--in-y))
+            scale(var(--exit-s));
   backface-visibility:hidden;
-  /* 缩小的这一段带一点过冲，收得干脆；高度与内边距用同一条普通缓动，
-     跟着一起折回去，不会先扁再补 */
+  /* 这条过渡现在只剩一个用武之地：视口变化时 js 重算 --tilt，倾角平滑转过去。
+     退场不走 CSS —— .is-leaving 会把它整条关掉，三个变量由 GSAP 逐帧补间 */
   transition:transform .42s cubic-bezier(.34,1.2,.64,1),
-             opacity .3s ease,
-             max-height .42s var(--ease),
-             padding-top .42s var(--ease),
-             padding-bottom .42s var(--ease),
-             margin-bottom .42s var(--ease);
+             opacity .3s ease;
 }
-/* 超出三组的那条：缩小、上飘、淡出，占位一起收掉 ——
-   容器的 gap 会给它留一份，用等量的负下边距抵回去，
-   收完之后下面的气泡无缝顶上来 */
+/* 超出三组的那条：由 js 先钉成绝对定位（left/top/width 写在元素上），
+   再把 --exit-y / --exit-s / --exit-o 交给 GSAP 补间 —— 往上飘一段、
+   按弹性曲线收到 0.78、透明度减到 0。它已经不在流里，缩小不会被自身盒子
+   的收高压成一条线，倾角也保留在这条 transform 上。
+   transition 要关掉：变量是逐帧写的，再挂一层 CSS 过渡等于每帧重新起一段
+   插值，追不上补间，动作会糊成一条慢线 */
 .stage-chat__bubble.is-leaving{
-  /* 起点的具体高度由 js 写在元素上，这里必须让它压过内联那一条 */
-  max-height:0!important;
-  padding-top:0;
-  padding-bottom:0;
-  margin-bottom:calc(var(--stage-gap) * -1);
+  position:absolute;
+  z-index:1;
+  margin:0;
+  overflow:hidden;
+  pointer-events:none;
+  transition:none;
+  /* 这一段每一帧都在改 transform 与 opacity，提前提层，
+     免得整块跟着列的排版一起重绘 */
+  will-change:transform, opacity;
+}
+/* 排着队等退场的那条：入队就开始淡（js/assistant_chat.js 逐帧写 --exit-o），
+   这里要把 opacity 的过渡关掉 —— 否则每写一帧就重新起一段 0.3s 插值，
+   追不上补间，淡出会糊成一条慢线 */
+.stage-chat__bubble[data-stage-exit]{
+  transition:none;
+}
+/* 新气泡落位的那一帧：老的几条被排版往上顶了一截，这段位移由 js 换成补间
+   （translateY 从差量回到 0），新的一条从底边滑上来。两边都是逐帧写变量，
+   这里要把 transform / opacity 的过渡关掉，否则每帧重新起一段插值会拖成慢线 */
+.stage-chat__bubble.is-shifting,
+.stage-chat__bubble.is-entering{
+  transition:none;
+}
+/* 退场气泡留下的空占位：高度由 js 写成原高，再补间到 0（连同下面那 12 的
+   缝一起收回），后面的气泡顺着排版顶上来。它不进任何选择器 —— 计数与取
+   最旧一条都只认 .stage-chat__bubble */
+.stage-chat__spacer{
+  flex:0 0 auto;
   overflow:hidden;
   pointer-events:none;
 }
