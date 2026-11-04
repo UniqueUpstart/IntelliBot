@@ -1030,11 +1030,10 @@
   bottom:0;
   width:100%;
   height:38px;
-  /* 白底、无描边：胶囊与输入条的 --card-solid 之间只靠一点明度差分界，
-     描边与灰底都撤掉，收起时它读起来就是一片贴在输入条上的白 */
+  /* 收起时融进输入条，只保留模型名和小箭头；展开后才抬起白色面板 */
   border:0;
   border-radius:999px;
-  background:#fff;
+  background:transparent;
   /* 列表挂在这块底板里、由它裁切：展开途中底板还没长够时，露出来的只是
      已经排好版的那一段，不会有一条列表先探到面板外头去 */
   overflow:hidden;
@@ -1050,14 +1049,13 @@
     border-radius var(--dur) var(--ease),
     box-shadow var(--dur) var(--ease);
 }
-/* 深色底上没有白：退回卡片实色，免得这块亮片在暗背景里跳出来 */
-:root[data-theme="dark"] .composer__model-surface{background:var(--card-solid)}
 /* 展开：宽取「胶囊宽」与 --model-panel-w 的大者，高由 js 量出来的 --model-h 定
    （38 + 列表高）；右侧边不动，面板整个往左长出来 */
 .composer__model.is-open > .composer__model-surface{
   width:max(100%,var(--model-panel-w));
   height:var(--model-h,38px);
   border-radius:18px;
+  background:var(--card-solid);
   /* 与齿轮面板同一条柔光：半径与浓度都读补间变量，
      面板涨开时阴影一起变宽变实，收回去又淡下来 */
   box-shadow:0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
@@ -1071,7 +1069,7 @@
   display:flex;
   align-items:center;
   gap:5px;
-  padding:0 12px;
+  padding:0 9px;
   border:0;
   border-radius:999px;
   background:transparent;
@@ -1082,36 +1080,16 @@
   cursor:pointer;
   appearance:none;
   -webkit-appearance:none;
-  /* 只过渡字色：底片涨开的那 0.1s 里若字色还是瞬切，会出现浅底配浅字的空档 */
-  transition:color .1s cubic-bezier(.7,0,.84,.16);
+  transition:color .16s ease,background-color .16s ease;
 }
-/* 底片与账号面板里的选项胶囊同一套：常驻一层主题色，静止 scale 0 不可见，
-   hover / 键盘聚焦时从圆心涨满整盒，字跟着反白；退场沿原路缩回圆心。
-   压入仍走 --press（js/press.js 逐帧写），与全站胶囊同一档深度 */
-.composer__model-trigger::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background:var(--theme);
-  pointer-events:none;
-  scale:0;
-  transform-origin:50% 50%;
-  transform:scale(calc(1 - var(--press,0) * var(--press-k)));
-  transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
-}
-/* 文字与那颗「高」压在底片之上，涨色时不至于被盖住 */
-.composer__model-trigger > *{position:relative; z-index:1}
 .composer__model-trigger:hover,
 .composer__model-trigger:focus-visible{
-  color:var(--text-invert);
+  color:var(--text-primary);
   outline:none;
-  transition:color .1s cubic-bezier(.16,.84,.3,1);
 }
-.composer__model-trigger:hover::before,
-.composer__model-trigger:focus-visible::before{
-  scale:1;
-  transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
+.composer__model-trigger:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--theme) 56%,transparent);
+  outline-offset:2px;
 }
 /* 展开后这枚钮变成面板最下面那一行：横跨整块底板，但内容仍旧靠右 ——
    它原来就在胶囊里靠右停着，这么写开合时字一个像素都不挪，长的只是左边那段空板。
@@ -1123,6 +1101,11 @@
   width:max(100%,var(--model-panel-w));
   max-width:none;
   justify-content:flex-end;
+  border-radius:0 0 18px 18px;
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--border) 62%,transparent);
+}
+.composer__model.is-open .composer__model-trigger:hover{
+  background:color-mix(in srgb,var(--bg) 58%,transparent);
 }
 .composer__model-label{
   min-width:0;
@@ -1132,13 +1115,27 @@
 }
 .composer__model-effort{
   flex:0 0 auto;
-  /* 跟着字色走、只压淡一档：底片涨成主题色时它也要一起反白，
-     写死 --text-muted 会在浅绿底上糊成灰 */
-  color:inherit;
-  opacity:.68;
+  color:var(--text-muted);
   font-size:12px;
 }
 .composer__model-effort[hidden]{display:none}
+.composer__model-chevron{
+  flex:0 0 auto;
+  width:12px;
+  height:12px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.55;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  opacity:.68;
+  transition:transform .24s var(--ease),opacity .16s ease;
+}
+.composer__model-trigger:hover .composer__model-chevron,
+.composer__model-trigger:focus-visible .composer__model-chevron{
+  opacity:1;
+}
+.composer__model.is-open .composer__model-chevron{transform:rotate(180deg)}
 
 /* 发送钮：不可用时只有一枚淡的箭头（--text-muted），底子是透明的；
    一旦输入框里有字，底色整片涨成主题色、箭头反白 —— 颜色过渡和
@@ -1224,7 +1221,7 @@
   bottom:38px;
   width:100%;
   min-width:var(--model-panel-w);
-  padding:8px 8px 6px;
+  padding:6px 6px 4px;
   opacity:0;
   pointer-events:none;
   transform:translateY(4px);
@@ -1239,20 +1236,23 @@
 }
 .model-menu__list{
   display:grid;
-  gap:4px;
+  gap:2px;
   max-height:min(260px,34vh);
   overflow-y:auto;
   overscroll-behavior:contain;
 }
-/* 每一行就是账号面板里那枚选项胶囊：40 高、半高圆角、左内边距 12、
-   hover 时底片从圆心涨满主题色、字反白并右移一格、箭头从左侧浮出来。
-   236 宽的面板放不下 --pill-fs（18–24），这里压到 14 号 */
+/* 候选行保持轻量：不用整块主题色，只用浅底和字色变化提示可点击。 */
 .model-menu .pill{
   width:100%;
-  height:40px;
-  flex:0 0 40px;
-  font-size:var(--fs-14);
+  height:36px;
+  flex:0 0 36px;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text-secondary);
+  font-size:13px;
+  box-shadow:none;
 }
+.model-menu .pill::before{display:none}
 .model-menu .pill .pill__label{
   left:12px;
   /* 模型名比「导出记录」长得多：盒宽按内边距收住，
@@ -1263,9 +1263,13 @@
   transform:translateY(-50%);
 }
 .model-menu .pill:hover .pill__label,
-.model-menu .pill:focus-visible .pill__label{transform:translate(calc(1em + 16px),-50%)}
-.model-menu .pill:hover .pill__arrow,
-.model-menu .pill:focus-visible .pill__arrow{opacity:1;transform:translateY(-50%) translateX(0)}
+.model-menu .pill:focus-visible .pill__label{transform:translateY(-50%)}
+.model-menu .pill .pill__arrow{display:none}
+.model-menu .pill:hover,
+.model-menu .pill:focus-visible{
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
+  color:var(--text-primary);
+}
 /* 只有当前模型会在列表里露头（整个 provider 没有别的候选时），
    它按选中态停在深墨，不铺底片 */
 .model-menu .pill.is-on{color:var(--text-primary)}
