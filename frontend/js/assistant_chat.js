@@ -16,6 +16,10 @@
   var log = findInPanel('[data-assistant-log]');
   var input = composer.querySelector('[data-assistant-input]');
   var sendButton = composer.querySelector('[data-assistant-send]');
+  /* 面板底部那条输入：与页面底部的主输入条共用下面的 send()，
+     各自保留自己的草稿和按钮态。取不到就只是少一条入口 */
+  var dockInput = document.querySelector('[data-chat-dock-input]');
+  var dockSend = document.querySelector('[data-chat-dock-send]');
   var settingsButton = document.querySelector('[data-chat-settings]');
   var historyMenu = document.querySelector('[data-chat-history-menu]');
   /* 齿轮所在的那块 dock：开合时给它挂 is-open，panels.js 的 pop 与
@@ -41,6 +45,12 @@
   var sendIcon = typeof sendButton.querySelector === 'function'
     ? sendButton.querySelector('.composer__send-icon')
     : null;
+  var dockIcon = dockSend && typeof dockSend.querySelector === 'function'
+    ? dockSend.querySelector('.composer__send-icon')
+    : null;
+  /* 最后一次把光标落在哪条输入里：发送完要还回同一处，
+     顺带决定是哪一枚发送钮做飞箭头的动作 */
+  var dockFocus = false;
 
   var queryApi = new URLSearchParams(location.search).get('api');
   var api = queryApi ? queryApi.replace(/\/+$/, '') : '/api/v1';
@@ -48,8 +58,12 @@
   var records = [];
   var pending = false;
   var sequenceToken = 0;
-  var STAGE_LIMIT = 60;   /* 舞台每侧最多留 60 条，更早的看左栏完整对话流 */
   var STARTED_KEY = 'intellibot.chat.started';
+  /* 清空的二次确认：与账号面板的退出登录同一条时间常量（auth.js 的
+     LOGOUT_HOLD 3s）。这段时间里指针进出都不算信号，只有「再点一次」才执行 */
+  var CLEAR_HOLD = 3000;
+  var clearArmed = false;
+  var clearTimer = 0;
   var welcomeShown = false;
   var welcomeMotionPlayed = false;
 
@@ -77,20 +91,70 @@
     node.dataset.author = role === 'user' ? tr('chat.you', '你') : 'IntelliBot';
   }
 
-  /* 贴底判定：离底不到一行就当还停在最新。新消息只在贴底时才把记录流
-     带下去；已经往上翻过去看旧对话的人，不会被新消息硬拽回底部 */
-  function atStageBottom(stream) {
-    return stream.scrollHeight - stream.scrollTop - stream.clientHeight < 32;
+  /* 舞台不再滚动：一屏只留最近三组（一问一答算一组），更早的一条在
+     第 7 条落位时缩小淡出，把占位让出来。离场不写 transform ——
+     气泡自己还挂着 rotateY 的倾角，覆盖 transform 会把那一帧拍平；
+     这里只改三个 CSS 变量，过渡交给样式表 */
+  var STAGE_GROUPS = 3;
+  var STAGE_LIMIT = STAGE_GROUPS * 2;
+  var STAGE_LEAVE_MS = 440;
+
+  function stageLive(stream) {
+    var count = 0;
+    for (var i = 0; i < stream.children.length; i += 1) {
+      if (!stream.children[i].classList.contains('is-leaving')) count += 1;
+    }
+    return count;
   }
 
-  function stageToBottom(stream) {
-    requestAnimationFrame(function () { stream.scrollTop = stream.scrollHeight; });
+  function stageOldest(stream) {
+    for (var i = 0; i < stream.children.length; i += 1) {
+      if (!stream.children[i].classList.contains('is-leaving')) return stream.children[i];
+    }
+    return null;
   }
 
-  /* 列的矩形快照，syncStagePerspective 每次重算时覆盖；滚轮热区判得勤，
-     没有它就变成每个 wheel 事件拉一次布局 */
-  var stageRect = null;
+  function leaveStage(node) {
+    if (!node || node.classList.contains('is-leaving')) return;
+    /* 先把上限钉在这条气泡的实际高度上：不写的话 max-height 是 none，
+       收高度这一路没有起点，压缩会等到淡出结束才「咔」一下塌掉。
+       钉住之后再折到 0，压缩才落在看得见的这一段里 */
+    node.style.maxHeight = node.offsetHeight + 'px';
+    /* 读一次布局，让这个起点先落进样式表，否则两步会被合成一帧 */
+    void node.offsetHeight;
+    node.classList.add('is-leaving');
+    node.setAttribute('aria-hidden', 'true');
+    /* 目标值：缩到 0.82、往上飘 8、完全透明。CSS 里那条 transform 把这三个
+       变量叠在 rotateY 后面，所以缩小是绕着气泡自己的倾角发生的 */
+    node.style.setProperty('--exit-s', '0.82');
+    node.style.setProperty('--exit-y', '-8px');
+    node.style.setProperty('--exit-o', '0');
+    var removed = false;
+    var drop = function () {
+      if (removed) return;
+      removed = true;
+      if (bubbleWatcher) bubbleWatcher.unobserve(node);
+      node.remove();
+    };
+    node.addEventListener('transitionend', function (event) {
+      if (event.target === node) drop();
+    });
+    /* 标签页被挂起时过渡不派发 end：这条只是兜底，别让占位一直留着 */
+    setTimeout(drop, STAGE_LEAVE_MS + 120);
+  }
 
+  function trimStage(stream) {
+    var live = stageLive(stream);
+    if (live <= STAGE_LIMIT) return;
+    /* 一次退一整组：只多出一条时也带走两条，否则裁掉半组、
+       留下一开头就是机器人的半截问答，读起来像丢了问题 */
+    var drop = Math.ceil((live - STAGE_LIMIT) / 2) * 2;
+    for (var i = 0; i < drop; i += 1) {
+      var oldest = stageOldest(stream);
+      if (!oldest) return;
+      leaveStage(oldest);
+    }
+  }
 
   /* 相机跟着视口走，不写死：镜头架在屏幕中轴与视口中线上，距离取视口高度的
      1.25 倍（窄屏 0.95 倍，画面更小、透视更近），再换算成相对这一列的百分比
@@ -101,9 +165,6 @@
     if (!flow) return;
     var box = flow.getBoundingClientRect();
     if (!box.width || !box.height) return;
-    /* 顺手存一份矩形：滚轮每次都要判热区，而列的位置只在尺寸变化时才动，
-       不必每个 wheel 事件都去问一次布局 */
-    stageRect = { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width };
     var vw = window.innerWidth || document.documentElement.clientWidth;
     var vh = window.innerHeight || document.documentElement.clientHeight;
     var narrow = vw <= 900;
@@ -140,7 +201,6 @@
     if (!stream) return;
     var key = String(recordId || '');
     var node = key ? stream.querySelector('[data-record-id="' + key + '"]') : null;
-    var follow = !node || atStageBottom(stream);
     if (!node) {
       node = document.createElement('button');
       node.type = 'button';
@@ -153,18 +213,13 @@
       stream.appendChild(node);
       syncBubbleTilt(node);
       if (bubbleWatcher) bubbleWatcher.observe(node);
-      /* 只留最近 STAGE_LIMIT 条：更早的还在左栏完整对话流里，舞台这块不必无限长 */
-      while (stream.children.length > STAGE_LIMIT) {
-        var oldest = stream.firstElementChild;
-        if (bubbleWatcher) bubbleWatcher.unobserve(oldest);
-        oldest.remove();
-      }
+      /* 只留最近三组：超出的那条就地缩小淡出，不再靠滚动翻旧账 */
+      trimStage(stream);
     }
     var textNode = node.querySelector('[data-stage-text]');
     if (textNode) textNode.textContent = text;
     else node.textContent = text;
     node.dataset.recordId = key;
-    if (follow) stageToBottom(stream);
   }
 
   function hideStage() {
@@ -267,26 +322,48 @@
     if (!pending) sendButton.disabled = !hasText;
   }
 
+  /* 面板底部那枚发送钮的同一套判定：有字才实心、才可点 */
+  function paintDock() {
+    if (!dockInput || !dockSend) return;
+    if (dockIcon && dockIcon.classList.contains('is-flying')) return;
+    var hasText = dockInput.value.trim().length > 0;
+    dockSend.classList.toggle('is-filled', hasText);
+    if (!pending) dockSend.disabled = !hasText;
+  }
+
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var flyTimer = 0;
 
   /* 收尾：摘掉 is-flying，再按当前输入框重新判一次实心/空心 */
   function endFly() {
     if (flyTimer) { clearTimeout(flyTimer); flyTimer = 0; }
-    if (!sendIcon || !sendIcon.classList.contains('is-flying')) return;
-    sendIcon.classList.remove('is-flying');
+    var alive = false;
+    if (sendIcon && sendIcon.classList.contains('is-flying')) {
+      sendIcon.classList.remove('is-flying');
+      alive = true;
+    }
+    if (dockIcon && dockIcon.classList.contains('is-flying')) {
+      dockIcon.classList.remove('is-flying');
+      alive = true;
+    }
+    if (!alive) return;
     paintSend();
+    paintDock();
   }
 
   function flySendIcon() {
     /* 关掉动效的人不发这一帧：CSS 那边 animation:none 之后
        animationend 不会触发，is-flying 会一直挂着，按钮就再也不会换态了 */
-    if (!sendIcon || reduceMotion.matches) return;
+    if (reduceMotion.matches) return;
+    /* 只让「刚才在打字的那条」飞：两条输入共用发送逻辑，
+       但两枚按钮同时做动作会看成两处都在发 */
+    var icon = (dockFocus && dockIcon) ? dockIcon : sendIcon;
+    if (!icon) return;
     /* 连按时把动画重头放一遍：先摘类、强制一次回流再挂上，
        不然类名没变，浏览器不会重启同一条 animation */
-    sendIcon.classList.remove('is-flying');
-    void sendIcon.offsetWidth;
-    sendIcon.classList.add('is-flying');
+    icon.classList.remove('is-flying');
+    void icon.offsetWidth;
+    icon.classList.add('is-flying');
     /* animationend 是主路径，这条 700 的定时器只是兜底（动画 .62s）：
        标签页被挂起时动画会被取消、不派发 end，少了这一手按钮会永远停在实心态 */
     clearTimeout(flyTimer);
@@ -294,13 +371,20 @@
   }
 
   if (sendIcon) sendIcon.addEventListener('animationend', endFly);
+  if (dockIcon) dockIcon.addEventListener('animationend', endFly);
 
   function setPending(value) {
     pending = value;
     input.disabled = value;
     sendButton.disabled = value || !input.value.trim();
+    if (dockInput && dockSend) {
+      dockInput.disabled = value;
+      dockSend.disabled = value || !dockInput.value.trim();
+    }
     composer.setAttribute('aria-busy', value ? 'true' : 'false');
-    if (!value) input.focus();
+    /* 光标还回上一条在打字的那格：从面板里发完一句，
+       焦点不该突然跳到底部那条输入上 */
+    if (!value) (dockFocus && dockInput ? dockInput : input).focus();
   }
 
   async function requestReply(text, previous) {
@@ -452,6 +536,8 @@
     addRecord('user', text);
     input.value = '';
     input.dispatchEvent(new Event('input'));
+    /* 面板那条也清掉：两条输入各自存草稿，发出去的那句同步收起 */
+    if (dockInput) { dockInput.value = ''; paintDock(); }
     var thinking = addRecord('ai', tr('chat.thinking', '正在思考…'), 'pending');
     setPending(true);
     try {
@@ -504,16 +590,65 @@
     else openChat();
   }
 
+  /* ---------- 清空的确认态 ---------- */
+
+  /* 文案只有两态：平时 chat.clear（清空 / Clear），armed 时 chat.clear.confirm
+     （确认 / Confirm）。确认态由 is-arm 这一个类承载，与账号面板的退出登录同款；
+     组内单选那套会在点击时抢先挂 is-active，这里一并收回 —— 亮不亮只该由
+     确认态决定 */
+  function paintClear() {
+    var label = clearButton.querySelector('.pill__label');
+    clearButton.classList.remove('is-active');
+    clearButton.classList.toggle('is-arm', clearArmed);
+    clearButton.setAttribute('aria-pressed', String(clearArmed));
+    if (!label) return;
+    if (clearArmed) {
+      /* 摘掉 data-i18n：切语言时别把「确认」顺手覆盖回「清空」 */
+      label.removeAttribute('data-i18n');
+      label.textContent = tr('chat.clear.confirm', '确认');
+    } else {
+      label.setAttribute('data-i18n', 'chat.clear');
+      label.textContent = tr('chat.clear', '清空');
+    }
+  }
+
+  function disarmClear() {
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = 0; }
+    if (!clearArmed) return;
+    clearArmed = false;
+    paintClear();
+  }
+
+  function armClear() {
+    if (clearArmed) return;
+    clearArmed = true;
+    paintClear();
+    /* 固定 3 秒，不因指针移开而提前收回：这一下的确认是「再点一次」，
+       停不停在按钮上都不是信号 */
+    if (clearTimer) clearTimeout(clearTimer);
+    clearTimer = setTimeout(disarmClear, CLEAR_HOLD);
+  }
+
+  function onClearClick() {
+    if (!clearArmed) { armClear(); return; }
+    disarmClear();
+    clear();
+  }
+
   function setHistoryMenu(open) {
     historyMenu.hidden = !open;
     if (historyDock) historyDock.classList.toggle('is-open', open);
     settingsButton.setAttribute('aria-expanded', String(open));
+    /* 菜单一收就退回未确认态：下次点开时不该还是「确认」 */
+    if (!open) disarmClear();
   }
 
   function syncHistoryActions() {
     var empty = records.length === 0;
     if (exportButton) exportButton.disabled = empty;
     clearButton.disabled = empty;
+    /* 记录被清空（含别处触发）之后，确认态没有对象了，顺手收回 */
+    if (empty) disarmClear();
   }
 
   function toggleHistoryMenu() {
@@ -562,13 +697,29 @@
   }
 
   input.addEventListener('input', paintSend);
+  input.addEventListener('focus', function () { dockFocus = false; });
   input.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(input.value); }
   });
-  sendButton.addEventListener('click', function () { send(input.value); });
+  sendButton.addEventListener('click', function () { dockFocus = false; send(input.value); });
+  /* 面板底部那条：回车与点击都走同一个 send()，与主输入条不分叉 */
+  if (dockInput && dockSend) {
+    dockInput.addEventListener('input', paintDock);
+    dockInput.addEventListener('focus', function () { dockFocus = true; });
+    dockInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        send(dockInput.value);
+      }
+    });
+    dockSend.addEventListener('click', function () {
+      dockFocus = true;
+      send(dockInput.value);
+    });
+  }
   stopButton.addEventListener('click', function () { stopActions(); });
   settingsButton.addEventListener('click', toggleHistoryMenu);
-  clearButton.addEventListener('click', clear);
+  clearButton.addEventListener('click', onClearClick);
   if (exportButton) exportButton.addEventListener('click', exportHistory);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
@@ -578,71 +729,6 @@
     var bubble = event.target.closest('[data-stage-message]');
     if (bubble) openChat(bubble.dataset.recordId);
   });
-  /* 那一列自己不接指针（中间那条竖带给三维场景留着拖视角），滚轮从
-     document 上接管。接管范围分三段：左边一条、右边一条，中间那条留给
-     机器人 —— 指针落在中缝里就原样交回去，滚轮只干一件事，
-     不会又缩放模型又把聊天记录拖着走。
-     中缝宽按列宽取 16%，上限 300（半宽 150），窄屏跟着缩 */
-  var GAP_RATIO = 0.16;
-  var GAP_HALF_MAX = 150;
-  /* 一帧里可能来好几个 wheel，攒成一个数再一次写 scrollTop：
-     每次写都会引发一轮滚动与合成，合并掉就少掉好几帧的抖动 */
-  var wheelStep = 0;
-  var wheelFrame = 0;
-  function flushStageWheel(flow) {
-    wheelFrame = 0;
-    var step = wheelStep;
-    wheelStep = 0;
-    if (!step) return;
-    var max = flow.scrollHeight - flow.clientHeight;
-    var next = Math.max(0, Math.min(max, flow.scrollTop + step));
-    if (next === flow.scrollTop) return;
-    flow.scrollTop = next;
-  }
-  /* 指针是否落在列矩形之外。滚轮热区、现量与快照两处判定共用这一条 */
-  function outsideStage(box, x, y) {
-    return y < box.top || y > box.bottom || x < box.left || x > box.right;
-  }
-  if (stage) document.addEventListener('wheel', function (event) {
-    /* 弹窗和左右栏都有自己的滚动容器。它们会覆盖舞台聊天列，但坐标仍可能
-       落在背后的列矩形内；先按实际事件目标排除，避免把滚轮送到不可见的聊天列。 */
-    if (event.target.closest('.modal, .rail')) return;
-    var flow = stageStream();
-    if (!flow || flow.scrollHeight <= flow.clientHeight + 4) return;
-    /* 栏一打开舞台就整块 visibility:hidden（见 css 那条 body:has(.rail.is-open)），
-       它这时候不该再接滚轮。以前只按矩形判，左右栏和聊天列在窄一点的屏上横向重叠，
-       指针明明落在栏里的列表上，滚轮却被这层接走并 preventDefault，
-       表现就是栏偶尔滑不动 —— 判断依据换成「舞台上不上场」，不是几何 */
-    if (document.querySelector('.rail.is-open, .modal[aria-hidden="false"]')) return;
-    /* 弹窗和输入区自己滚自己的，别抢 */
-    var target = event.target;
-    if (target && target.closest && target.closest('.modal, .composer, .model-menu')) return;
-    var box = stageRect || flow.getBoundingClientRect();
-    /* 竖直方向上压着列的范围才算热区：列上方是顶栏与机器人，下方是输入区，
-       指针落在那些地方时不该把整页的滚轮吃掉 */
-    if (outsideStage(box, event.clientX, event.clientY)) {
-      /* 快照是上次重算时量的，面板或顶栏伸缩后会偏。落在边界外就现量一次再判，
-         边界内的事件仍旧走快照，不为此每个事件都拉一次布局 */
-      var live = flow.getBoundingClientRect();
-      box = { left: live.left, right: live.right, top: live.top, bottom: live.bottom, width: live.width };
-      stageRect = box;
-      if (outsideStage(box, event.clientX, event.clientY)) return;
-    }
-    var gap = Math.min(GAP_HALF_MAX, box.width * GAP_RATIO);
-    if (Math.abs(event.clientX - (box.left + box.right) / 2) < gap) return;
-    /* 已经贴顶还往上推、或者贴底还往下推，这一下本来就滚不动了：
-       再 preventDefault 只会让整页也一动不动，读起来就是「卡住」。
-       所以到界就放手，把事件原样交还给外层 */
-    var delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
-    if (!delta) return;
-    var max = flow.scrollHeight - flow.clientHeight;
-    if ((delta < 0 && flow.scrollTop <= 1) || (delta > 0 && flow.scrollTop >= max - 1)) return;
-    wheelStep += delta;
-    event.preventDefault();
-    if (!wheelFrame) {
-      wheelFrame = window.requestAnimationFrame(function () { flushStageWheel(flow); });
-    }
-  }, { passive: false });
 
   /* 相机参数先摆好，再等字体落位重摆一次 —— 字体换了行高、列的位置也可能挪 */
   if (stage) {

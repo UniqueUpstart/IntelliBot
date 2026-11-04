@@ -267,22 +267,22 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 .persona-card__remove.is-armed .persona-card__remove-x{width:0; opacity:0}
 .persona-card__remove.is-armed .persona-card__remove-text{max-width:72px; opacity:1}
 /* 新增角色：一枚主题色圆钮钉在标题行右端，加号反白。
-   静止就是 16×16 的一个点 —— 与 24 号标题并排时只占标题的半行高，
-   不再是一颗压过标题重量的 38 圆钮；指针压上去时就地长成胶囊 ——
-   右边缘不动、宽度朝左伸，加号随左缘一起左移，提示文字排在加号右侧。
-   高度仍是 16：胶囊是横向长出来的，文字因此走 12 号那一档。
+   静止是 32×32 的正圆，与聊天页右上角那枚齿轮同档；指针压上去时就地长成
+   128 宽的胶囊 —— 右边缘不动、宽度朝左伸，加号停在原位，提示文字从加号
+   右侧被撑出来。高度仍是 32，文字走 14 号那一档并垂直居中。
    行内的 --press 由 js/press.js 逐帧写，按下时整体缩进一格再弹回 */
 .persona-new{
   appearance:none;-webkit-appearance:none;
   position:relative;
   flex:0 0 auto;
   margin-left:auto;
-  height:16px;
-  min-width:16px;
+  height:32px;
+  width:32px;
+  min-width:32px;
   display:inline-flex;
   align-items:center;
-  justify-content:center;
-  /* 不加左右内边距：静止时宽度就等于那枚 16 的加号，圆钮才是正圆 */
+  justify-content:flex-start;
+  /* 不加左右内边距：静止时宽度就等于那枚 32 的圆钮 */
   padding:0;
   border:0;
   border-radius:999px;
@@ -291,27 +291,30 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   font:inherit;
   cursor:pointer;
   transform:scale(calc(1 - var(--press,0) * var(--press-k)));
-  transition:background-color .2s ease, color .2s ease,
+  transition:width .32s var(--ease), background-color .2s ease, color .2s ease,
              transform .16s var(--ease), box-shadow .2s ease;
 }
 .persona-new__plus{
   flex:0 0 auto;
   width:16px;
   height:16px;
+  /* 左右各留 8：加号在 32 的圆里居中，展开后它还停在这 32 的格里不动，
+     文字从 32 + 6 起排，右缘正落在按钮的右内边距上 */
+  margin:0 8px;
   fill:none;
   stroke:currentColor;
-  /* 加号只有两笔，细描边在实底主题色上会显得发灰，比同栏其它图标重一档 */
-  stroke-width:2.6;
+  /* 加号只有两笔，实底主题色上细描边会发虚；2 比同栏其它图标的 1.65 重一档，
+     又不至于把笔画糊成一团 */
+  stroke-width:2;
   stroke-linecap:round;
 }
-/* 提示文字先只占 0 宽，悬停时把可用宽度与左边距一起放开，
-   胶囊是被这段文字撑长的，所以不需要给按钮写死一个宽度。
-   内层那枚 span 不收缩、靠右对齐：宽度不够时被裁掉的是字头，
-   露出来的字尾始终贴着右内边距，跟着胶囊一起往左展开。
-   胶囊只有 16 高，字只能走 12 号那一档；右内边距落在文字上而不是按钮上，
-   静止（max-width:0）时它跟着一起被裁掉，不会把圆钮撑宽 */
+/* 提示文字先只占 0 宽，悬停时按钮定宽到 128（32 的加号 + 6 的间距 + 这段 90），
+   文字在这一格里靠右排：宽度不够时被裁掉的是字头，露出来的字尾始终贴着
+   右内边距，跟着胶囊一起往左展开。字走 14 号那一档，右内边距落在文字上
+   而不是按钮上，静止（max-width:0）时它跟着一起被裁掉，不会把圆钮撑宽 */
 .persona-new__text{
   display:flex;
+  flex:1 1 auto;
   justify-content:flex-end;
   max-width:0;
   /* 右内边距不能写在它身上：padding 先把盒子撑到 7 宽，max-width:0 也压不下去，
@@ -321,24 +324,25 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   opacity:0;
   overflow:hidden;
   white-space:nowrap;
-  font-size:var(--fs-12);
+  font-size:var(--fs-14);
   line-height:1;
   transition:max-width .32s var(--ease), margin-left .32s var(--ease), opacity .16s ease;
 }
 .persona-new__text > span{flex:0 0 auto; padding-right:7px}
 .persona-new:hover,
-.persona-new:focus-visible{outline:none}
+.persona-new:focus-visible{width:128px; outline:none}
 .persona-new:hover .persona-new__text,
 .persona-new:focus-visible .persona-new__text{
-  max-width:112px;
+  max-width:90px;
   margin-left:6px;
   opacity:1;
   transition:max-width .32s var(--ease), margin-left .32s var(--ease),
              opacity .24s ease .06s;
 }
-/* 按压期间几何交给 GSAP 逐帧写，别让 transform 的过渡把它拉回去 */
+/* 按压期间几何交给 GSAP 逐帧写，别让 transform 的过渡把它拉回去；
+   宽度那条保留 —— 按下时若正赶上展开，胶囊不会一顿跳到位 */
 .persona-new.is-press{
-  transition:background-color .2s ease, color .2s ease;
+  transition:width .32s var(--ease), background-color .2s ease, color .2s ease;
 }
 
 /* 表单与上方角色列表之间不再画分割线，只留一点额外留白分层 */
@@ -379,22 +383,23 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 .persona-view .view-badge{display:none}
 /* 表头与右栏 Emotions 页同一条起算线：视图上内边距已归零（见 rail.css 里那条
    [data-view] 规则），表头盒顶边贴住面板顶，文字靠 padding-top 落到 --title-top。
-   行高按标题那 24 算、内容顶对齐：标题文字与右上角那枚 16 的加号顶边同在
-   --title-top(16) 上，加号悬停长成胶囊也只是横向伸展，不会顶出表头。
+   行高按那枚 32 的加号算（标题仍是 24）：圆钮顶边与标题同在 --title-top(16)，
+   上距、右距都是面板内边距 16，下沿正好落在表头底边；
+   悬停长成 128 的胶囊也只是横向伸展。
    吸附线与静止位都是 0，滚动时表头不动 */
 .persona-view .view-head{
   position:sticky;
   top:0;
   z-index:4;
-  height:calc(var(--title-top) + 24px);
+  height:calc(var(--title-top) + 32px);
   padding-top:var(--title-top);
   align-items:flex-start;
 }
+/* 颜色格与同排的文本框等长：外面仍是同一个胶囊（42 高、999 圆角），
+   只是不再收成 96 的方块 —— 左右两条边与其它字段对齐，色片跟着填满整格 */
 .persona-field--color input{
-  width:96px;
-  max-width:100%;
+  width:100%;
   padding:4px;
-  justify-self:start;
 }
 .persona-field--color input::-webkit-color-swatch-wrapper{padding:0}
 .persona-field--color input::-webkit-color-swatch{border:0;border-radius:999px}

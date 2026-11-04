@@ -54,15 +54,32 @@
   var UP_DUR   = 0.25;    // 撑到两轴极值
   var BACK_DUR = 0.75;    // 弹性收回 1，STRCAT 的 OPEN_SQUASH_DUR 是同量级（0.9）
   var OPEN_DUR = 0.4;     // 内容进入（STRCAT 的 OPEN_DUR）
-  var SH_BASE  = '16px';  // 投影柔光半径常态（与 CSS 的 --sh 初值一致）
+  var SH_BASE  = '16px';  // 投影柔光半径常态（栏体 / 账号 / 齿轮；模型胶囊的常态是 0）
   var SH_MAX   = '32px';  // 撑开时的柔光半径：翻一倍，浮起感靠这一下
-  var SH_A_BASE = 0.1;    // 投影透明度常态（与 CSS 的 --sh-a 初值一致）
+  var SH_A_BASE = 0.1;    // 投影透明度常态（同上；模型面板那支取 0）
   var SH_A_MAX  = 0.2;    // 撑开时的透明度：常态 +0.1，阴影同时变宽变实
   var COMPACT  = window.matchMedia('(max-width: 640px)');
+  /* 模型面板那一枚不跟全站这套走：它从输入条里长出来，旁边就是正在输入的
+     文字，形变过冲一大，面板里的字会跟着 scale 一起抖 —— 字体在非整数缩放
+     上每帧重采样，边缘先发毛再回正，读起来就是「抖」。这枚只留 1.008 的
+     过冲、收回也压短，形变幅度小到字看着是稳稳挪过去的 */
+  var MODEL_POP = { up: 0.18, back: 0.42, peak: 1.008, compact: 1.004 };
+  /* 弹出后的指针冷却：CSS 的 width / height / border-radius 过渡是 --dur（.34s），
+     这段时间里整块面板退出命中测试（规则在 base.css 的 .is-entering），
+     等形状长定了再把指针交回来。模型面板的过渡压到 .24s（--model-dur），
+     冷却同步收到 260ms —— 太晚会显得点开之后一会儿才「醒」 */
+  var ENTER_LOCK = 360;
+  var MODEL_LOCK = 260;
 
   /* 小屏的栏体贴底满宽（100vw - 24），幅度减半，两轴同步收窄 */
-  function peakX() { return COMPACT.matches ? 1.01 : PEAK_X; }
-  function peakY() { return COMPACT.matches ? 1.01 : PEAK_Y; }
+  function peakX(isModel) {
+    if (isModel) return COMPACT.matches ? MODEL_POP.compact : MODEL_POP.peak;
+    return COMPACT.matches ? 1.01 : PEAK_X;
+  }
+  function peakY(isModel) {
+    if (isModel) return COMPACT.matches ? MODEL_POP.compact : MODEL_POP.peak;
+    return COMPACT.matches ? 1.01 : PEAK_Y;
+  }
 
   /* 只在栏体上补内容通道：账号面板的名字与菜单本来就有 CSS 位移 / 淡入，
      再叠一层会打架 */
@@ -75,6 +92,50 @@
      投影与底片都由托盘给，所以这里对它取不到表面，只补形变那一路 */
   function surfaceOf(node) {
     return node.querySelector('.rail__surface, .user__surface, .chat-dock__surface, .composer__model-surface');
+  }
+
+  /* 模型胶囊点开后，那行「当前模型」要从胶囊里长成面板底行：trigger 的宽度是
+     瞬切到面板宽的（auto 到定值没法过渡），可字得跟着面板左缘一起过去。
+     所以按 FLIP 补一段 —— 新位置由布局直接给出，旧位置从外层那一格推：
+     胶囊态字从内边距 12 起排、纵向居中于 32 高的胶囊，「高」贴右内边距 12。
+     位移写进 transform，label 的 hover 位移走的是 translate 属性，两个属性
+     各自独立、不会互相覆盖。曲线取面板宽高同一条 --ease / --dur，字的左缘
+     就始终贴着面板内边距 16，看上去是面板把字带过去的，不是字先跳一下。
+     收回同一个函数：旧位置改从底板量（左缘 + 16、底边 - 24），文字先停在
+     展开时的位置，再随收缩滑回胶囊里 */
+  var MODEL_DUR = 0.24;                            /* 与 css 的 --model-dur 一致 */
+  var MODEL_EASE = cubicEase(0.22, 0.61, 0.36, 1);  /* 与 --ease 同一条曲线 */
+
+  function glide(node, opening) {
+    if (!node.classList.contains('composer__model')) return;
+    var pieces = node.querySelectorAll('.composer__model-label, .composer__model-effort');
+    if (!pieces.length) return;
+    var surf = node.querySelector('.composer__model-surface');
+    var box = node.getBoundingClientRect();
+    var sr = surf ? surf.getBoundingClientRect() : box;
+    Array.prototype.forEach.call(pieces, function (el) {
+      if (el.hidden || !el.offsetWidth) return;
+      gsap.killTweensOf(el);
+      /* 上一次没走完的那段先撤掉，量到的才是布局位置 */
+      gsap.set(el, { clearProps: 'transform' });
+      var r = el.getBoundingClientRect();
+      var isLabel = el.classList.contains('composer__model-label');
+      var fromX, fromY;
+      if (opening) {
+        fromX = isLabel ? box.left + 12 : box.right - 12;
+        fromY = box.top + box.height / 2;
+      } else {
+        fromX = isLabel ? sr.left + 16 : sr.right - 16;
+        fromY = sr.bottom - 24;
+      }
+      var dx = fromX - (isLabel ? r.left : r.right);
+      var dy = fromY - (r.top + r.height / 2);
+      if (!dx && !dy) return;
+      gsap.fromTo(el, { x: dx, y: dy }, {
+        x: 0, y: 0, duration: MODEL_DUR, ease: MODEL_EASE, overwrite: true,
+        onComplete: function () { gsap.set(el, { clearProps: 'transform' }); }
+      });
+    });
   }
 
   function pop(node, on) {
@@ -90,6 +151,20 @@
     var tl = gsap.timeline();
     node.__popTl = tl;
 
+    /* 模型面板用自己那组更轻的参数：过冲小、尾巴短，
+       旁边的输入框与文字不会被一块缩放带着抖 */
+    var isModel = node.classList.contains('composer__model');
+    var upDur = isModel ? MODEL_POP.up : UP_DUR;
+    var backDur = isModel ? MODEL_POP.back : BACK_DUR;
+    /* 弹性曲线：模型面板把第二个参数（周期）调大，振荡次数跟着少 ——
+       1.02 → 1 的那几下回摆是文字「抖」的主要来源 */
+    var backEase = isModel ? 'elastic.out(1.1, 1.1)' : 'elastic.out(1.1, 0.8)';
+    /* 阴影的常态：栏体、账号胶囊、齿轮留着 16/.10 那层柔光；模型胶囊收起时
+       一律回 0 —— 它贴在输入条上，那圈柔光会让白胶囊在灰底上浮成另一层。
+       展开时只往 32/.20 长，不再落回常态（面板真的浮起来了，阴影就该在） */
+    var shBase = isModel ? '0px' : SH_BASE;
+    var shABase = isModel ? 0 : SH_A_BASE;
+
     /* 开合期间挂个标记：卡片的 3D 磁吸在父级还在 scale 回弹时叠加透视，
        缩放与透视两层变换每帧各自重投影，字和描边会抖。这 1.1s 里让卡片
        的磁吸目标保持 0，等 --sx/--sy 彻底回弹到 1 之后才允许吸 */
@@ -97,17 +172,38 @@
     clearTimeout(node.__popOff);
     node.__popOff = setTimeout(function () {
       node.classList.remove('is-popping');
-    }, on ? (UP_DUR + BACK_DUR) * 1000 + 80 : 320);
+    }, on ? (upDur + backDur) * 1000 + 80 : 320);
+
+    /* 弹出途中不接受 hover：展开时挂 is-entering，形状长完（--dur）再摘。
+       鼠标点开面板时本来就压在原位上，不挡住的话这一下会同时点亮底片、
+       把文字推出去，和形变抢注意力；收回时立刻摘掉，则不会有上一次的
+       定时器留到下次展开 */
+    if (on) {
+      node.classList.add('is-entering');
+      clearTimeout(node.__enterOff);
+      node.__enterOff = setTimeout(function () {
+        node.classList.remove('is-entering');
+      }, isModel ? MODEL_LOCK : ENTER_LOCK);
+    } else {
+      clearTimeout(node.__enterOff);
+      node.classList.remove('is-entering');
+    }
+
+    /* 模型面板底行那一串字：不论开还是收，都从上一处位置滑到新的一处 */
+    glide(node, on);
 
     if (on) {
       /* 形变与内容同时起步，各走各的曲线；内容只淡入，不改变排版位置。 */
-      tl.to(node, { '--sx': peakX(), '--sy': peakY(), duration: UP_DUR, ease: 'power2.out' }, 0)
-        .to(node, { '--sx': 1, '--sy': 1, duration: BACK_DUR, ease: 'elastic.out(1.1, 0.8)' }, UP_DUR);
+      tl.to(node, { '--sx': peakX(isModel), '--sy': peakY(isModel), duration: upDur, ease: 'power2.out' }, 0)
+        .to(node, { '--sx': 1, '--sy': 1, duration: backDur, ease: backEase }, upDur);
       /* 阴影同步：柔光 16 → 32、透明度 .10 → .20 与形变同拍撑开，回弹用同一条弹性曲线收回，
-         两块一起鼓、一起落，浮起感才是一体的 */
+         两块一起鼓、一起落，浮起感才是一体的。
+         模型面板只走前半程：涨到 32/.20 就停在那里，不再弹回常态 —— 它的常态是 0 */
       if (surf) {
-        tl.to(surf, { '--sh': SH_MAX, '--sh-a': SH_A_MAX, duration: UP_DUR, ease: 'power2.out' }, 0)
-          .to(surf, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: BACK_DUR, ease: 'elastic.out(1.1, 0.8)' }, UP_DUR);
+        tl.to(surf, { '--sh': SH_MAX, '--sh-a': SH_A_MAX, duration: upDur, ease: 'power2.out' }, 0);
+        if (!isModel) {
+          tl.to(surf, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: backDur, ease: backEase }, upDur);
+        }
       }
       if (el) {
         tl.fromTo(el, { opacity: 0 }, {
@@ -116,8 +212,9 @@
       }
     } else {
       /* 收回：形变先归 1（打断展开时不硬切），内容保持原位淡出。 */
-      tl.to(node, { '--sx': 1, '--sy': 1, duration: 0.2, ease: 'power2.out' }, 0);
-      if (surf) tl.to(surf, { '--sh': SH_BASE, '--sh-a': SH_A_BASE, duration: 0.2, ease: 'power2.out' }, 0);
+      var backIn = isModel ? 0.16 : 0.2;
+      tl.to(node, { '--sx': 1, '--sy': 1, duration: backIn, ease: 'power2.out' }, 0);
+      if (surf) tl.to(surf, { '--sh': shBase, '--sh-a': shABase, duration: backIn, ease: 'power2.out' }, 0);
       if (el) tl.to(el, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0);
     }
   }

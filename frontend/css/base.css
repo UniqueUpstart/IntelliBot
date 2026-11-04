@@ -31,6 +31,9 @@
   --text-reduced:     #4b4b4b;
   --text-muted:       #9b9b9b;
   --text-invert:      #fafafa;
+  /* 主色文字的反相：铺在主题色（mint）底上的那段字用它。主题色两支主题下
+     都是同一枚浅色，所以它在深色模式里也不跟着翻白 —— 见下面 dark 那一块 */
+  --text-primary-invert:#1c1c1c;
   --avatar:           #d9d9d9;
   /* 投影色单独拿出来：浅色底上用 #2d2d2d 的柔灰，深色底上必须换成纯黑，
      否则面板与页面同明度，投影完全看不出来、几层表面会糊成一片。
@@ -144,6 +147,8 @@
   --text-reduced:   #cdcdcd;
   --text-muted:     #9b9b9b;
   --text-invert:    #1c1c1c;
+  /* 不跟 --text-primary 翻成亮字：底色还是那枚浅 mint，亮字上去就没了对比度 */
+  --text-primary-invert:#1c1c1c;
   --avatar:         #545454;
   --shadow:         0,0,0;
   --sh-k:           1.9;
@@ -159,6 +164,17 @@
 ::view-transition-new(root){
   animation-duration:.5s;
   animation-timing-function:var(--ease);
+}
+
+/* 面板弹出途中不接受指针：js/panels.js 的 pop 在展开的一瞬挂上 is-entering，
+   --dur（.34s）走完再摘。形变和尺寸还在路上时鼠标往往正好停在新面板上，
+   这一下若跟着触发 hover —— 底片涨色、文字右移、箭头浮出 —— 会和开合动效
+   叠成两层，看起来像面板自己在抖。整棵子树一起退出命中测试：列表块本身是
+   pointer-events:auto，只压面板根挡不住里面的行，用 * 兜住继承。
+   摘掉之后 hover 要等下一次指针移动才重新点亮，面板长成的那一刻不会闪一下 */
+.is-entering,
+.is-entering *{
+  pointer-events:none!important;
 }
 
 *{box-sizing:border-box}

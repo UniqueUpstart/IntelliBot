@@ -158,7 +158,7 @@
   box-shadow:
     0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
     inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
-  transition:box-shadow .1s ease;
+  transition:box-shadow .2s cubic-bezier(.16,.84,.3,1);
 }
 .edit__input::placeholder{color:var(--text-muted)}
 .edit__input:focus{
@@ -300,7 +300,7 @@
     0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
     inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
   /* 只补描边这一条：宽高逐键测量，补间会让测量值追不上手速 */
-  transition:box-shadow .1s ease;
+  transition:box-shadow .2s cubic-bezier(.16,.84,.3,1);
 }
 /* 量文字宽度的镜子：与输入框同一套字体，white-space:pre 让换行只影响
    行数、宽度取最长那一行。它不可见、不占位，只给脚本读 offsetWidth */
@@ -313,7 +313,7 @@
 /* 滚动条本体也藏掉（Chromium / Safari）：与上面的 scrollbar-width 是一回事，
    一个管标准属性、一个管老实现，两条都写才在各家浏览器里都不出槽 */
 .composer__input::-webkit-scrollbar{width:0; height:0}
-.composer__input::placeholder{color:var(--text-muted)}
+.composer__input::placeholder{color:var(--text-reduced)}
 /* 右内边距让出那枚 36 的圆：距右 6、直径 36，再留 10 的缝就是 52，
    与 js/composer.js 里的 PAD_RIGHT 是同一个数 */
 .composer__input{padding-right:52px}
@@ -478,15 +478,23 @@
 .rail__view--chat{position:relative;height:100%;min-height:0}
 /* 聊天页不让面板上内边距（32）把表头推下去：表头是绝对定位、不参与滚动，
    顶边直接给 20，与其它页标题的静止位（也是吸顶位）对齐 */
-[data-panel-body][data-view="chat"]{overflow:hidden;padding-top:0;padding-bottom:18px}
+[data-panel-body][data-view="chat"]{overflow:hidden;padding-top:0;padding-bottom:0}
 [data-panel-body][data-view="chat"] .rail__view--chat{display:flex;flex-direction:column}
 .rail__view--chat .assistant-chat{
   position:static;display:flex;flex:1 1 auto;width:100%;max-height:none;min-height:0;
   padding:0;background:transparent;box-shadow:none
 }
 /* 表头 56 高（--title-top 16 + 头像 32 + 8），记录从它下面 4 起排：
-   第一条消息不会压在头像底下，也不会离表头太远 */
-.rail__view--chat .assistant-chat__log{max-height:none;padding-top:60px}
+   第一条消息不会压在头像底下，也不会离表头太远。
+   滚动条整条藏掉：这一栏本来就只有 236 宽，6px 的条贴在气泡右边缘上，
+   滚动时还在动；滚轮 / 触控板 / 键盘照常能滚，只是不画那条 */
+.rail__view--chat .assistant-chat__log{
+  max-height:none;
+  padding-top:60px;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.rail__view--chat .assistant-chat__log::-webkit-scrollbar{width:0;height:0}
 
 /* ============================================================
    Conversation polish
@@ -527,7 +535,7 @@
   cursor:pointer;
   /* 盒形与节奏留在这儿，颜色和底片在文件后段统一给（词条要跟左右边栏
      同一层玻璃），一处写一半会看不出哪边在生效 */
-  transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .18s var(--ease);
+  transition:background-color .18s ease,color .18s ease,transform .18s var(--ease);
 }
 .composer__starters button:focus-visible{outline:none}
 .chat-view__head{
@@ -656,9 +664,22 @@
 .chat-history-menu .pill:focus-visible .pill__label{transform:translate(calc(1em + 16px),-50%)}
 .chat-history-menu .pill:hover .pill__arrow,
 .chat-history-menu .pill:focus-visible .pill__arrow{opacity:1; transform:translateY(-50%) translateX(0)}
-/* 清空记录这一项保留告警色，hover 仍照全站规矩反白 */
-.chat-history-menu .pill[data-chat-clear]{color:#a44e48}
-.chat-history-menu .pill[data-chat-clear]:hover{color:var(--text-invert)}
+/* 清空这一项不再单独着色：它与导出同为 .pill 的默认字色，告警只出现在
+   确认态那一下（见下面 is-arm），平时不该像一条危险操作 */
+/* 确认态：与账号面板里「退出登录」的二次确认同一套说法（topbar.css 的
+   is-arm）—— 底片转 warning 并涨满、字反白；这时文字不再右移、箭头也不浮出，
+   因为这一下的意思是「再点一次就执行」，不是「悬停选中」 */
+.chat-history-menu .pill[data-chat-clear].is-arm,
+.chat-history-menu .pill[data-chat-clear].is-arm:hover,
+.chat-history-menu .pill[data-chat-clear].is-arm:focus-visible{color:var(--text-invert)}
+.chat-history-menu .pill[data-chat-clear].is-arm::before{scale:1; background:var(--warning)}
+.chat-history-menu .pill[data-chat-clear].is-arm:hover .pill__label,
+.chat-history-menu .pill[data-chat-clear].is-arm:focus-visible .pill__label{
+  transform:translateY(-50%);
+}
+.chat-history-menu .pill[data-chat-clear].is-arm .pill__arrow{
+  opacity:0; transform:translateY(-50%) translateX(-4px);
+}
 /* 没有记录时两枚都禁用：底片不再涨开，按压也不给反馈 */
 .chat-history-menu .pill:disabled{opacity:.42;cursor:default}
 .chat-history-menu .pill:disabled::before{scale:0}
@@ -739,7 +760,7 @@
   color:var(--text-secondary);
   transform:translateX(var(--bubble-shift-x)) rotate(var(--bubble-tilt));
   transform-origin:12% 100%;
-  animation:chat-bubble-arrive .5s cubic-bezier(.16,1,.3,1) both;
+  /* 不做入场动画：消息落进记录里就直接在位，滚动只由 scrollBottom 负责 */
   transition:box-shadow .18s ease,transform .18s var(--ease);
 }
 .assistant-chat__message::before{
@@ -805,10 +826,6 @@
   from{opacity:0;transform:translateY(8px) scale(.97)}
   to{opacity:1;transform:translateY(0) scale(1)}
 }
-@keyframes chat-bubble-arrive{
-  from{opacity:0;transform:translate(var(--bubble-shift-x),10px) scale(.94) rotate(0deg)}
-  to{opacity:1;transform:translate(var(--bubble-shift-x),0) scale(1) rotate(var(--bubble-tilt))}
-}
 @media(max-width:760px){
   .composer__starters{
     width:min(560px,calc(100vw - 28px));
@@ -819,8 +836,11 @@
   .composer__starters button{flex:1 1 auto;text-align:center}
 }
 @media(prefers-reduced-motion:reduce){
-  .composer__starters,
-  .assistant-chat__message{animation:none}
+  .composer__starters{animation:none}
+  /* 词条的填色不做涨开，悬停直接到位 */
+  .composer__starters button::before,
+  .composer__starters button:hover::before,
+  .composer__starters button:focus-visible::before{transition:none}
 }
 
 /* ============================================================
@@ -839,23 +859,27 @@
   --exit-d:calc(100% + 24px);
   pointer-events:none;
 }
+/* 与面板里其它输入框同一套表面（只差尺寸）：不描边，一层白底、外面一圈 16 的
+   常驻柔光，选中时主题色 1px 内描边淡入到底。
+   白底取不透明的 --card-solid 而不是 --card：面板里的字段背后是实色面板，
+   这枚却浮在机器人与点阵之上，半透明底会让模型从输入框里穿过去。
+   圆角 24：与面板输入条、气泡同一档曲率 */
 .composer__surface{
   position:relative;
   z-index:2;
   overflow:visible;
-  border:1px solid color-mix(in srgb,#e8e8e8 88%,var(--border));
-  border-radius:26px;
+  border:0;
+  border-radius:24px;
   background:var(--card-solid);
   box-shadow:
-    0 12px 32px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .38)),
-    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .18));
-  transition:border-color .16s ease,box-shadow .16s ease;
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
+  transition:box-shadow .2s cubic-bezier(.16,.84,.3,1);
 }
 .composer__surface:focus-within{
-  border-color:color-mix(in srgb,#d8d8d8 82%,var(--border));
   box-shadow:
-    0 14px 34px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .46)),
-    0 2px 5px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .22));
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px var(--theme);
 }
 .composer__input{
   display:block;
@@ -883,15 +907,18 @@
 }
 .composer__input:focus{box-shadow:none}
 .composer__input::placeholder{
-  color:var(--text-muted);
+  color:var(--text-reduced);
   opacity:1;
 }
+/* 内边距四周统一 16：左端那枚三横钮、右端发送钮都压在这条线上，
+   与上面正文的左内边距对齐；底下留 16 而不是 10，圆角 26 收尾时
+   钮的外沿才不会挤进弧线里 */
 .composer__footer{
   display:flex;
   align-items:center;
   gap:10px;
   min-height:46px;
-  padding:0 10px 10px 16px;
+  padding:0 16px 16px;
 }
 .composer__trail{
   min-width:0;
@@ -910,8 +937,8 @@
      left 是会生效的 —— 不显式归零，它就被推到输入框外头去 */
   inset:auto;
   flex:0 0 auto;
-  width:38px;
-  height:38px;
+  width:32px;
+  height:32px;
   display:grid;
   place-items:center;
   padding:0;
@@ -975,35 +1002,41 @@
 .composer__history.is-open .composer__menu-line:first-child{transform:rotate(45deg) translateY(5px)}
 .composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
 .composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
-/* 模型胶囊：高与右边发送钮同档（38），圆角取半高 —— 两端是完整的圆头，
-   和方形的三横钮、圆形的发送钮并排时，这一条是中间唯一的长条。
+/* 模型胶囊：高 32，与左右两枚圆钮同一档，底行三件东西的外沿落在同一条
+   上下边线上，不再有谁探出来。圆角取半高，两端是完整的圆头。
    点开时胶囊自己长成面板：底板 .composer__model-surface 贴在胶囊原位，
    以下边界锚定向上长（bottom:0），宽度从胶囊宽撑到面板宽、圆角从半高收成 18，
    所以看上去是这枚胶囊被拉开了，而不是旁边冒出一块浮层。
    外层 .composer__model 只负责占位，尺寸恒等于胶囊，展开时输入条不重排。 */
 .composer__model{
   --model-panel-w:236px;    /* 展开后的面板宽，窄屏那档在文件末尾改 */
+  /* 这一枚的开合比全站那 0.34s 快一档：它贴在输入条上，拖长了会盖住正在
+     敲字的视线；宽度、高度、圆角与 JS 那段文字补间都读这一个时长 */
+  --model-dur:.24s;
   position:relative;
   flex:0 0 auto;
   width:auto;
-  height:38px;
+  height:32px;
   display:flex;
   align-items:center;
   z-index:2;
   /* 与账号胶囊、聊天页齿轮 dock 同一套形变变量：panels.js 的 pop 补间
-     --sx / --sy，原点取右下角 —— 面板朝左上长，鼓起时右下那一角钉在
-     发送钮左边不动，另外三条边一起胀出去再弹回来 */
+     --sx / --sy。只是这枚的形变不挂在最外层 —— 底行那串字贴着输入框，
+     跟着非整数缩放每帧重采样就会发毛；把 scale 交给白色底板（见下一条），
+     字保持 1:1 不缩放，鼓起来的只有那块面板 */
   --sx:1;
   --sy:1;
-  scale:var(--sx) var(--sy);
-  transform-origin:100% 100%;
 }
 .composer__model-surface{
   position:absolute;
   right:0;
   bottom:0;
   width:100%;
-  height:38px;
+  height:32px;
+  /* 形变落在这里：原点取右下角，面板朝左上长，右下那一角钉在发送钮左边不动，
+     另外三条边一起胀出去再弹回来。字在外面的 trigger 上，不参与这层缩放 */
+  scale:var(--sx) var(--sy);
+  transform-origin:100% 100%;
   /* 白底、无描边：胶囊与输入条的 --card-solid 之间只靠一点明度差分界，
      描边与灰底都撤掉，收起时它读起来就是一片贴在输入条上的白 */
   border:0;
@@ -1013,25 +1046,40 @@
      已经排好版的那一段，不会有一条列表先探到面板外头去 */
   overflow:hidden;
   pointer-events:none;
-  /* 柔光的半径与浓度：panels.js 的 pop 在这两个变量上补间，
-     常数与齿轮面板同一套（16 / .10 → 32 / .20），
-     所以展开时是同一记「胀开 + 浮起」，不是另一种浮层的入场 */
-  --sh:16px;
-  --sh-a:.1;
+  /* 柔光的半径与浓度：panels.js 的 pop 在这两个变量上补间。
+     收起态取 0 —— 这枚胶囊贴在输入条上，一圈 16/.10 的柔光会让它在灰底上
+     浮成另一层，和旁边的输入框、发送钮不在一个平面上；只有展开成面板、
+     真的离开输入条浮起来时才长到 32 / .20（补间终点见 panels.js） */
+  --sh:0px;
+  --sh-a:0;
+  box-shadow:0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
+  /* 这里只过渡形状，阴影不进来：--sh / --sh-a 是逐帧写的，
+     再加一条 box-shadow transition 会让每帧都重新起一段插值，
+     追不上补间，峰值被削平、回弹也被抹成一条几乎不动的线 */
   transition:
-    width var(--dur) var(--ease),
-    height var(--dur) var(--ease),
-    border-radius var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease);
+    width var(--model-dur) var(--ease),
+    height var(--model-dur) var(--ease),
+    border-radius var(--model-dur) var(--ease);
 }
 /* 深色底上没有白：退回卡片实色，免得这块亮片在暗背景里跳出来 */
 :root[data-theme="dark"] .composer__model-surface{background:var(--card-solid)}
+/* 收起态：指针压上来（或键盘落到钮上）只换一圈主题色描边，白底与字色都不动。
+   描边走 inset 阴影而不是 border —— 不占布局，胶囊宽高不会跟着跳一格；
+   柔光那一层要一起写回来，否则描边会把常驻的阴影顶掉，胶囊一亮暗就变扁 */
+.composer__model:hover > .composer__model-surface,
+.composer__model:focus-within > .composer__model-surface{
+  box-shadow:
+    inset 0 0 0 1px var(--theme),
+    0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
+}
 /* 展开：宽取「胶囊宽」与 --model-panel-w 的大者，高由 js 量出来的 --model-h 定
-   （38 + 列表高）；右侧边不动，面板整个往左长出来 */
+   （底行 40 + 行距 4 + 列表高）；右侧边不动，面板整个往左长出来。
+   这一条排在收起态那条之后，展开时那圈描边由它盖掉。
+   圆角取 24，与账号面板同一档（那边是 --top-h / 2，展开后四角仍是同一曲率） */
 .composer__model.is-open > .composer__model-surface{
   width:max(100%,var(--model-panel-w));
-  height:var(--model-h,38px);
-  border-radius:18px;
+  height:var(--model-h,84px);
+  border-radius:24px;
   /* 与齿轮面板同一条柔光：半径与浓度都读补间变量，
      面板涨开时阴影一起变宽变实，收回去又淡下来 */
   box-shadow:0 0 var(--sh) rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k)));
@@ -1039,20 +1087,31 @@
 .composer__model-trigger{
   position:relative;
   z-index:1;
+  /* 收起态固定 128 宽：模型名长短不再牵动输入条右侧那一段，换模型时
+     发送钮前面的位置不会左右挪。名字放不下就在这一格里省略 */
+  width:128px;
   min-width:0;
   max-width:min(280px,38vw);
-  height:38px;
+  height:32px;
   display:flex;
   align-items:center;
+  justify-content:flex-start;
   gap:5px;
   padding:0 12px;
+  /* 输入区外层是居中的（欢迎语那一片继承下来），胶囊里的名字不能跟着居中：
+     字一定从内边距 12 起排，hover 右移那 1em + 16 才是从这条基线出发 */
+  text-align:left;
   border:0;
   border-radius:999px;
   background:transparent;
   color:var(--text-primary);
-  font-family:"Noto Sans SC","Segoe UI",sans-serif;
-  font-size:13px;
-  font-weight:400;
+  /* 字体跟随站点、字重与账号面板胶囊同档（--fw）；字号压回 14 号 ——
+     --pill-fs 那档 18–24 在 236 宽的面板里放不下模型名，这一枚按小一号排 */
+  font-family:inherit;
+  font-weight:var(--fw);
+  font-size:var(--fs-14);
+  letter-spacing:0;
+  line-height:1;
   cursor:pointer;
   appearance:none;
   -webkit-appearance:none;
@@ -1060,8 +1119,9 @@
   transition:color .1s cubic-bezier(.7,0,.84,.16);
 }
 /* 底片与账号面板里的选项胶囊同一套：常驻一层主题色，静止 scale 0 不可见，
-   hover / 键盘聚焦时从圆心涨满整盒，字跟着反白；退场沿原路缩回圆心。
-   压入仍走 --press（js/press.js 逐帧写），与全站胶囊同一档深度 */
+   展开后 hover / 键盘聚焦时从圆心涨满整盒，字跟着反白；退场沿原路缩回圆心。
+   收起态不铺色（那只换一圈描边，见上面的 surface 规则），所以涨满的规则
+   全部挂在 .is-open 下；压入仍走 --press（js/press.js 逐帧写），与全站胶囊同一档 */
 .composer__model-trigger::before{
   content:'';
   position:absolute;
@@ -1074,35 +1134,72 @@
   transform:scale(calc(1 - var(--press,0) * var(--press-k)));
   transition:transform .2s linear, scale .1s cubic-bezier(.7,0,.84,.16);
 }
-/* 文字与那颗「高」压在底片之上，涨色时不至于被盖住 */
+/* 文字、那颗「高」与箭头压在底片之上，涨色时不至于被盖住 */
 .composer__model-trigger > *{position:relative; z-index:1}
-.composer__model-trigger:hover,
-.composer__model-trigger:focus-visible{
+.composer__model-trigger:focus-visible{outline:none}
+.composer__model.is-open .composer__model-trigger:hover,
+.composer__model.is-open .composer__model-trigger:focus-visible{
   color:var(--text-invert);
-  outline:none;
   transition:color .1s cubic-bezier(.16,.84,.3,1);
 }
-.composer__model-trigger:hover::before,
-.composer__model-trigger:focus-visible::before{
+.composer__model.is-open .composer__model-trigger:hover::before,
+.composer__model.is-open .composer__model-trigger:focus-visible::before{
   scale:1;
   transition:transform .2s linear, scale .1s cubic-bezier(.16,.84,.3,1);
 }
-/* 展开后这枚钮变成面板最下面那一行：横跨整块底板，但内容仍旧靠右 ——
-   它原来就在胶囊里靠右停着，这么写开合时字一个像素都不挪，长的只是左边那段空板。
-   （靠左对齐会让字在展开的一瞬间弹到面板左缘，反而是个跳。） */
+/* 展开后这枚钮就是列表里的一行，规格与上面那些模型行逐项对齐：
+   左右各让 4、离底 4、40 高、半高圆角、字左 12（4 + 12 = 16，与账号面板
+   里那些选项胶囊同一条内边距），hover 底片从圆心涨满、文字右移一格给左侧
+   箭头让位 —— 它就是「当前选中」的那一行，只是平时收在胶囊里 */
 .composer__model.is-open .composer__model-trigger{
   position:absolute;
+  /* 外层 .composer__model 只占胶囊那么宽，面板是朝左长出去的，
+     所以这行靠右锚定、宽度取面板宽；左右那 4 让给内边距，
+     字与「高」仍与上面那些模型行停在同一条线上（4 + 12 = 16） */
   right:0;
-  bottom:0;
+  bottom:4px;
   width:max(100%,var(--model-panel-w));
   max-width:none;
-  justify-content:flex-end;
+  height:40px;
+  padding:0 16px;
+  /* 这一行就是被选中的那一条：字色走主题色，其余候选停在原来的深墨；
+     指针压上来时下面的 hover 规则会把它交回反白 */
+  color:var(--theme);
 }
+/* 底片按列表行的宽度铺：整行 236，底子左右各让 4，落在 228 的同一格上 */
+.composer__model.is-open .composer__model-trigger::before{
+  left:4px;
+  right:4px;
+}
+/* 名字吃掉可用的那一段（展开后它转成 absolute，flex 不再参与）：
+   右侧的推理强度因此被顶到内边距上，不再跟着名字的长短左右跑 */
 .composer__model-label{
+  flex:1 1 auto;
   min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+}
+/* 展开后文字脱离流：左缘对齐内边距 16（与账号面板的选项胶囊同一格），
+   正文与「高」之间留出箭头的落位，字太长时在这里截断，不会顶到右边那枚小字上。
+   纵向用行高居中而不是 translateY(-50%)：展开那一下 label 从 flow 变 absolute，
+   若靠 translate 居中，那 50% 会跟着 translate 的过渡一起滑进来，和下面
+   JS 补的那段横移叠成两层；行高 40 是和底行同高，字始终停在行中线上。
+   这里只过渡 translate —— js/panels.js 的 glide 用 transform 补横移，两个属性
+   各自独立，互不覆盖（translate 先于 transform 应用） */
+.composer__model.is-open .composer__model-label{
+  position:absolute;
+  top:0;
+  left:16px;
+  height:40px;
+  line-height:40px;
+  /* 右端要给「高」留位（右 16 + 自身约 12），再留出 hover 时右移的 1em + 16 */
+  max-width:calc(100% - 82px);
+  transition:translate var(--model-dur) var(--ease);
+}
+.composer__model.is-open .composer__model-trigger:hover .composer__model-label,
+.composer__model.is-open .composer__model-trigger:focus-visible .composer__model-label{
+  translate:calc(1em + 16px) 0;
 }
 .composer__model-effort{
   flex:0 0 auto;
@@ -1113,15 +1210,49 @@
   font-size:12px;
 }
 .composer__model-effort[hidden]{display:none}
+/* 「高」在展开后钉在行右端：文字左对齐之后，这枚小字仍守着内边距 16。
+   与 label 同一套纵向处理（行高 40 居中），横移交给 js 的 glide 补 */
+.composer__model.is-open .composer__model-effort{
+  position:absolute;
+  top:0;
+  right:16px;
+  height:40px;
+  line-height:40px;
+}
+/* 箭头：与账号面板胶囊里那枚同一路径、同一套浮现动画 —— 静止淡出、左退 4，
+   行被 hover 时淡入并回到内边距 12 的位置。收起态它一直藏着 */
+.composer__model-arrow{
+  position:absolute;
+  top:50%;
+  left:12px;
+  width:1em;
+  height:1em;
+  fill:currentColor;
+  transform:translateY(-50%) translateX(-4px);
+  opacity:0;
+  pointer-events:none;
+  z-index:1;
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.composer__model.is-open .composer__model-arrow{left:16px}
+.composer__model.is-open .composer__model-trigger:hover .composer__model-arrow,
+.composer__model.is-open .composer__model-trigger:focus-visible .composer__model-arrow{
+  opacity:1;
+  transform:translateY(-50%) translateX(0);
+}
 
 /* 发送钮：不可用时只有一枚淡的箭头（--text-muted），底子是透明的；
-   一旦输入框里有字，底色整片涨成主题色、箭头反白 —— 颜色过渡和
-   顶栏那几枚圆钮同一条曲线，看起来是「填上了」而不是换了个灰块 */
+   一旦输入框里有字，底色从圆心涨满、箭头反白 —— 填色交给下面那层 ::before，
+   不是直接补 background-color（那是整片一起变浅，看着像换了个灰块；
+   涨开才是「填进去」） */
 .composer__send{
-  position:static;
+  /* relative 不脱流（这一枚由 flex 摆位），同时给下面那层 ::before 一个定位参照；
+     旧布局留下的 right/bottom:7px 要显式归零，否则相对定位下会把它推歪 */
+  position:relative;
+  inset:auto;
   flex:0 0 auto;
-  width:38px;
-  height:38px;
+  width:32px;
+  height:32px;
   display:grid;
   place-items:center;
   padding:0;
@@ -1133,12 +1264,32 @@
   box-shadow:none;
   /* 箭头飞出去的那一帧要落在按钮外面，不裁掉就会压在输入框上 */
   overflow:hidden;
-  transition:background-color .2s cubic-bezier(.16,.84,.3,1),color .2s cubic-bezier(.16,.84,.3,1),transform .15s ease,opacity .15s ease;
+  /* 负层级的底片只压自己的透明底，不跑到输入条上去 */
+  isolation:isolate;
+  transition:color .2s cubic-bezier(.16,.84,.3,1),transform .15s ease,opacity .15s ease;
+}
+/* 填色的底片：与按钮同大的一枚圆，静止缩在圆心（scale 0），有字后涨到满格。
+   收的时候快一档（.1s）、放的时候稍慢（.22s），进出都不拖尾 */
+.composer__send::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  scale:0;
+  transform-origin:50% 50%;
+  transition:scale .1s cubic-bezier(.7,0,.84,.16);
 }
 .composer__send.is-filled{
-  background:var(--theme);
+  background:transparent;
   color:var(--text-invert);
   box-shadow:none;
+}
+.composer__send.is-filled::before{
+  scale:1;
+  transition:scale .22s cubic-bezier(.16,.84,.3,1);
 }
 /* 悬停不放大：按钮大小保持一格，反馈只交给底色与箭头的换色；
    只有按下去那一下还有一点回弹 */
@@ -1189,27 +1340,30 @@
 }
 /* 待选模型：挂在底板里面、贴着胶囊那 38 的上边界，宽度跟底板走。
    静止时透明且不接指针，展开后再淡入 —— 底板的 height 是 js 量它算出来的
-   （38 + 本块高度），所以这里的 padding / 行高 / gap 改动会连带底板一起变。
+   （44 + 本块高度），所以这里的 padding / 行高 / gap 改动会连带底板一起变。
    min-width 让它在底板还没长够的那 0.3 秒里也按终态排版，字不会先挤再松。
    当前模型不在这张表里：它永远是下面那条胶囊本身 */
 .model-menu{
   position:absolute;
   right:0;
-  bottom:38px;
+  /* 底行（当前模型那枚钮）占 40 高、离面板底 4，列表就从它的上沿往上排；
+     左右各 4、顶 8、贴着底行再让 4 —— 与账号面板里那组菜单同一套内边距 */
+  bottom:44px;
   width:100%;
   min-width:var(--model-panel-w);
-  padding:8px 8px 6px;
+  padding:8px 4px 4px;
   opacity:0;
   pointer-events:none;
   transform:translateY(4px);
-  transition:opacity .16s ease, transform .26s var(--ease);
+  /* 与底板同拍：底板 0.24s 长完，这一块也在这之前落定 */
+  transition:opacity .12s ease, transform .2s var(--ease);
 }
 .model-menu[hidden]{display:none}
 .composer__model.is-open .model-menu{
   opacity:1;
   pointer-events:auto;
   transform:none;
-  transition-delay:.06s;
+  transition-delay:.04s;
 }
 .model-menu__list{
   display:grid;
@@ -1220,7 +1374,7 @@
 }
 /* 每一行就是账号面板里那枚选项胶囊：40 高、半高圆角、左内边距 12、
    hover 时底片从圆心涨满主题色、字反白并右移一格、箭头从左侧浮出来。
-   236 宽的面板放不下 --pill-fs（18–24），这里压到 14 号 */
+   字号与胶囊那一枚同为 14 号（--pill-fs 的 18–24 在 236 宽里放不下模型名） */
 .model-menu .pill{
   width:100%;
   height:40px;
@@ -1241,20 +1395,23 @@
 .model-menu .pill:hover .pill__arrow,
 .model-menu .pill:focus-visible .pill__arrow{opacity:1;transform:translateY(-50%) translateX(0)}
 /* 只有当前模型会在列表里露头（整个 provider 没有别的候选时），
-   它按选中态停在深墨，不铺底片 */
-.model-menu .pill.is-on{color:var(--text-primary)}
+   它按选中态停在主题色，不铺底片；指针压上来时仍交给 hover 的反白
+   （:not 让这条路在 hover / 键盘聚焦时让位，否则特异性更高的这一条
+   会把底片涨满后的反白压回主题色，深底上直接糊掉） */
+.model-menu .pill.is-on:not(:hover):not(:focus-visible){color:var(--theme)}
 /* 快捷胶囊排在卡片底行、左下角三横钮的右手边：不再越过卡片顶缘压到舞台上。
-   锚点按 footer 的盒模型算 —— 左内边距 16 + 圆钮直径 38 + 间距 10 = 64；
-   纵向让 28 高的胶囊与 38 高的圆钮同心，底距就是 10 + (38 − 28) / 2 = 15。
+   锚点按 footer 的盒模型算 —— 左内边距 16 + 圆钮直径 32 + 间距 10 = 58；
+   纵向让 28 高的胶囊与底行（三件都是 32 高）同心，
+   底距就是 16 + (32 − 28) / 2 = 18。
    right 仍写 auto，right:auto 时宽度才由 max-content 撑开 */
 .composer__starters{
   right:auto;
-  left:calc(16px + 38px + 10px);
-  bottom:calc(10px + (38px - 28px) / 2);
+  left:calc(16px + 32px + 10px);
+  bottom:calc(16px + (32px - 28px) / 2);
   width:max-content;
   /* 右侧给模型胶囊与发送钮留出位置：这一行两枚钮加起来约 133 宽，
      再留一点余量。语言包换成长词条时宁可裁字，也不要压到钮上 */
-  max-width:calc(100% - 64px - 160px);
+  max-width:calc(100% - 58px - 160px);
   overflow:hidden;
   gap:8px;
   justify-content:flex-start;
@@ -1268,28 +1425,48 @@
 /* 余量被吃掉时收成省略号，胶囊轮廓不跟着变形 */
 .composer__starters button{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 词条的皮肤：跟左右边栏同一层玻璃 —— 半透明的 --panel 加背后的高斯模糊，
-   浮在舞台上时背后有什么就透出一点被磨开的颜色，静止时描边与字都取 muted，
-   安静地停在输入框上方 */
+   浮在舞台上时背后有什么就透出一点被磨开的颜色。不描边：胶囊的边界交给
+   那层玻璃自己，静止时字取 muted，安静地停在输入框上方。
+   内边距各加 1 抵掉原来那条 1px 描边，去掉之后盒子不会矮一圈、这一行不跳 */
 .composer__starters button{
-  padding:6px 10px;
-  border:1px solid var(--text-muted);
+  position:relative;
+  padding:7px 11px;
+  border:0;
   background:var(--panel);
   color:var(--text-muted);
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-weight:400;
   box-shadow:none;
+  /* 底片要压在自己的玻璃底之上、字之下：负层级得有个独立的层叠上下文兜着 */
+  isolation:isolate;
   -webkit-backdrop-filter:blur(var(--blur));
   backdrop-filter:blur(var(--blur));
 }
-/* 指针压上来：描边与字一起转主题色，底片收成不透明的一层，和输入框同一种实底。
-   描边始终 1px（与输入框那条同宽），换色不加粗，胶囊的轮廓和这一行的排布都不跳 */
+/* 填色的底片：与词条同形的一枚胶囊，静止缩在中心（scale 0），指针压上来时
+   从中间涨满整格 —— 和发送钮、三横钮是同一种反馈，不是整片底色淡过去 */
+.composer__starters button::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  scale:0;
+  transform-origin:50% 50%;
+  transition:scale .1s cubic-bezier(.7,0,.84,.16);
+}
+/* 指针压上来：底片涨满、字反白。收起快一档（.1s）、涨开稍慢（.22s） */
 .composer__starters button:hover,
 .composer__starters button:focus-visible{
-  border-color:var(--theme);
-  background:var(--card-solid);
-  color:var(--theme);
+  color:var(--text-invert);
   outline:none;
   transform:none;
+}
+.composer__starters button:hover::before,
+.composer__starters button:focus-visible::before{
+  scale:1;
+  transition:scale .22s cubic-bezier(.16,.84,.3,1);
 }
 /* 卡片收到 840 及以下时底行放不下这两枚词条（父级宽度 = 100vw − 220，
    留给字条的部分跟着缩），退回原来的位置：浮在卡片上方、允许折行。
@@ -1315,17 +1492,22 @@
   width:fit-content;
   min-width:0;
   max-width:min(84%,300px);
-  /* 四周一圈同宽的内边距，字号与行高不变；原来上下 8、左右 8 的窄垫在
-     14 号字上显得局促，句首与圆角离得太近 */
-  padding:16px;
+  /* 四周一圈同宽的内边距，字号与行高不变；上下 8 让一段话更紧凑，
+     左右给到 12：圆角 24 摆在那儿，8 那版首字几乎贴着弧线起笔 */
+  padding:8px 12px;
   /* 不描边：两块气泡靠底色分开，机器人的白、用户的 theme 色本身就有边界 */
   border:0;
   /* 靠中轴那侧的下角压成直角：助手在左、用户在右 */
   border-radius:24px 24px 24px 0;
   background:#fff;
   box-shadow:0 2px 8px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .08));
-  color:var(--text-secondary);
-  font-family:"Source Han Sans SC","Noto Sans SC","Segoe UI",sans-serif;
+  /* 两侧都用主色文字：浅底上是深墨，深色模式下随 --text-primary 翻亮，
+     机器人那块的 --card-solid 也跟着换，对比度两边都够 */
+  color:var(--text-primary);
+  /* 思源黑体优先，没装就落 Google Fonts 分发的 Noto Sans SC（同一套字），
+     最后退回雅黑；中英数与标点在同一套字里，行内不会出现两种骨架 */
+  font-family:"Source Han Sans SC","Source Han Sans CN","思源黑体 CN","思源黑体",
+              "Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
   font-size:14px;
   font-weight:400;
   line-height:1.55;
@@ -1333,7 +1515,6 @@
   overflow-wrap:break-word;
   word-break:normal;
   transform:none;
-  animation:chat-message-in .22s ease-out both;
 }
 .assistant-chat__message::before{display:none}
 /* 悬停时才露出的时间戳：贴在气泡下方靠外的一侧，14px muted */
@@ -1363,9 +1544,10 @@
 .assistant-chat__message--user{
   border-radius:24px 24px 0 24px;
   /* 自己的话直接用主题色铺满。theme 两支明暗主题下都是同一枚浅色，
-     所以字色固定取深墨，不跟 --text-primary 走（深色模式下那支会变白） */
+     所以字色取主色文字的反相（始终是深墨），不跟 --text-primary 走
+     （深色模式下那支会变白） */
   background:var(--theme);
-  color:#1c1c1c;
+  color:var(--text-primary-invert);
 }
 .assistant-chat__message--pending{
   color:var(--text-muted);
@@ -1385,17 +1567,14 @@
   font-family:"Noto Sans SC","Segoe UI",sans-serif;
   font-weight:400;
 }
-@keyframes chat-message-in{
-  from{opacity:0;transform:translateY(4px)}
-  to{opacity:1;transform:translateY(0)}
-}
 @media(max-width:640px){
   .composer{
     width:calc(100vw - 24px);
     bottom:calc(12px + 64px + 12px);
   }
-  .composer__input{padding:16px 18px 4px}
-  .composer__footer{padding:0 8px 8px}
+  .composer__input{padding:16px 16px 4px}
+  /* 窄屏也守 16：正文与底下那排钮落在同一条左内边距上 */
+  .composer__footer{padding:0 16px 16px}
   .composer__model-trigger{max-width:150px}
   /* 窄屏面板跟输入框同宽：底板 / 列表 / 底下那行都读同一个变量 */
   .composer__model{--model-panel-w:min(320px,calc(100vw - 24px))}
@@ -1430,9 +1609,9 @@
    绕竖轴转不改 x 与 y 的对应关系，两条竖边投影后仍然竖直，
    只有上下两条边朝中轴收。
 
-   整列一起滚：往上滑就是更早的记录，新消息只在还贴着底的时候
-   把整列带下去，翻旧记录的人不会被拽回底部（判定在 assistant_chat.js
-   的 atStageBottom）。边上不加渐隐遮罩，滚到哪就露到哪。
+   这一列不滚动：新消息落到末尾，最早的超出三组就地缩小淡出，
+   让出来的位置由下面的气泡接住。翻旧记录去左栏的完整对话流，
+   舞台这块只保留最近三组，一屏之内看得完。
    ============================================================ */
 .stage-chat{
   position:fixed;
@@ -1440,8 +1619,9 @@
   z-index:18;
   pointer-events:none;
 }
-/* 流本身不接指针：中间那条带给三维场景留着，滚轮由 assistant_chat.js
-   转发（指针落在这一列里就把 deltaY 交给 scrollTop），气泡自己再接回来 */
+/* 流本身不接指针：中间那条带给三维场景留着。这一列不滚动 ——
+   一屏只留最近三组，更早的在 js 里缩小淡出后让位（见 assistant_chat.js
+   的 trimStage），所以这里裁掉溢出而不是给出滚动条 */
 .stage-chat__flow{
   position:absolute;
   /* 上下不写死高度，由这两条夹出来：顶栏占到 16%，底部输入区占到 20%，
@@ -1455,14 +1635,14 @@
   width:min(1080px,calc(100vw - 24px));
   display:flex;
   flex-direction:column;
-  gap:12px;
+  /* 行距写成变量：离场那条要把容器留的这份 gap 用负边距收回去 */
+  --stage-gap:12px;
+  gap:var(--stage-gap);
   /* 左右这点内边距是给透视留的余量：气泡外缘绕内侧竖边转过来会放大，
-     没有这段留白，掀起来的那半截会被滚动区的边界裁掉 */
+     没有这段留白，掀起来的那半截会被列的边界裁掉 */
   padding:4px 32px;
-  overflow-y:auto;
-  overscroll-behavior:contain;
+  overflow:hidden;
   pointer-events:none;
-  scrollbar-width:none;
   /* 相机参数由脚本写进这三个变量；这里的值只是第一帧的兜底 */
   perspective:var(--stage-d,1200px);
   perspective-origin:var(--stage-ox,50%) var(--stage-oy,50%);
@@ -1495,13 +1675,39 @@
   overflow-wrap:anywhere;
   cursor:pointer;
   pointer-events:auto;
+  /* 离场那三个变量默认是「原样」：位置、大小、不透明都不动。
+     它们叠在 rotateY 之后，缩小时仍沿用气泡自己的倾角与转轴 */
+  --exit-s:1;
+  --exit-y:0px;
+  --exit-o:1;
+  opacity:var(--exit-o);
   /* 转轴钉在外侧竖边，也就是靠屏幕边的那条对齐线：这条边在投影里零位移，
      气泡多宽多短，这一侧的缘都落在同一条竖线上（thinking 那种短气泡
      不会因为外扩少而显得缩进去）。靠中轴的内侧随倾角往里收，
      外宽内窄的观感留在原处 */
   transform-origin:0 50%;
-  transform:rotateY(var(--tilt));
+  transform:rotateY(var(--tilt)) translateY(var(--exit-y)) scale(var(--exit-s));
   backface-visibility:hidden;
+  /* 缩小的这一段带一点过冲，收得干脆；高度与内边距用同一条普通缓动，
+     跟着一起折回去，不会先扁再补 */
+  transition:transform .42s cubic-bezier(.34,1.2,.64,1),
+             opacity .3s ease,
+             max-height .42s var(--ease),
+             padding-top .42s var(--ease),
+             padding-bottom .42s var(--ease),
+             margin-bottom .42s var(--ease);
+}
+/* 超出三组的那条：缩小、上飘、淡出，占位一起收掉 ——
+   容器的 gap 会给它留一份，用等量的负下边距抵回去，
+   收完之后下面的气泡无缝顶上来 */
+.stage-chat__bubble.is-leaving{
+  /* 起点的具体高度由 js 写在元素上，这里必须让它压过内联那一条 */
+  max-height:0!important;
+  padding-top:0;
+  padding-bottom:0;
+  margin-bottom:calc(var(--stage-gap) * -1);
+  overflow:hidden;
+  pointer-events:none;
 }
 .stage-chat__bubble span{display:block}
 /* 只把靠外的那只下角压成直角：左侧左下角、右侧右下角，其余三角收圆 24 */
@@ -1528,7 +1734,7 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
     top:16%;
     bottom:22%;
     width:calc(100vw - 12px);
-    gap:10px;
+    --stage-gap:10px;
     padding:4px 20px;
   }
   /* 窄屏两半很窄，气泡收到 54%：再宽就顶到中线上，机器人的位置没了。
@@ -1537,8 +1743,70 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
   .stage-chat__bubble--user{--tilt:-8deg}
 }
 @media(prefers-reduced-motion:reduce){
-  /* 三横钮的填色不做涨开，悬停直接到位 */
+  /* 三横钮与发送钮的填色不做涨开，有字/悬停直接到位 */
   .composer__history::before,
   .composer__history:hover::before,
-  .composer__history:focus-visible::before{transition:none}
+  .composer__history:focus-visible::before,
+  .composer__send::before,
+  .composer__send.is-filled::before{transition:none}
 }
+
+/* ============================================================
+   Panel composer
+   左栏对话流底部的一条常驻输入：胶囊输入框与右边那枚圆钮是两个
+   独立元素，横向间隔 8、同高 48，悬在面板底部内边距（16）上。
+   输入框复用 .composer__input 那套字（字体、15 号、光标色、
+   placeholder 灰），只把尺寸收到 48 的单行；按钮直接用
+   .composer__send，实心/空心、换色、按下回弹都是同一套。
+   ============================================================ */
+.chat-composer{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:16px;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+/* 与面板里其它输入框同一套表面：不描边，只铺一层 --card 和 16 的常驻柔光，
+   选中时主题色 1px 内描边淡入 —— 和编辑页那枚 .edit__input、persona 的字段
+   是同一种材质。原先照着页面底部那条输入条做（白底 + 灰描边 + 双层投影），
+   放进 236 宽的面板里就成了第三材质，跟上下几页的字段读不到一起 */
+.chat-composer__field{
+  position:relative;
+  flex:1 1 auto;
+  min-width:0;
+  height:48px;
+  display:flex;
+  align-items:center;
+  border:0;
+  border-radius:999px;
+  background:var(--card);
+  /* 内描边常驻只是把透明度压到 0：焦点来了只补这一条，形状与柔光都不动，
+     所以不会像换 border-color 那样硬切，也不占布局 */
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
+  transition:box-shadow .2s cubic-bezier(.16,.84,.3,1);
+}
+.chat-composer__field:focus-within{
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px var(--theme);
+}
+/* 没有描边要让位了，46 改成整 48；行高 22 配 12 的上下内边距，单行正好居中 */
+.chat-composer .composer__input{
+  height:48px;
+  min-height:48px;
+  padding:12px 16px;
+  line-height:22px;
+  overflow-y:auto;
+}
+.chat-composer .composer__send{
+  width:48px;
+  height:48px;
+}
+/* 记录区把这条输入的高度让出来，最后一条不会被压在底下：
+   48 输入 + 16 底距 + 8 呼吸 */
+.rail__view--chat .assistant-chat__log{padding-bottom:72px}

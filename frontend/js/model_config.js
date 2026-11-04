@@ -219,11 +219,12 @@
     renderDatalist(current.provider);
     renderMenu();
     label.textContent = modelLabel(current.model) || t('model.choose', '选择模型');
+    /* 右侧那枚小字只说推理强度（model.effort.high，高 / High），不再借它显示
+       配置状态 —— 那是另一回事，顶栏的状态胶囊与 Key 输入框的提示各说一遍就够了。
+       文案挂回 data-i18n，切语言时 i18n 直接改这一格 */
     effort.hidden = false;
-    effort.removeAttribute('data-i18n');
-    effort.textContent = current.configured
-      ? t('model.status.configured', '已配置')
-      : t('model.status.unconfigured', '未配置');
+    effort.setAttribute('data-i18n', 'model.effort.high');
+    effort.textContent = t('model.effort.high', '高');
     /* 模型胶囊只挂 aria-label：原生 title 悬停会弹黑底小框，输入框尾部不要这个 */
     trigger.removeAttribute('title');
     trigger.setAttribute('aria-label', formatLabel(current.api_format) + ' · ' + current.model +
@@ -296,6 +297,8 @@
     } catch (error) {
       paint(current);
       effort.hidden = false;
+      /* 失败时临时把这格让给提示，data-i18n 摘掉，切语言不会把它冲回「高」 */
+      effort.removeAttribute('data-i18n');
       effort.textContent = t('model.status.error', '保存失败');
       trigger.removeAttribute('title');
       trigger.setAttribute('aria-label', error.message);
@@ -351,7 +354,8 @@
      由 css 的 height 过渡从 38 走到这个值。列表在展开前是透明的但已经排版，
      没展开也能量到真实尺寸；量不到时 css 那边回落到 38 */
   function measureMenu() {
-    wrap.style.setProperty('--model-h', (38 + menu.offsetHeight) + 'px');
+    /* 展开后的面板高 = 底行（当前模型 40 高 + 离底 4）+ 列表整块 */
+    wrap.style.setProperty('--model-h', (44 + menu.offsetHeight) + 'px');
   }
 
   var closeTimer = 0;
@@ -375,7 +379,7 @@
        否则这一格会塌成 0，底板与列表的 100% 也就没了参照 */
     wrap.style.width = wrap.offsetWidth + 'px';
     measureMenu();
-    /* 先把「胶囊态」的 38 刷成当前计算值，再加类，height 才有起点可过渡 */
+    /* 先把「胶囊态」的 32 刷成当前计算值，再加类，height 才有起点可过渡 */
     void wrap.offsetWidth;
     wrap.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
