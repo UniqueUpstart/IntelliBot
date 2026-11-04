@@ -171,10 +171,12 @@
     });
   };
 
-  /* .chat-dock 是聊天页右上角那枚齿轮：收起是正圆、点开长成面板。
-     模型入口已经是独立浮层，按钮本身不能再参与缩放补间，避免点击时左移。 */
+  /* .chat-dock 是聊天页右上角那枚齿轮：收起是正圆、点开长成面板；
+     .composer__model 是输入条右侧的模型胶囊，点开同样从胶囊长成面板。
+     两枚都走这条胀开曲线，所以一并收进来 —— 原点各自由 css 的
+     transform-origin 定（齿轮是右上、模型胶囊是右下，面板都朝远离角的方向长） */
   var nodes = Array.prototype.slice.call(
-    document.querySelectorAll('.rail, .user, .viewdock, .chat-dock'));
+    document.querySelectorAll('.rail, .user, .viewdock, .chat-dock, .composer__model'));
   nodes.forEach(function (n) { n.__open = n.classList.contains('is-open'); });
 
   new MutationObserver(function (records) {

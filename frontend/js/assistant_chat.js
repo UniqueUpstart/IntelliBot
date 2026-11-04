@@ -869,9 +869,7 @@
   if (exportButton) exportButton.addEventListener('click', exportHistory);
   if (suggestions) suggestions.addEventListener('click', function (event) {
     var button = event.target.closest('[data-chat-example]');
-    if (!button) return;
-    var label = button.querySelector('[data-i18n]');
-    send((label ? label.textContent : button.textContent).trim());
+    if (button) send(button.dataset.chatPrompt || button.textContent.trim());
   });
   if (stage) stage.addEventListener('click', function (event) {
     var bubble = event.target.closest('[data-stage-message]');

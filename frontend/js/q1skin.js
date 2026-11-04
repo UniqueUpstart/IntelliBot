@@ -133,8 +133,8 @@ function init() {
   const pick = panel.querySelector('[data-skin-pick]');
   const note = panel.querySelector('[data-skin-note]');
   const removeBtn = panel.querySelector('[data-skin-delete]');
-  /* 导入钮搬到了弹窗标题区右上角（.modal__act 里那颗胶囊），不再挂在面板里，
-     所以这两个按整页取；取不到就整段跳过，换版式时不会连带 Q1 一起挂掉 */
+  /* 导入卡排在模型网格最后。文件输入和入口按整页取；取不到就整段跳过，
+     换版式时不会连带 Q1 一起挂掉 */
   const fileInput = document.querySelector('[data-skin-file]');
   const importCard = document.querySelector('[data-skin-import]');
   const loaded = new Map();
@@ -859,7 +859,8 @@ function init() {
       '<span class="skin-card__name"></span>',
     ].join('');
     card.querySelector('.skin-card__name').textContent = label;
-    pick.appendChild(card);
+    if (importCard) pick.insertBefore(card, importCard);
+    else pick.appendChild(card);
   }
 
   async function useBundled(id, url, name) {

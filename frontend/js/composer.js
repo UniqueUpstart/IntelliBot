@@ -18,9 +18,7 @@
   function outOffset() {
     var bottom = parseFloat(window.getComputedStyle(wrap).bottom);
     if (isNaN(bottom)) bottom = 16;
-    var suggestions = wrap.querySelector('.composer__starters:not([hidden])');
-    var suggestionsOffset = suggestions ? suggestions.offsetHeight + 12 : 0;
-    return bottom + wrap.offsetHeight + suggestionsOffset + 12;
+    return bottom + wrap.offsetHeight + 12;
   }
 
   /* 打断也要接得住：先按当前计算值压实内联，再挂 is-out，
