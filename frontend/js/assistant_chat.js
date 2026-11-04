@@ -59,8 +59,10 @@
     requestAnimationFrame(function () { log.scrollTop = log.scrollHeight; });
   }
 
-  function stageStream(role) {
-    return stage && stage.querySelector('[data-stage-stream="' + role + '"]');
+  /* 舞台只有一条流：问答按顺序落在同一根时间轴上，靠哪边由角色决定。
+     行容器负责对齐与透视，气泡挂在行里（见 css/chat.css 的 .stage-chat__row） */
+  function stageStream() {
+    return stage && stage.querySelector('[data-stage-stream]');
   }
 
   function decorateBubble(node, role, recordId) {
@@ -86,11 +88,68 @@
     stream.classList.toggle('is-overflow', stream.scrollHeight > stream.clientHeight + 4);
   }
 
-  /* 舞台两侧各是一条记录流，按角色分开：这一侧已有的气泡按 recordId 复用，
-     新的追加到末尾（流自己向上滚，最新一条总在底边）。
+  /* 相机跟着视口走，不写死：镜头架在屏幕中轴与视口中线上，距离取视口高度的
+     1.25 倍（窄屏 0.95 倍，画面更小、透视更近），再换算成相对这一列的百分比
+     交给 CSS。列的尺寸一变（断点、旋屏、软键盘）重算一次就够 ——
+     气泡自身的位置不用重算，透视原点钉在列上，滚动与增删会让投影自己变化 */
+  function syncStagePerspective() {
+    var flow = stageStream();
+    if (!flow) return;
+    var box = flow.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    var vw = window.innerWidth || document.documentElement.clientWidth;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var narrow = vw <= 900;
+    flow.style.setProperty('--stage-ox',
+      ((vw / 2 - box.left) / box.width * 100).toFixed(2) + '%');
+    flow.style.setProperty('--stage-oy',
+      ((vh / 2 - box.top) / box.height * 100).toFixed(2) + '%');
+    flow.style.setProperty('--stage-d', Math.round(vh * (narrow ? 0.95 : 1.25)) + 'px');
+  }
+
+  /* 倾角按气泡自己的宽度算：内缘退进去的深度是 宽 × sinθ，宽气泡把角度收一点，
+     免得长句子的内侧退得太狠；窄屏整体放缓。内容回填把气泡撑宽时由
+     ResizeObserver 再调一次，所以这一项也随内容大小实时变。
+     上限 18°（窄屏 9°）是观感值：再大读起来就像侧着的字幕，太小又退回平板 */
+  function syncBubbleTilt(node) {
+    if (!node || !node.offsetWidth) return;
+    var user = node.classList.contains('stage-chat__bubble--user');
+    var narrow = (window.innerWidth || 0) <= 900;
+    var limit = narrow ? 9 : 18;
+    var tilt = limit - (node.offsetWidth - 200) / 100 * (narrow ? 0.6 : 1.4);
+    tilt = Math.max(narrow ? 5 : 9, Math.min(limit, tilt));
+    node.style.setProperty('--tilt', (user ? -tilt : tilt).toFixed(2) + 'deg');
+  }
+
+  var bubbleWatcher = window.ResizeObserver ? new window.ResizeObserver(function (entries) {
+    for (var i = 0; i < entries.length; i += 1) syncBubbleTilt(entries[i].target);
+  }) : null;
+
+  /* 弹出复用账号面板那条弹性（panels.js 的 1.02 → elastic.out(1.1, 0.8)），
+     但只让它朝横向撑：账号面板是 --sx/--sy 两轴等比鼓，这里把 y 压住在 1，
+     气泡就只往左右胀一下再弹回。走 --sx 这个独立 scale 属性、不碰 transform ——
+     transform 里挂着 rotateY(--tilt)，GSAP 一旦接管它会把倾角抹平。
+     转轴在外侧对齐线，所以横向胀开时贴边那条线不动，往中轴方向推 */
+  var POP_UP = 0.25;
+  var POP_BACK = 0.75;
+  /* 账号面板那套是 1.02，但它是整块面板、按面积看得到；气泡只有 380 宽，
+     2% 只推 7px，看不出来，所以按尺寸提到 1.03（约 11px）才和面板的观感同级 */
+  var POP_PEAK = 1.03;
+  var calmPop = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function popStageBubble(node) {
+    var g = window.gsap;
+    if (!g || !node || calmPop.matches) return;
+    g.killTweensOf(node, '--sx');
+    g.timeline()
+      .to(node, { '--sx': POP_PEAK, duration: POP_UP, ease: 'power2.out' }, 0)
+      .to(node, { '--sx': 1, duration: POP_BACK, ease: 'elastic.out(1.1, 0.8)' }, POP_UP);
+  }
+
+  /* 舞台只有一列：已有的气泡按 recordId 复用，新的追加到末尾 —— 时间怎么走，
+     气泡就怎么往下排（流自己向上滚，最新一条总在底边），问答因此自然错位。
      同一条记录会走两遍 —— 先「正在思考…」再回填正文，所以复用优先于新建 */
   function showStage(role, text, recordId) {
-    var stream = stageStream(role);
+    var stream = stageStream();
     if (!stream) return;
     var key = String(recordId || '');
     var node = key ? stream.querySelector('[data-record-id="' + key + '"]') : null;
@@ -105,8 +164,16 @@
       label.setAttribute('data-stage-text', '');
       decorateBubble(node, role, recordId);
       stream.appendChild(node);
-      /* 只留最近 STAGE_LIMIT 条：更早的还在左栏完整对话流里，舞台这块板不必无限长 */
-      while (stream.children.length > STAGE_LIMIT) stream.firstElementChild.remove();
+      syncBubbleTilt(node);
+      if (bubbleWatcher) bubbleWatcher.observe(node);
+      popStageBubble(node);
+      /* 只留最近 STAGE_LIMIT 条：更早的还在左栏完整对话流里，舞台这块不必无限长 */
+      while (stream.children.length > STAGE_LIMIT) {
+        var oldest = stream.firstElementChild;
+        if (bubbleWatcher) bubbleWatcher.unobserve(oldest);
+        if (window.gsap) window.gsap.killTweensOf(oldest);
+        oldest.remove();
+      }
     }
     var textNode = node.querySelector('[data-stage-text]');
     if (textNode) textNode.textContent = text;
@@ -117,18 +184,24 @@
   }
 
   function hideStage() {
-    if (!stage) return;
-    stage.querySelectorAll('[data-stage-stream]').forEach(function (stream) {
-      stream.replaceChildren();
-    });
+    var stream = stageStream();
+    if (!stream) return;
+    if (bubbleWatcher) {
+      for (var i = 0; i < stream.children.length; i += 1) {
+        bubbleWatcher.unobserve(stream.children[i]);
+      }
+    }
+    stream.replaceChildren();
   }
 
   /* 待机时的自言自语：往舞台上追一条就够，不做定时清理——
-     记录留在两侧的滚动流里，由用户自己翻看。
+     记录留在同一列滚动流里，由用户自己翻看。
      同一条刚说过就不再说：换成另一种，两种都刚说过就整轮跳过 */
   function stageLastText(role) {
-    var stream = stageStream(role);
-    var last = stream && stream.lastElementChild;
+    var stream = stageStream();
+    if (!stream) return '';
+    var bubbles = stream.querySelectorAll('[data-stage-message="' + role + '"]');
+    var last = bubbles.length ? bubbles[bubbles.length - 1] : null;
     return last ? last.textContent.trim() : '';
   }
   function showIdleReaction(kind) {
@@ -520,6 +593,25 @@
     var bubble = event.target.closest('[data-stage-message]');
     if (bubble) openChat(bubble.dataset.recordId);
   });
+  /* 那一列自己不接指针（中间那条竖带给三维场景留着拖视角），滚轮从
+     document 上接管：指针落在列的矩形里、且这列确实装不下内容，
+     才把 deltaY 换成 scrollTop */
+  if (stage) document.addEventListener('wheel', function (event) {
+    var flow = stageStream();
+    if (!flow || flow.scrollHeight <= flow.clientHeight + 4) return;
+    var box = flow.getBoundingClientRect();
+    if (event.clientX < box.left || event.clientX > box.right ||
+        event.clientY < box.top || event.clientY > box.bottom) return;
+    flow.scrollTop += event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    event.preventDefault();
+  }, { passive: false });
+  /* 相机参数先摆好，再等字体落位重摆一次 —— 字体换了行高、列的位置也可能挪 */
+  if (stage) {
+    syncStagePerspective();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncStagePerspective);
+    }
+  }
   if (historyButton) {
     var chatTab = document.querySelector('.rail--left .item[data-panel="Chat"]');
     historyButton.addEventListener('pointerdown', function (event) { event.stopPropagation(); });
@@ -538,8 +630,9 @@
       sequenceToken += 1; stopButton.hidden = true;
     });
     window.addEventListener('resize', function () {
-      if (!stage) return;
-      stage.querySelectorAll('[data-stage-stream]').forEach(stageSync);
+      var stream = stageStream();
+      if (stream) stageSync(stream);
+      syncStagePerspective();
     });
     window.addEventListener('intellibot-idle-reaction', function (event) {
       showIdleReaction(event.detail && event.detail.kind);

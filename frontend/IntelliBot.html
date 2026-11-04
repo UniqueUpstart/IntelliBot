@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="css/workspace.css?v=22">
   <link rel="stylesheet" href="css/cards.css?v=25">
   <link rel="stylesheet" href="css/modal.css?v=35">
-  <link rel="stylesheet" href="css/chat.css?v=78">
+  <link rel="stylesheet" href="css/chat.css?v=84">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/sim.css?v=58">
   <link rel="stylesheet" href="css/robot.css?v=4">
@@ -1128,18 +1128,14 @@
   </div>
 </div>
 
-<!-- 舞台两侧各立一块聊天记录板：左侧是 IntelliBot 的回复，右侧是你说的话。
-     两块板都是纯平面，绕 Y 轴朝机器人那一侧偏转，挂在半空正对中间；
-     各自的记录流可以上下滚（往上就是更早的对话），气泡由 js/assistant_chat.js
-     按记录追加，点任一条打开左栏的完整对话流 -->
+<!-- 舞台是一列竖向记录流，像微信那样一问一答依次往下排：谁说的谁站边，
+     用户的气泡靠右半、机器人的靠左半，两者共用同一条时间轴上下交错。
+     每条气泡各自绕靠中轴的那条竖边朝机器人一侧偏转（样式见 css/chat.css），
+     所以左右半幅仍有各自的透视，但竖直顺序不分家。
+     记录由 js/assistant_chat.js 按到达顺序追加，点任一条打开左栏的完整对话流 -->
 <div class="stage-chat" data-stage-chat>
-  <div class="stage-chat__side stage-chat__side--assistant">
-    <!-- 舞台这块不重复播报：左栏对话流才是读屏的那一份 -->
-    <div class="stage-chat__stream" data-stage-stream="assistant"></div>
-  </div>
-  <div class="stage-chat__side stage-chat__side--user">
-    <div class="stage-chat__stream" data-stage-stream="user"></div>
-  </div>
+  <!-- 舞台这块不重复播报：左栏对话流才是读屏的那一份 -->
+  <div class="stage-chat__flow" data-stage-stream></div>
 </div>
 
 <script src="js/modal.js?v=35"></script>
@@ -1147,7 +1143,7 @@
 <script src="js/composer.js?v=7"></script>
 <script src="js/model_config.js?v=14"></script>
 <script src="js/persona.js?v=4"></script>
-<script src="js/assistant_chat.js?v=19"></script>
+<script src="js/assistant_chat.js?v=25"></script>
 <script src="js/pose_controls.js?v=1"></script>
 
 <!-- ===================== 背景动效 ===================== -->
