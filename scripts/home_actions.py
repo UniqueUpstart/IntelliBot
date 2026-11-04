@@ -13,4 +13,18 @@ HOME_ACTIONS = (
         "aliases": ["捧腹大笑", "捧腹笑", "哈哈大笑", "大笑", "奶娃笑", "奶蛙笑"],
         "duration_s": 10.5,
     },
+    {
+        "id": "mechanical_dance",
+        "name": "机械舞",
+        "description": "12秒100 BPM机械舞：短促snap到位、分段定格、植根几何造型、机械转身和关机收势",
+        "aliases": ["机械舞", "机器人舞", "机器舞", "popping", "pop舞"],
+        "duration_s": 12.0,
+    },
+    {
+        "id": "disco_dance",
+        "name": "迪斯科",
+        "description": "15秒全身迪斯科：step-touch、交替指天、左右滑步、腰胯律动、转身和V字收势",
+        "aliases": ["迪斯科", "迪斯科舞步", "蹦迪", "disco", "disco dance"],
+        "duration_s": 15.0,
+    },
 )

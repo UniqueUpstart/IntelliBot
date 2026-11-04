@@ -50,14 +50,47 @@ def _load_capabilities() -> dict:
     return value
 
 
-CAPABILITIES = _load_capabilities()
-MOTION_CATALOG = list(CAPABILITIES["motions"])
-SUPPORTED_ACTION_IDS = frozenset(item["id"] for item in MOTION_CATALOG)
-SUPPORTED_POSE_IDS = frozenset(item["id"] for item in CAPABILITIES["poses"])
-SUPPORTED_VIEW_IDS = frozenset(item["id"] for item in CAPABILITIES["views"])
-SUPPORTED_EMOTION_IDS = frozenset(item["id"] for item in CAPABILITIES["emotions"])
-MAX_COMMANDS = int(CAPABILITIES["limits"]["max_commands"])
-MAX_MOTIONS = int(CAPABILITIES["limits"]["max_motions"])
+CAPABILITIES: dict = {}
+MOTION_CATALOG: list[dict] = []
+SUPPORTED_ACTION_IDS: frozenset[str] = frozenset()
+SUPPORTED_POSE_IDS: frozenset[str] = frozenset()
+SUPPORTED_VIEW_IDS: frozenset[str] = frozenset()
+SUPPORTED_EMOTION_IDS: frozenset[str] = frozenset()
+MAX_COMMANDS = 0
+MAX_MOTIONS = 0
+CAPABILITIES_MTIME_NS = -1
+CAPABILITIES_LOCK = threading.RLock()
+
+
+def _apply_capabilities(value: dict) -> None:
+    global CAPABILITIES, MOTION_CATALOG
+    global SUPPORTED_ACTION_IDS, SUPPORTED_POSE_IDS, SUPPORTED_VIEW_IDS, SUPPORTED_EMOTION_IDS
+    global MAX_COMMANDS, MAX_MOTIONS
+    CAPABILITIES = value
+    MOTION_CATALOG = list(value["motions"])
+    SUPPORTED_ACTION_IDS = frozenset(item["id"] for item in MOTION_CATALOG)
+    SUPPORTED_POSE_IDS = frozenset(item["id"] for item in value["poses"])
+    SUPPORTED_VIEW_IDS = frozenset(item["id"] for item in value["views"])
+    SUPPORTED_EMOTION_IDS = frozenset(item["id"] for item in value["emotions"])
+    MAX_COMMANDS = int(value["limits"]["max_commands"])
+    MAX_MOTIONS = int(value["limits"]["max_motions"])
+
+
+def refresh_capabilities(force: bool = False) -> bool:
+    global CAPABILITIES_MTIME_NS
+    with CAPABILITIES_LOCK:
+        try:
+            mtime_ns = CAPABILITIES_PATH.stat().st_mtime_ns
+        except OSError as error:
+            raise RuntimeError(f"无法读取能力清单状态 {CAPABILITIES_PATH}: {error}") from error
+        if not force and mtime_ns == CAPABILITIES_MTIME_NS:
+            return False
+        _apply_capabilities(_load_capabilities())
+        CAPABILITIES_MTIME_NS = mtime_ns
+        return True
+
+
+refresh_capabilities(force=True)
 
 
 class BridgeError(RuntimeError):
@@ -282,6 +315,7 @@ def _explicit_motion_ids(message: str) -> list[str]:
 
 
 def _system_prompt(persona: str = "") -> str:
+    refresh_capabilities()
     catalog = json.dumps(CAPABILITIES, ensure_ascii=False, separators=(",", ":"))
     base = (
         "你是 IntelliBot，一台友好、简洁的机器人助手。请用用户使用的语言回答。"
@@ -740,10 +774,15 @@ class BridgeState:
         self.opener = opener
         self.cache: dict[str, CachedResponse] = {}
         self.lock = threading.Lock()
+        self.capabilities_mtime_ns = CAPABILITIES_MTIME_NS
 
     def run_chat(self, key: str, body: bytes) -> tuple[int, dict]:
+        refresh_capabilities()
         with self.lock:
             config = self.config
+            if self.capabilities_mtime_ns != CAPABILITIES_MTIME_NS:
+                self.cache.clear()
+                self.capabilities_mtime_ns = CAPABILITIES_MTIME_NS
         if not config.api_key:
             raise BridgeError(503, "AI_NOT_CONFIGURED", "请先在模型设置中填写 API Key")
         fingerprint = hashlib.sha256(body).hexdigest()
@@ -813,6 +852,7 @@ def make_handler(state: BridgeState):
             if self.path != "/health":
                 self._json(404, {"error": {"code": "NOT_FOUND", "message": "接口不存在"}})
                 return
+            refresh_capabilities()
             config = state.get_config()
             self._json(
                 200,

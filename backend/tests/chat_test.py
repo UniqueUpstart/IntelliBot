@@ -96,7 +96,12 @@ class FakeAiHandler(BaseHTTPRequestHandler):
                 },
             )
             return
-        if message in {"surprised", "hug", "refuse"}:
+        if message in {
+            "surprised", "hug", "refuse",
+            "mechanical_dance", "disco_dance",
+            "cheer_roar", "martial_salute", "march_in_place",
+            "applause", "point_forward",
+        }:
             self.reply(200, {"reply":"好的", "action_id":message, "actions":[message], "stop":False, "model":"deepseek-flash"})
             return
         if message == "slow":
@@ -186,9 +191,18 @@ try:
         auth_token = result["data"]["access_token"]
         assert call(backend_port, "POST", "/motion/base", {"vx":1}, "dev-key")[0] == 403
 
-    for action in ["surprised", "hug", "refuse"]:
+    for action in [
+        "surprised", "hug", "refuse",
+        "mechanical_dance", "disco_dance",
+    ]:
         code, result = call(backend_port, "POST", "/chat", {"message":action}, str(uuid4()))
         assert code == 200 and result["data"]["actions"] == [action], (code,result)
+    for action in [
+        "cheer_roar", "martial_salute", "march_in_place",
+        "applause", "point_forward",
+    ]:
+        code, result = call(backend_port, "POST", "/chat", {"message":action}, str(uuid4()))
+        assert code == 502 and result["error"]["code"] == "AI_INVALID_RESPONSE", (code,result)
 
     status, payload = call(
         backend_port,

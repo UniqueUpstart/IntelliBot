@@ -3,9 +3,19 @@ import {moodId, setMood, onMood} from './faces.js?v=15';
 import {HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE} from './q1_motion_data.js?v=3';
 import {STREET_DANCE, STREET_DANCE_REST_POSE} from './street_dance_data.js?v=3';
 import {BELLY_LAUGH, BELLY_LAUGH_REST_POSE} from './belly_laugh_data.js?v=3';
+import {MECHANICAL_DANCE, MECHANICAL_DANCE_REST_POSE} from './mechanical_dance_data.js?v=3';
+import {DISCO_DANCE, DISCO_DANCE_REST_POSE} from './disco_dance_data.js?v=3';
 
-const TIMELINE_MOTIONS = [STREET_DANCE, BELLY_LAUGH];
+const TIMELINE_MOTIONS = [
+  STREET_DANCE, BELLY_LAUGH, MECHANICAL_DANCE, DISCO_DANCE,
+];
 const TIMELINE_BY_ID = Object.fromEntries(TIMELINE_MOTIONS.map((motion) => [motion.id, motion]));
+const TIMELINE_REST_POSES = new Map([
+  [STREET_DANCE.id, STREET_DANCE_REST_POSE],
+  [BELLY_LAUGH.id, BELLY_LAUGH_REST_POSE],
+  [MECHANICAL_DANCE.id, MECHANICAL_DANCE_REST_POSE],
+  [DISCO_DANCE.id, DISCO_DANCE_REST_POSE],
+]);
 const MOTION_BY_ID = Object.fromEntries([
   ...HOME_MOTIONS.map((motion) => [motion.id, motion]),
   ...TIMELINE_MOTIONS.map((motion) => [motion.id, motion]),
@@ -66,7 +76,7 @@ export function samplePose(id, progress) {
   return pose;
 }
 
-function sampleTrack(points, beat) {
+function sampleTrack(points, beat, easing = 'smooth') {
   if (!points || !points.length) return 0;
   if (beat <= points[0][0]) return points[0][1];
   const last = points[points.length - 1];
@@ -75,21 +85,22 @@ function sampleTrack(points, beat) {
     const [endBeat, endValue] = points[index];
     if (beat > endBeat) continue;
     const [startBeat, startValue] = points[index - 1];
-    const progress = smoothstep((beat - startBeat) / (endBeat - startBeat || 1));
+    const raw = (beat - startBeat) / (endBeat - startBeat || 1);
+    const progress = smoothstep(easing === 'snap' ? Math.min(1, raw / 0.18) : raw);
     return startValue + (endValue - startValue) * progress;
   }
   return last[1];
 }
 
 function timelineRest(motion) {
-  return motion.id === STREET_DANCE.id ? STREET_DANCE_REST_POSE : BELLY_LAUGH_REST_POSE;
+  return TIMELINE_REST_POSES.get(motion.id) || Q1_REST_POSE;
 }
 
 function sampleTimelinePose(time, transform) {
   const beat = time * transform.bpm / 60;
   const pose = {...timelineRest(transform)};
   Object.entries(transform.tracks).forEach(([joint, points]) => {
-    pose[joint] = sampleTrack(points, beat);
+    pose[joint] = sampleTrack(points, beat, transform.easing);
   });
   return pose;
 }
@@ -97,9 +108,10 @@ function sampleTimelinePose(time, transform) {
 function sampleTimelineRoot(time, transform) {
   if (!transform.root) return {side: 0, yaw: 0};
   const beat = time * transform.bpm / 60;
+  const easing = transform.root.easing || transform.easing || 'smooth';
   return {
-    side: sampleTrack(transform.root.side, beat),
-    yaw: sampleTrack(transform.root.yaw, beat),
+    side: sampleTrack(transform.root.side, beat, easing),
+    yaw: sampleTrack(transform.root.yaw, beat, easing),
   };
 }
 
@@ -310,6 +322,7 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
         mood: motion.mood || null,
         category: motion.category || 'gesture',
         bpm: motion.bpm || null,
+        easing: motion.easing || 'smooth',
         loop: !!motion.loop,
         returnToRest: motion.returnToRest !== false,
       } : null;
@@ -321,13 +334,60 @@ export function createHomeMotionController(model, mixer, idleAction, onState, en
   };
 }
 
-/* 已经搬进左栏 Action 的三张卡（舞动、cha-cha、街舞）不在右栏重复出现；
-   其余手势都进右栏，卡面是机器人做这个动作的缩略图，图没就绪时先显示名字 */
-const RAIL_EXCLUDE = new Set(['dance', 'cha_cha', 'street_dance']);
+/* 左栏 Action 已展示的舞蹈不在右栏重复出现；其余手势进入右栏，
+   卡面是机器人做这个动作的缩略图，图没就绪时先显示名字 */
+const RAIL_EXCLUDE = new Set([
+  'dance', 'cha_cha', 'street_dance',
+  MECHANICAL_DANCE.id, DISCO_DANCE.id,
+]);
+const ACTION_SHORTCUTS = [
+  {motion: MECHANICAL_DANCE, brief: '定格机械舞'},
+  {motion: DISCO_DANCE, brief: '复古迪斯科'},
+];
 const RAIL_MOTIONS = [...HOME_MOTIONS, ...TIMELINE_MOTIONS]
   .filter((motion) => !RAIL_EXCLUDE.has(motion.id));
+const PLAY_GLYPH =
+  '<span class="sc__go" aria-hidden="true"><svg viewBox="0 0 32 32">' +
+  '<path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35' +
+  'c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01.54,1.31l4.35,4.35' +
+  'c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9' +
+  'c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span>';
 
 export function mountHomeMotionControls(play) {
+  const actionGroup = document.querySelector('.sc-group--action');
+  const placeholderCards = actionGroup
+    ? Array.from(actionGroup.querySelectorAll('.sc:not([data-motion]):not([data-action-motion])'))
+    : [];
+  const actionCards = placeholderCards.slice(0, ACTION_SHORTCUTS.length);
+  placeholderCards.slice(ACTION_SHORTCUTS.length).forEach((card) => card.remove());
+  actionCards.forEach((card, index) => {
+    const {motion, brief} = ACTION_SHORTCUTS[index];
+    if (!motion) return;
+    card.dataset.actionMotion = motion.id;
+    card.innerHTML =
+      '<span class="sc__id">' + String(index + 1).padStart(2, '0') + '</span>' +
+      '<span class="sc__brief">' + motion.label + '</span>' +
+      '<span class="sc__time">' + brief + ' · ' + motion.duration + 's</span>' +
+      PLAY_GLYPH;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', '播放' + motion.label + '动作');
+    card.setAttribute('aria-pressed', 'false');
+    const activate = () => play(motion.id);
+    card.addEventListener('click', activate);
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      activate();
+    });
+  });
+  if (actionGroup) {
+    Array.from(actionGroup.querySelectorAll('.sc')).forEach((card, index) => {
+      const number = card.querySelector('.sc__id');
+      if (number) number.textContent = String(index + 1).padStart(2, '0');
+    });
+  }
+
   const grid = document.querySelector('[data-rail-grid="gestures"]');
   if (grid) {
     while (grid.children.length < RAIL_MOTIONS.length) {
@@ -384,10 +444,12 @@ export function mountHomeMotionControls(play) {
   if (!fillThumbs()) window.addEventListener('robot-ready', fillThumbs, { once: true });
 
   return (activeId) => {
-    cards.forEach((card) => {
+    [...cards, ...actionCards].forEach((card) => {
       const active = card.dataset.motion === activeId;
-      card.classList.toggle('is-on', active);
+      const shortcutActive = card.dataset.actionMotion === activeId;
+      card.classList.toggle('is-on', active || shortcutActive);
       if (card.dataset.motion) card.setAttribute('aria-pressed', String(active));
+      if (card.dataset.actionMotion) card.setAttribute('aria-pressed', String(shortcutActive));
     });
   };
 }

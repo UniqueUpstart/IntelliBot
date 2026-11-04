@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import time
@@ -55,6 +56,19 @@ class MotionLibraryTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = json.loads(
+            (SIM_DIR.parent / "assistant" / "capabilities.json").read_text(encoding="utf-8")
+        )
+        action_ids = {item["id"] for item in manifest["motions"]}
+        self.assertTrue(
+            {"mechanical_dance", "disco_dance"} <= action_ids
+        )
+        self.assertFalse(
+            {
+                "applause", "point_forward",
+                "cheer_roar", "martial_salute", "march_in_place",
+            } & action_ids
+        )
 
     def test_invalid_joint_is_reported(self) -> None:
         original = GESTURES["salute"]["pose"]

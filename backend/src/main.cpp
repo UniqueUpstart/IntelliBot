@@ -28,6 +28,10 @@ bool load_assistant_capabilities(
     std::unordered_set<std::string>& emotions,
     int& max_commands,
     int& max_motions) {
+  motions.clear();
+  poses.clear();
+  views.clear();
+  emotions.clear();
   std::vector<std::string> candidates;
   if (const char* configured = std::getenv("INTELLIBOT_CAPABILITIES")) candidates.emplace_back(configured);
   candidates.insert(candidates.end(), {
@@ -179,8 +183,11 @@ int main(int argc, char** argv) {
   const std::unordered_map<std::string,int> actions{{"q1.wave",3004},{"q1.heart",3007},{"q1.cheer",3008}};
   std::unordered_set<std::string> ai_actions, ai_poses, ai_views, ai_emotions;
   int max_ai_commands = 0, max_ai_motions = 0;
-  if (!load_assistant_capabilities(
-          ai_actions, ai_poses, ai_views, ai_emotions, max_ai_commands, max_ai_motions)) {
+  const auto reload_ai_capabilities = [&]() {
+    return load_assistant_capabilities(
+        ai_actions, ai_poses, ai_views, ai_emotions, max_ai_commands, max_ai_motions);
+  };
+  if (!reload_ai_capabilities()) {
     return 2;
   }
   /* 页面若从别的本地端口打开（静态服务器、预览器），接口就是跨源的。
@@ -427,6 +434,10 @@ int main(int argc, char** argv) {
         return;
       }
       try {
+        std::lock_guard<std::mutex> capability_guard(mutex);
+        if (!reload_ai_capabilities()) {
+          throw std::runtime_error("capability manifest reload failed");
+        }
         const auto data = json::parse(upstream.body);
         if (!data.is_object() || !data.contains("reply") || !data["reply"].is_string() ||
             !data.contains("action_id") ||

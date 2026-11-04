@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
+import tempfile
+import time
 import unittest
 import urllib.error
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,6 +27,7 @@ from backend.ai.deepseek_bridge import (
     validate_chat_request,
     validate_persona,
 )
+import backend.ai.deepseek_bridge as bridge
 
 
 class FakeResponse:
@@ -279,6 +284,87 @@ class DeepSeekBridgeTest(unittest.TestCase):
             [{"type": "motion", "id": "wave"}],
         )
         self.assertEqual(result["actions"], ["wave"])
+
+    def test_new_actions_are_available_to_chat(self):
+        cases = {
+            "来一段机械舞": "mechanical_dance",
+            "跳个迪斯科": "disco_dance",
+            "来个机器人舞": "mechanical_dance",
+            "蹦迪一下": "disco_dance",
+        }
+        self.assertFalse(
+            {
+                "applause", "point_forward",
+                "cheer_roar", "martial_salute", "march_in_place",
+            } & bridge.SUPPORTED_ACTION_IDS
+        )
+        for message, action_id in cases.items():
+            with self.subTest(action_id=action_id):
+                captured = {}
+
+                def opener(request, **_kwargs):
+                    captured.update(json.loads(request.data.decode("utf-8")))
+                    return completion('{"reply":"好的。","commands":[],"stop":false}')
+
+                result = chat(self.config, message, [], opener)
+                self.assertEqual(
+                    result["commands"],
+                    [{"type": "motion", "id": action_id}],
+                )
+                self.assertIn(action_id, captured["messages"][0]["content"])
+
+    def test_capability_reload_updates_ids_and_invalidates_cache(self):
+        manifest_path = bridge.CAPABILITIES_PATH
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        added = {
+            "id": "test_celebrate",
+            "name": "测试庆祝",
+            "description": "用于验证能力清单热重载",
+            "aliases": ["测试庆祝"],
+            "duration": 1.0,
+        }
+        calls = 0
+
+        def opener(*_args, **_kwargs):
+            nonlocal calls
+            calls += 1
+            return completion('{"reply":"好的。","commands":[],"stop":false}')
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_manifest = Path(temp_dir) / "capabilities.json"
+            changed = {**manifest, "motions": [*manifest["motions"], added]}
+            temp_manifest.write_text(
+                json.dumps(changed, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            try:
+                with patch.object(bridge, "CAPABILITIES_PATH", temp_manifest):
+                    bridge.refresh_capabilities(force=True)
+                    self.assertIn("test_celebrate", bridge.SUPPORTED_ACTION_IDS)
+
+                    state = BridgeState(self.config, opener)
+                    body = json.dumps({"message": "测试"}, ensure_ascii=False).encode("utf-8")
+                    state.run_chat("reload-key", body)
+                    state.run_chat("reload-key", body)
+                    self.assertEqual(calls, 1)
+
+                    changed["motions"] = [
+                        item for item in changed["motions"]
+                        if item["id"] != "test_celebrate"
+                    ]
+                    temp_manifest.write_text(
+                        json.dumps(changed, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    next_mtime = max(time.time_ns(), temp_manifest.stat().st_mtime_ns + 1_000_000)
+                    os.utime(temp_manifest, ns=(next_mtime, next_mtime))
+                    self.assertTrue(bridge.refresh_capabilities())
+                    self.assertNotIn("test_celebrate", bridge.SUPPORTED_ACTION_IDS)
+
+                    state.run_chat("reload-key", body)
+                    self.assertEqual(calls, 2)
+            finally:
+                bridge.refresh_capabilities(force=True)
 
     def test_json_mode_is_removed_when_provider_rejects_it(self):
         requests = []

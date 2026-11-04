@@ -8,15 +8,21 @@ import {idleState} from './idle_motion.js?v=2';
 import { HOME_MOTIONS, Q1_MOTIONS, Q1_REST_POSE } from './q1_motion_data.js?v=3';
 import { STREET_DANCE, STREET_DANCE_REST_POSE } from './street_dance_data.js?v=3';
 import { BELLY_LAUGH, BELLY_LAUGH_REST_POSE } from './belly_laugh_data.js?v=3';
+import { MECHANICAL_DANCE, MECHANICAL_DANCE_REST_POSE } from './mechanical_dance_data.js?v=3';
+import { DISCO_DANCE, DISCO_DANCE_REST_POSE } from './disco_dance_data.js?v=3';
 import { bindRetarget, loadCharacter, mountImported } from './skinpose.js?v=6';
 
 const TIMELINE_MOTIONS = new Map([
   [STREET_DANCE.id, STREET_DANCE],
   [BELLY_LAUGH.id, BELLY_LAUGH],
+  [MECHANICAL_DANCE.id, MECHANICAL_DANCE],
+  [DISCO_DANCE.id, DISCO_DANCE],
 ]);
 const TIMELINE_REST_POSES = new Map([
   [STREET_DANCE.id, STREET_DANCE_REST_POSE],
   [BELLY_LAUGH.id, BELLY_LAUGH_REST_POSE],
+  [MECHANICAL_DANCE.id, MECHANICAL_DANCE_REST_POSE],
+  [DISCO_DANCE.id, DISCO_DANCE_REST_POSE],
 ]);
 
 const skinStyle = document.createElement('style');
@@ -238,7 +244,7 @@ function init() {
     return pose;
   }
 
-  function sampleTrack(points, beat) {
+  function sampleTrack(points, beat, easing = 'smooth') {
     if (!points || !points.length) return 0;
     if (beat <= points[0][0]) return points[0][1];
     const last = points[points.length - 1];
@@ -248,7 +254,8 @@ function init() {
       if (beat > endBeat) continue;
       const [startBeat, startValue] = points[index - 1];
       const t = (beat - startBeat) / (endBeat - startBeat || 1);
-      const s = t * t * (3 - 2 * t);
+      const shaped = easing === 'snap' ? Math.min(1, t / 0.18) : t;
+      const s = shaped * shaped * (3 - 2 * shaped);
       return startValue + (endValue - startValue) * s;
     }
     return last[1];
@@ -258,11 +265,12 @@ function init() {
     const beat = time * motion.bpm / 60;
     const pose = { ...TIMELINE_REST_POSES.get(motion.id) };
     Object.entries(motion.tracks).forEach(([joint, points]) => {
-      pose[joint] = sampleTrack(points, beat);
+      pose[joint] = sampleTrack(points, beat, motion.easing);
     });
+    const rootEasing = (motion.root && motion.root.easing) || motion.easing || 'smooth';
     danceRoot = motion.root ? {
-      side: sampleTrack(motion.root.side, beat),
-      yaw: sampleTrack(motion.root.yaw, beat),
+      side: sampleTrack(motion.root.side, beat, rootEasing),
+      yaw: sampleTrack(motion.root.yaw, beat, rootEasing),
     } : null;
     return pose;
   }
@@ -284,9 +292,11 @@ function init() {
       requestAnimationFrame(watchMotions);
       return;
     }
+    const actionGroup = document.querySelector('.sc-group--action');
     const sync = () => {
-      const card = grid.querySelector('.is-on[data-motion]');
-      const id = card && card.dataset.motion;
+      const card = grid.querySelector('.is-on[data-motion]') ||
+        (actionGroup && actionGroup.querySelector('.is-on[data-action-motion]'));
+      const id = card && (card.dataset.motion || card.dataset.actionMotion);
       if (!id) {
         window.__homeGesture = null;
         return;
@@ -304,6 +314,14 @@ function init() {
         : null;
     };
     new MutationObserver(sync).observe(grid, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    if (actionGroup) {
+      new MutationObserver(sync).observe(actionGroup, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['class'],
+      });
+    }
+    sync();
   }
   watchMotions();
 
