@@ -1091,21 +1091,22 @@
   outline:2px solid color-mix(in srgb,var(--theme) 56%,transparent);
   outline-offset:2px;
 }
-/* 展开后这枚钮变成面板最下面那一行：横跨整块底板，但内容仍旧靠右 ——
-   它原来就在胶囊里靠右停着，这么写开合时字一个像素都不挪，长的只是左边那段空板。
-   （靠左对齐会让字在展开的一瞬间弹到面板左缘，反而是个跳。） */
+/* 展开后这枚钮变成面板最下面那一行。选中项必须和上方候选行共用左基线，
+   否则中文「未配置」把这一行撑长后，整段内容会被推到右侧，留下显眼的空档。 */
 .composer__model.is-open .composer__model-trigger{
   position:absolute;
   right:0;
   bottom:0;
   width:max(100%,var(--model-panel-w));
   max-width:none;
-  justify-content:flex-end;
+  justify-content:flex-start;
+  padding-left:18px;
   border-radius:0 0 18px 18px;
+  background:color-mix(in srgb,var(--bg) 46%,transparent);
   box-shadow:inset 0 1px 0 color-mix(in srgb,var(--border) 62%,transparent);
 }
 .composer__model.is-open .composer__model-trigger:hover{
-  background:color-mix(in srgb,var(--bg) 58%,transparent);
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
 }
 .composer__model-label{
   min-width:0;
