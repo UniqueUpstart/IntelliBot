@@ -1077,8 +1077,12 @@
 .composer__history.is-open .composer__menu-line:first-child{transform:rotate(45deg) translateY(5px)}
 .composer__history.is-open .composer__menu-line:nth-child(2){opacity:0}
 .composer__history.is-open .composer__menu-line:last-child{transform:rotate(-45deg) translateY(-5px)}
-/* 语音按钮与历史按钮共用同一组尺寸和主题填色；麦克风监听时用缓慢扩散圈提示，
-   扬声器关闭时只隐藏声波并显示斜线，不额外增加浮层。 */
+/* 语音按钮与历史按钮共用同一组尺寸、主题填色，也共用同一套底片：
+   底色不做淡入淡出，而是一枚常驻在那儿、静止时 scale 0 的圆片，
+   悬停 / 聚焦 / 监听时由中心涨满 —— 与左边那枚历史钮是同一个动作。
+   写成 background 过渡的话，退场第一帧颜色就跳没了，剩下那下收缩
+   发生在一块看不见的色块上，等于没有原路收回。
+   监听时另外缓一圈扩散的细环（::after），扬声器关闭只隐藏声波并显示斜线。 */
 .composer__voice{
   position:relative;
   flex:0 0 auto;
@@ -1094,16 +1098,35 @@
   box-shadow:none;
   cursor:pointer;
   isolation:isolate;
-  transition:background-color .16s ease,color .16s ease,transform .1s ease;
+  transition:color .16s cubic-bezier(.7,0,.84,.16),transform .1s ease;
+}
+.composer__voice::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  border-radius:inherit;
+  background:var(--theme);
+  pointer-events:none;
+  scale:0;
+  transform-origin:50% 50%;
+  transition:scale .1s cubic-bezier(.7,0,.84,.16);
 }
 .composer__voice[hidden]{display:none}
 .composer__voice:hover,
 .composer__voice:focus-visible,
 .composer__voice.is-listening{
   border-color:transparent;
-  background:var(--theme);
+  background:transparent;
   color:var(--text-invert);
   outline:none;
+  transition:color .16s cubic-bezier(.16,.84,.3,1);
+}
+.composer__voice:hover::before,
+.composer__voice:focus-visible::before,
+.composer__voice.is-listening::before{
+  scale:1;
+  transition:scale .12s cubic-bezier(.16,.84,.3,1);
 }
 .composer__voice:active:not(:disabled){transform:scale(.96)}
 .composer__voice:disabled{
