@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare and start IntelliBot with one cross-platform command.
+"""Prepare and start PrimebotX with one cross-platform command.
 
 The first run creates a project-local virtual environment, installs project
 dependencies there, downloads the C++ headers, builds the backend inside the
@@ -32,7 +32,7 @@ AI_REQUIREMENTS = ROOT / "backend" / "ai" / "requirements.txt"
 THIRD_PARTY = ROOT / "third_party"
 BUILD_DIR = ROOT / "backend-build"
 LOG_DIR = ROOT / "log"
-REQUIREMENTS_STAMP = VENV / ".intellibot-requirements.sha256"
+REQUIREMENTS_STAMP = VENV / ".primebotx-requirements.sha256"
 
 DEPENDENCIES = (
     {
@@ -83,7 +83,7 @@ def running_in_wsl() -> bool:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Prepare and start IntelliBot")
+    parser = argparse.ArgumentParser(description="Prepare and start PrimebotX")
     parser.add_argument(
         "--port",
         type=int,
@@ -196,7 +196,7 @@ def requirements_digest() -> str:
 def python_candidates() -> list[Path]:
     candidates: list[Path] = []
     for value in (
-        os.environ.get("INTELLIBOT_PYTHON"),
+        os.environ.get("PRIMEBOTX_PYTHON"),
         getattr(sys, "_base_executable", None),
         sys.executable,
     ):
@@ -252,7 +252,7 @@ def select_base_python() -> Path:
             status("环境", f"使用 Python {'.'.join(map(str, version))}：{candidate}")
             return candidate
     raise BootstrapError(
-        "找不到可用的 Python 3.11–3.14。请通过 INTELLIBOT_PYTHON "
+        "找不到可用的 Python 3.11–3.14。请通过 PRIMEBOTX_PYTHON "
         "指定可执行的 Python；项目不会启动无效的 .venv 解释器"
     )
 
@@ -325,7 +325,7 @@ def ensure_python_environment() -> Path:
 
 
 def find_git() -> Path:
-    configured = os.environ.get("INTELLIBOT_GIT")
+    configured = os.environ.get("PRIMEBOTX_GIT")
     candidates = [configured, shutil.which("git")]
     for candidate in candidates:
         if not candidate:
@@ -477,7 +477,7 @@ def path_list(value: str | None) -> list[Path]:
 
 def dependency_prefixes(compiler_prefix: Path | None = None) -> tuple[Path, ...]:
     candidates: list[Path | str | None] = [
-        os.environ.get("INTELLIBOT_DEPS_PREFIX"),
+        os.environ.get("PRIMEBOTX_DEPS_PREFIX"),
         *path_list(os.environ.get("CMAKE_PREFIX_PATH")),
         os.environ.get("CONDA_PREFIX"),
         os.environ.get("MSYSTEM_PREFIX"),
@@ -605,7 +605,7 @@ def find_msvc_toolchain() -> Toolchain | None:
 
 
 def find_windows_compiler() -> Toolchain:
-    configured = os.environ.get("INTELLIBOT_CXX")
+    configured = os.environ.get("PRIMEBOTX_CXX")
     compiler_candidates: list[Path] = [Path(configured)] if configured else []
     for name in ("g++.exe", "clang++.exe", "cl.exe"):
         found = shutil.which(name)
@@ -645,12 +645,12 @@ def find_windows_compiler() -> Toolchain:
         return toolchain
     raise BootstrapError(
         "找不到 Windows C++17 编译器。可安装 Visual Studio C++ 工具，"
-        "或将 g++/clang++ 加入 PATH，也可通过 INTELLIBOT_CXX 指向编译器"
+        "或将 g++/clang++ 加入 PATH，也可通过 PRIMEBOTX_CXX 指向编译器"
     )
 
 
 def find_unix_compiler() -> Toolchain:
-    configured = os.environ.get("INTELLIBOT_CXX")
+    configured = os.environ.get("PRIMEBOTX_CXX")
     candidates = [Path(configured)] if configured else []
     candidates.extend(
         Path(found)
@@ -772,8 +772,8 @@ def copy_runtime_dependencies(executable: Path, toolchain: Toolchain) -> None:
 
 def backend_executable() -> Path:
     candidates = (
-        BUILD_DIR / "intellibot_backend.exe",
-        BUILD_DIR / "intellibot_backend",
+        BUILD_DIR / "primebotx_backend.exe",
+        BUILD_DIR / "primebotx_backend",
     )
     for candidate in candidates:
         if candidate.is_file():
@@ -789,7 +789,7 @@ def ensure_backend(*, rebuild: bool) -> Path:
     )
     env = build_environment(toolchain)
     cache = BUILD_DIR / "CMakeCache.txt"
-    config_stamp = BUILD_DIR / ".intellibot-config.sha256"
+    config_stamp = BUILD_DIR / ".primebotx-config.sha256"
     fingerprint = build_config_fingerprint(
         venv_python(),
         toolchain,
@@ -859,7 +859,7 @@ def start_process(args: list[str], *, log_path: Path | None = None) -> subproces
             "PYTHONNOUSERSITE": "1",
         },
     )
-    process._intellibot_log_file = log_file  # type: ignore[attr-defined]
+    process._primebotx_log_file = log_file  # type: ignore[attr-defined]
     return process
 
 
@@ -897,7 +897,7 @@ def stop_process(process: subprocess.Popen | None) -> None:
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
-    log_file = getattr(process, "_intellibot_log_file", None)
+    log_file = getattr(process, "_primebotx_log_file", None)
     if log_file is not None:
         log_file.close()
 
@@ -931,12 +931,12 @@ def main() -> int:
         return 1
 
     if args.bootstrap_only:
-        print("\nIntelliBot 已准备完成，可以直接运行：python run.py")
+        print("\nPrimebotX 已准备完成，可以直接运行：python run.py")
         return 0
 
     ai_script = ROOT / "backend" / "ai" / "deepseek_bridge.py"
     frontend = ROOT / "frontend"
-    database = ROOT / "data" / "intellibot.db"
+    database = ROOT / "data" / "primebotx.db"
     if not ai_script.is_file():
         raise FileNotFoundError(f"AI service not found: {ai_script}")
     if not frontend.is_dir():
@@ -945,7 +945,7 @@ def main() -> int:
 
     backend_url = f"http://127.0.0.1:{args.port}"
     ai_url = f"http://127.0.0.1:{args.ai_port}"
-    page_url = f"{backend_url}/ui/IntelliBot.html"
+    page_url = f"{backend_url}/ui/PrimebotX.html"
     ai_log = LOG_DIR / "ai.log"
     ai_process: subprocess.Popen | None = None
     backend_process: subprocess.Popen | None = None
@@ -972,7 +972,7 @@ def main() -> int:
 
         backend_ready = health(
             f"{backend_url}/api/v1/health",
-            lambda value: value.get("data", {}).get("service") == "intellibot_backend",
+            lambda value: value.get("data", {}).get("service") == "primebotx_backend",
         )
         if not backend_ready:
             status("服务", "启动后端")
@@ -995,7 +995,7 @@ def main() -> int:
                     backend_process,
                     f"{backend_url}/api/v1/health",
                     lambda value: value.get("data", {}).get("service")
-                    == "intellibot_backend",
+                    == "primebotx_backend",
                 )
             except Exception:
                 show_log(LOG_DIR / "backend.log")
@@ -1004,7 +1004,7 @@ def main() -> int:
             status("服务", f"复用后端：{backend_url}")
 
         print()
-        status("就绪", f"IntelliBot 已启动：{page_url}")
+        status("就绪", f"PrimebotX 已启动：{page_url}")
         if not args.no_browser:
             webbrowser.open(page_url)
 
@@ -1024,7 +1024,7 @@ def main() -> int:
             time.sleep(0.5)
     except KeyboardInterrupt:
         print()
-        status("停止", "正在停止 IntelliBot")
+        status("停止", "正在停止 PrimebotX")
         return 0
     except Exception as error:
         print(f"[错误] 启动失败：{error}", file=sys.stderr)
