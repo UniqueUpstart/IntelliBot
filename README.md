@@ -53,7 +53,7 @@ python run.py --port 8081 --ai-port 8093 --no-browser
 | 编译后端 | C++17 编译器 |
 | 使用模型对话 | 在浏览器中配置模型服务 API Key |
 
-CMake 和 Ninja 由 `run.py` 安装到项目 `.venv`，不需要全局安装。SQLite3 和 libsodium 从 C++ 编译器所在的开发环境中读取；启动器只会把运行所需的 DLL 复制到 `backend-build/`，不会向该环境写入内容。
+CMake 和 Ninja 由 `run.py` 安装到项目 `.venv`，不需要全局安装。C++ 编译器会依次从 `INTELLIBOT_CXX`、`PATH`、当前 Python 工具链、Conda/MSYS2 和 Visual Studio 安装中自动发现。SQLite3 和 libsodium 会从 Conda、vcpkg、`CMAKE_PREFIX_PATH` 或 C++ 工具链前缀中查找；启动器只会把运行所需的 DLL 复制到 `backend-build/`，不会向这些环境写入内容。
 
 ## 首次安装
 
@@ -175,6 +175,7 @@ python run.py --bootstrap-only
 | `INTELLIBOT_GIT` | 显式指定 Windows `git.exe` |
 | `INTELLIBOT_PYTHON` | 显式指定用于创建 `.venv` 的 Python 3.11–3.14 |
 | `INTELLIBOT_CXX` | 显式指定 C++17 编译器 |
+| `INTELLIBOT_DEPS_PREFIX` | 显式指定 SQLite3、libsodium 所在的开发库前缀 |
 
 ## 动作与 AI 能力
 

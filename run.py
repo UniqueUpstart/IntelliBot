@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
@@ -54,8 +56,19 @@ class BootstrapError(RuntimeError):
     """A recoverable project setup error."""
 
 
-def log(message: str) -> None:
-    print(message, flush=True)
+@dataclass(frozen=True)
+class Toolchain:
+    compiler: Path
+    prefixes: tuple[Path, ...]
+    path_dirs: tuple[Path, ...] = ()
+    include_dirs: tuple[Path, ...] = ()
+    lib_dirs: tuple[Path, ...] = ()
+    config_key: str = ""
+    extra_env: dict[str, str] = field(default_factory=dict)
+
+
+def status(label: str, message: str) -> None:
+    print(f"[{label}] {message}", flush=True)
 
 
 def running_in_wsl() -> bool:
@@ -101,10 +114,11 @@ def run_checked(
     args: Sequence[str | Path],
     *,
     description: str,
+    status_label: str = "执行",
     cwd: Path = ROOT,
     env: dict[str, str] | None = None,
 ) -> None:
-    log(f"==> {description}")
+    status(status_label, description)
     completed = subprocess.run(
         [str(item) for item in args],
         cwd=str(cwd),
@@ -157,7 +171,10 @@ def python_environment_ready() -> bool:
         python = venv_python()
     except BootstrapError:
         return False
-    result = probe([python, "-c", "import edge_tts, sys; print(sys.version)"])
+    try:
+        result = probe([python, "-c", "import edge_tts, sys; print(sys.version)"])
+    except OSError:
+        return False
     if result.returncode != 0:
         return False
     try:
@@ -195,8 +212,11 @@ def python_candidates() -> list[Path]:
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         python_root = Path(local_app_data) / "Programs" / "Python"
-        if python_root.is_dir():
-            candidates.extend(sorted(python_root.glob("Python*/python.exe"), reverse=True))
+        try:
+            if python_root.is_dir():
+                candidates.extend(sorted(python_root.glob("Python*/python.exe"), reverse=True))
+        except OSError:
+            pass
 
     if os.name != "nt":
         candidates.extend((Path("/usr/bin/python3"), Path("/usr/local/bin/python3")))
@@ -229,7 +249,7 @@ def select_base_python() -> Path:
         except (ValueError, IndexError, json.JSONDecodeError):
             continue
         if (3, 11) <= version < (3, 15):
-            log(f"==> Python 解释器：{candidate} ({'.'.join(map(str, version))})")
+            status("环境", f"使用 Python {'.'.join(map(str, version))}：{candidate}")
             return candidate
     raise BootstrapError(
         "找不到可用的 Python 3.11–3.14。请通过 INTELLIBOT_PYTHON "
@@ -238,48 +258,69 @@ def select_base_python() -> Path:
 
 
 def ensure_python_environment() -> Path:
-    if VENV.exists() and not python_environment_ready():
-        log("==> 项目虚拟环境不完整或绑定了失效的 Python，正在重建 .venv")
-        shutil.rmtree(VENV)
-
-    if not VENV.exists():
+    previous: Path | None = None
+    needs_rebuild = VENV.exists() and not python_environment_ready()
+    if needs_rebuild:
         base_python = select_base_python()
-        run_checked(
-            [base_python, "-m", "venv", VENV],
-            description=f"创建项目虚拟环境 {VENV}",
-        )
+        status("环境", "正在安全重建项目虚拟环境 .venv")
+        previous = VENV.with_name(".venv.previous")
+        if previous.exists():
+            shutil.rmtree(previous)
+        VENV.replace(previous)
+    else:
+        base_python = None
 
-    python = venv_python()
-    digest = requirements_digest()
-    installed_digest = (
-        REQUIREMENTS_STAMP.read_text(encoding="utf-8").strip()
-        if REQUIREMENTS_STAMP.is_file()
-        else ""
-    )
-    if installed_digest != digest or not python_environment_ready():
-        pip_env = {
-            **os.environ,
-            "PIP_REQUIRE_VIRTUALENV": "1",
-            "PIP_NO_INPUT": "1",
-            "PYTHONNOUSERSITE": "1",
-        }
-        run_checked(
-            [
-                python,
-                "-m",
-                "pip",
-                "install",
-                "--no-cache-dir",
-                "--disable-pip-version-check",
-                "-r",
-                REQUIREMENTS,
-            ],
-            description="安装项目内 Python、CMake 与 Ninja 依赖",
-            env=pip_env,
-        )
-        REQUIREMENTS_STAMP.write_text(digest + "\n", encoding="utf-8")
+    try:
+        if not VENV.exists():
+            if base_python is None:
+                base_python = select_base_python()
+            run_checked(
+                [base_python, "-m", "venv", VENV],
+                description=f"创建项目虚拟环境 {VENV}",
+                status_label="环境",
+            )
 
-    log(f"==> Python 环境：{python}")
+        python = venv_python()
+        digest = requirements_digest()
+        installed_digest = (
+            REQUIREMENTS_STAMP.read_text(encoding="utf-8").strip()
+            if REQUIREMENTS_STAMP.is_file()
+            else ""
+        )
+        if installed_digest != digest or not python_environment_ready():
+            pip_env = {
+                **os.environ,
+                "PIP_REQUIRE_VIRTUALENV": "1",
+                "PIP_NO_INPUT": "1",
+                "PYTHONNOUSERSITE": "1",
+            }
+            run_checked(
+                [
+                    python,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-cache-dir",
+                    "--disable-pip-version-check",
+                    "-r",
+                    REQUIREMENTS,
+                ],
+                description="安装项目内 Python、CMake 与 Ninja 依赖",
+                status_label="环境",
+                env=pip_env,
+            )
+            REQUIREMENTS_STAMP.write_text(digest + "\n", encoding="utf-8")
+    except Exception:
+        if previous is not None and previous.exists():
+            if VENV.exists():
+                shutil.rmtree(VENV)
+            previous.replace(VENV)
+            status("环境", "新环境准备失败，已恢复原有 .venv")
+        raise
+
+    if previous is not None and previous.exists():
+        shutil.rmtree(previous)
+    status("环境", f"项目 Python 已就绪：{python}")
     return python
 
 
@@ -310,6 +351,7 @@ def clone_with_fallback(name: str, dest: Path, gitee: str, github: str) -> None:
             run_checked(
                 [git, "clone", "--depth", "1", url, temporary],
                 description=f"下载 {name} 到项目 third_party",
+                status_label="依赖",
             )
             temporary.replace(dest)
             return
@@ -317,7 +359,7 @@ def clone_with_fallback(name: str, dest: Path, gitee: str, github: str) -> None:
             last_error = error
             if temporary.exists():
                 shutil.rmtree(temporary)
-            log(f"    {name} 镜像下载失败，尝试备用地址")
+            status("提示", f"{name} 镜像下载失败，尝试备用地址")
     raise BootstrapError(f"无法下载 {name}：{last_error}")
 
 
@@ -335,7 +377,7 @@ def ensure_third_party() -> None:
     for dependency in missing:
         dest = dependency["dest"]
         if dest.exists():
-            log(f"==> 移除不完整的项目依赖 {dest}")
+            status("依赖", f"清理不完整的目录：{dest}")
             shutil.rmtree(dest)
         clone_with_fallback(
             dependency["name"],
@@ -345,50 +387,213 @@ def ensure_third_party() -> None:
         )
 
 
-def find_windows_compiler() -> tuple[Path, Path]:
-    configured = os.environ.get("INTELLIBOT_CXX")
-    candidates = [Path(configured)] if configured else []
-    for name in ("g++.exe", "clang++.exe"):
-        found = shutil.which(name)
-        if found:
-            candidates.append(Path(found))
+def unique_paths(paths: Sequence[Path | str | None]) -> tuple[Path, ...]:
+    result: list[Path] = []
+    seen: set[str] = set()
+    for value in paths:
+        if value is None or not str(value):
+            continue
+        path = Path(value)
+        key = os.path.normcase(os.path.abspath(path))
+        if key not in seen and path.exists():
+            seen.add(key)
+            result.append(path.resolve())
+    return tuple(result)
 
-    roots = []
-    python_prefix = Path(sys.executable).resolve().parent.parent
-    roots.extend(
+
+def path_list(value: str | None) -> list[Path]:
+    if not value:
+        return []
+    normalized = value.replace(";", os.pathsep)
+    return [Path(item) for item in normalized.split(os.pathsep) if item]
+
+
+def dependency_prefixes(compiler_prefix: Path | None = None) -> tuple[Path, ...]:
+    candidates: list[Path | str | None] = [
+        os.environ.get("INTELLIBOT_DEPS_PREFIX"),
+        *path_list(os.environ.get("CMAKE_PREFIX_PATH")),
+        os.environ.get("CONDA_PREFIX"),
+        os.environ.get("MSYSTEM_PREFIX"),
+        os.environ.get("MINGW_PREFIX"),
+        getattr(sys, "base_prefix", None),
+        compiler_prefix,
+    ]
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix and os.name == "nt":
+        candidates.append(Path(conda_prefix) / "Library")
+    vcpkg_root = os.environ.get("VCPKG_ROOT")
+    if vcpkg_root:
+        candidates.extend(
+            (
+                Path(vcpkg_root) / "installed" / "x64-windows",
+                Path(vcpkg_root) / "installed" / "x64-windows-static",
+            )
+        )
+    return unique_paths(candidates)
+
+
+def find_gcc_toolchain(compiler: Path) -> Toolchain:
+    compiler = compiler.resolve()
+    prefix = compiler.parent.parent
+    prefixes = dependency_prefixes(prefix)
+    return Toolchain(
+        compiler=compiler,
+        prefixes=prefixes,
+        path_dirs=unique_paths((compiler.parent, *(prefix / "bin" for prefix in prefixes))),
+        config_key=f"gcc:{compiler}",
+    )
+
+
+def version_sort_key(path: Path) -> tuple[int, ...]:
+    parts = re.findall(r"\d+", path.name)
+    return tuple(int(part) for part in parts)
+
+
+def find_msvc_toolchain() -> Toolchain | None:
+    program_files_x86 = os.environ.get("ProgramFiles(x86)")
+    if not program_files_x86:
+        return None
+    vswhere = (
+        Path(program_files_x86)
+        / "Microsoft Visual Studio"
+        / "Installer"
+        / "vswhere.exe"
+    )
+    if not vswhere.is_file():
+        return None
+    result = probe(
         [
-            Path(os.environ.get("MSYSTEM_PREFIX", "")),
-            python_prefix,
-            Path("C:/msys64/ucrt64"),
-            Path("C:/msys64/mingw64"),
+            vswhere,
+            "-latest",
+            "-products",
+            "*",
+            "-requires",
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "-property",
+            "installationPath",
         ]
     )
-    for root in roots:
-        if not str(root):
-            continue
-        candidates.extend((root / "bin" / "g++.exe", root / "bin" / "clang++.exe"))
+    if result.returncode != 0:
+        return None
 
-    for candidate in candidates:
-        if candidate.is_file():
-            prefix = candidate.parent.parent
-            if not (prefix / "include").is_dir():
-                continue
-            return candidate.resolve(), prefix.resolve()
+    sdk_root = Path(program_files_x86) / "Windows Kits" / "10"
+    sdk_versions = (
+        sorted(
+            (
+                path
+                for path in (sdk_root / "Include").glob("*")
+                if (sdk_root / "Lib" / path.name / "ucrt" / "x64").is_dir()
+            ),
+            key=version_sort_key,
+        )
+        if (sdk_root / "Include").is_dir()
+        else []
+    )
+    if not sdk_versions:
+        return None
+    sdk_version = sdk_versions[-1].name
+
+    for line in result.stdout.splitlines():
+        vs_root = Path(line.strip())
+        msvc_root = vs_root / "VC" / "Tools" / "MSVC"
+        msvc_versions = (
+            sorted(
+                (path for path in msvc_root.glob("*") if (path / "bin" / "Hostx64" / "x64" / "cl.exe").is_file()),
+                key=version_sort_key,
+            )
+            if msvc_root.is_dir()
+            else []
+        )
+        if not msvc_versions:
+            continue
+        msvc = msvc_versions[-1]
+        compiler = (msvc / "bin" / "Hostx64" / "x64" / "cl.exe").resolve()
+        include_dirs = (
+            msvc / "include",
+            sdk_root / "Include" / sdk_version / "ucrt",
+            sdk_root / "Include" / sdk_version / "um",
+            sdk_root / "Include" / sdk_version / "shared",
+        )
+        lib_dirs = (
+            msvc / "lib" / "x64",
+            sdk_root / "Lib" / sdk_version / "ucrt" / "x64",
+            sdk_root / "Lib" / sdk_version / "um" / "x64",
+        )
+        prefixes = dependency_prefixes()
+        return Toolchain(
+            compiler=compiler,
+            prefixes=prefixes,
+            path_dirs=unique_paths(
+                (
+                    compiler.parent,
+                    sdk_root / "bin" / sdk_version / "x64",
+                    *(prefix / "bin" for prefix in prefixes),
+                )
+            ),
+            include_dirs=unique_paths(include_dirs),
+            lib_dirs=unique_paths(lib_dirs),
+            config_key=f"msvc:{compiler}:{sdk_version}",
+        )
+    return None
+
+
+def find_windows_compiler() -> Toolchain:
+    configured = os.environ.get("INTELLIBOT_CXX")
+    compiler_candidates: list[Path] = [Path(configured)] if configured else []
+    for name in ("g++.exe", "clang++.exe", "cl.exe"):
+        found = shutil.which(name)
+        if found:
+            compiler_candidates.append(Path(found))
+
+    roots = unique_paths(
+        (
+            os.environ.get("MSYSTEM_PREFIX"),
+            os.environ.get("MINGW_PREFIX"),
+            os.environ.get("CONDA_PREFIX"),
+            getattr(sys, "base_prefix", None),
+        )
+    )
+    for root in roots:
+        compiler_candidates.extend((root / "bin" / "g++.exe", root / "bin" / "clang++.exe"))
+
+    for candidate in compiler_candidates:
+        if not candidate.is_file():
+            continue
+        if candidate.name.lower() == "cl.exe":
+            toolchain = find_msvc_toolchain()
+            if toolchain:
+                return toolchain
+            if os.environ.get("INCLUDE") and os.environ.get("LIB"):
+                return Toolchain(
+                    compiler=candidate.resolve(),
+                    prefixes=dependency_prefixes(),
+                    path_dirs=(candidate.parent,),
+                    config_key=f"msvc:{candidate.resolve()}",
+                )
+            continue
+        return find_gcc_toolchain(candidate)
+
+    toolchain = find_msvc_toolchain()
+    if toolchain:
+        return toolchain
     raise BootstrapError(
-        "找不到 Windows C++17 编译器。请提供 g++/clang++，"
-        "或通过 INTELLIBOT_CXX 指向编译器；启动器不会修改全局环境"
+        "找不到 Windows C++17 编译器。可安装 Visual Studio C++ 工具，"
+        "或将 g++/clang++ 加入 PATH，也可通过 INTELLIBOT_CXX 指向编译器"
     )
 
 
-def find_unix_compiler() -> tuple[Path, Path]:
+def find_unix_compiler() -> Toolchain:
     configured = os.environ.get("INTELLIBOT_CXX")
-    candidates = [configured] if configured else []
-    candidates.extend(shutil.which(name) for name in ("c++", "g++", "clang++"))
+    candidates = [Path(configured)] if configured else []
+    candidates.extend(
+        Path(found)
+        for name in ("c++", "g++", "clang++")
+        if (found := shutil.which(name))
+    )
     for candidate in candidates:
-        if candidate and Path(candidate).is_file():
-            compiler = Path(candidate).resolve()
-            return compiler, compiler.parent.parent
-    raise BootstrapError("找不到 C++17 编译器，请先准备 c++、g++ 或 clang++")
+        if candidate.is_file():
+            return find_gcc_toolchain(candidate)
+    raise BootstrapError("找不到 C++17 编译器，请准备 c++、g++ 或 clang++")
 
 
 def find_build_tools() -> tuple[Path, Path]:
@@ -406,22 +611,28 @@ def find_build_tools() -> tuple[Path, Path]:
     return cmake, ninja
 
 
-def build_environment(prefix: Path) -> dict[str, str]:
+def build_environment(toolchain: Toolchain) -> dict[str, str]:
     env = {**os.environ, "PYTHONNOUSERSITE": "1"}
-    prepend = [
-        venv_bin_dir(),
-        prefix / "bin",
-    ]
+    prepend = [venv_bin_dir(), *toolchain.path_dirs]
     env["PATH"] = os.pathsep.join(
         [str(path) for path in prepend] + [env.get("PATH", "")]
     )
+    if toolchain.include_dirs:
+        env["INCLUDE"] = os.pathsep.join(
+            [str(path) for path in toolchain.include_dirs]
+            + [env.get("INCLUDE", "")]
+        )
+    if toolchain.lib_dirs:
+        env["LIB"] = os.pathsep.join(
+            [str(path) for path in toolchain.lib_dirs] + [env.get("LIB", "")]
+        )
+    env.update(toolchain.extra_env)
     return env
 
 
 def build_config_fingerprint(
     python: Path,
-    compiler: Path,
-    prefix: Path,
+    toolchain: Toolchain,
     cmake: Path,
     ninja: Path,
 ) -> str:
@@ -430,8 +641,8 @@ def build_config_fingerprint(
             str(python.resolve()),
             str(VENV / "pyvenv.cfg"),
             (VENV / "pyvenv.cfg").read_text(encoding="utf-8", errors="replace"),
-            str(compiler.resolve()),
-            str(prefix.resolve()),
+            toolchain.config_key or str(toolchain.compiler.resolve()),
+            *(str(prefix.resolve()) for prefix in toolchain.prefixes),
             str(cmake.resolve()),
             str(ninja.resolve()),
             requirements_digest(),
@@ -440,19 +651,27 @@ def build_config_fingerprint(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def copy_runtime_dependencies(executable: Path, compiler: Path, prefix: Path) -> None:
+def copy_runtime_dependencies(executable: Path, toolchain: Toolchain) -> None:
     if os.name != "nt":
         return
-    objdump = compiler.with_name("objdump.exe")
+    objdump = toolchain.compiler.with_name("objdump.exe")
     if not objdump.is_file():
+        for prefix in toolchain.prefixes:
+            for pattern in ("libsodium*.dll", "libsqlite*.dll", "sqlite*.dll"):
+                for source in (prefix / "bin").glob(pattern):
+                    shutil.copy2(source, executable.parent / source.name)
         return
 
     pending = [executable]
     visited: set[Path] = set()
     search_dirs = [
         executable.parent,
-        prefix / "bin",
-        compiler.parent,
+        *(
+            directory
+            for prefix in toolchain.prefixes
+            for directory in (prefix / "bin", prefix / "lib")
+        ),
+        toolchain.compiler.parent,
         venv_bin_dir(),
     ]
     while pending:
@@ -498,16 +717,15 @@ def backend_executable() -> Path:
 def ensure_backend(*, rebuild: bool) -> Path:
     ensure_third_party()
     cmake, ninja = find_build_tools()
-    compiler, prefix = (
+    toolchain = (
         find_windows_compiler() if os.name == "nt" else find_unix_compiler()
     )
-    env = build_environment(prefix)
+    env = build_environment(toolchain)
     cache = BUILD_DIR / "CMakeCache.txt"
     config_stamp = BUILD_DIR / ".intellibot-config.sha256"
     fingerprint = build_config_fingerprint(
         venv_python(),
-        compiler,
-        prefix,
+        toolchain,
         cmake,
         ninja,
     )
@@ -529,21 +747,27 @@ def ensure_backend(*, rebuild: bool) -> Path:
             "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
             f"-DCMAKE_MAKE_PROGRAM={ninja}",
-            f"-DCMAKE_CXX_COMPILER={compiler}",
-            f"-DCMAKE_PREFIX_PATH={prefix}",
+            f"-DCMAKE_CXX_COMPILER={toolchain.compiler}",
+            f"-DCMAKE_PREFIX_PATH={';'.join(str(prefix) for prefix in toolchain.prefixes)}",
             f"-DPython3_EXECUTABLE={venv_python()}",
         ]
-        run_checked(configure, description="配置项目内 C++ 后端", env=env)
+        run_checked(
+            configure,
+            description="配置项目内 C++ 后端",
+            status_label="编译",
+            env=env,
+        )
         config_stamp.write_text(fingerprint + "\n", encoding="utf-8")
 
     run_checked(
         [cmake, "--build", BUILD_DIR],
         description="编译项目内 C++ 后端",
+        status_label="编译",
         env=env,
     )
     executable = backend_executable()
-    copy_runtime_dependencies(executable, compiler, prefix)
-    log(f"==> 后端程序：{executable}")
+    copy_runtime_dependencies(executable, toolchain)
+    status("完成", f"后端程序：{executable}")
     return executable
 
 
@@ -662,7 +886,7 @@ def main() -> int:
     try:
         ai_ready = health(f"{ai_url}/health", lambda value: bool(value.get("ok")))
         if not ai_ready:
-            print("Starting AI service...")
+            status("服务", "启动 AI 服务")
             ai_process = start_process(
                 [str(python), str(ai_script), "--port", str(args.ai_port)],
                 log_path=ai_log,
@@ -677,14 +901,14 @@ def main() -> int:
                 show_log(ai_log)
                 raise
         else:
-            print(f"Using AI service at {ai_url}")
+            status("服务", f"复用 AI 服务：{ai_url}")
 
         backend_ready = health(
             f"{backend_url}/api/v1/health",
             lambda value: value.get("data", {}).get("service") == "intellibot_backend",
         )
         if not backend_ready:
-            print("Starting backend...")
+            status("服务", "启动后端")
             backend_process = start_process(
                 [
                     str(backend),
@@ -710,16 +934,17 @@ def main() -> int:
                 show_log(LOG_DIR / "backend.log")
                 raise
         else:
-            print(f"Using backend at {backend_url}")
+            status("服务", f"复用后端：{backend_url}")
 
-        print(f"\nIntelliBot is ready: {page_url}")
+        print()
+        status("就绪", f"IntelliBot 已启动：{page_url}")
         if not args.no_browser:
             webbrowser.open(page_url)
 
         if ai_process is None and backend_process is None:
             return 0
 
-        print("Press Ctrl+C to stop the services started by this command.")
+        print("按 Ctrl+C 停止本次启动的服务。")
         while True:
             for name, process in (
                 ("backend", backend_process),
@@ -731,10 +956,11 @@ def main() -> int:
                     )
             time.sleep(0.5)
     except KeyboardInterrupt:
-        print("\nStopping IntelliBot...")
+        print()
+        status("停止", "正在停止 IntelliBot")
         return 0
     except Exception as error:
-        print(f"\nStartup failed: {error}", file=sys.stderr)
+        print(f"[错误] 启动失败：{error}", file=sys.stderr)
         return 1
     finally:
         stop_process(backend_process)
