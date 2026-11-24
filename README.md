@@ -45,6 +45,8 @@ python run.py --port 8081 --ai-port 8093 --no-browser
 
 ## 环境要求
 
+> 当前正式支持 Windows 10/11 x64。Linux/macOS 的跨平台构建路径尚未验证，WSL 不在支持范围内。
+
 | 用途 | 需要 |
 | --- | --- |
 | 打开网页 | 支持 WebGL 2 的 Chrome、Edge 或其他现代浏览器 |
@@ -163,7 +165,7 @@ python run.py --bootstrap-only
 | 3D 模型没有显示 | 确认完整保留了 `frontend/model/` 和 `frontend/lib/three/` |
 | 端口被占用 | 执行 `python run.py --port 8081 --ai-port 8093` |
 | 直接双击 HTML 无法连接 | 网页必须通过 `http://127.0.0.1:8080` 打开 |
-| 曾在 WSL 中执行 `bash` | 在 Windows PowerShell 中运行 `python run.py --rebuild`；启动器不会调用 WSL |
+| 在 WSL 中启动 | 请在 Windows PowerShell 中运行 `python run.py`；启动器不会通过 WSL 构建 |
 
 ## 可配置项
 
