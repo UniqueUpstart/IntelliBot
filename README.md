@@ -9,6 +9,8 @@ IntelliBot 是一个浏览器端智能机器人交互平台，提供实时 3D �
 ```powershell
 git clone https://github.com/UniqueUpstart/IntelliBot.git
 cd IntelliBot
+```
+```powershell
 python run.py
 ```
 
