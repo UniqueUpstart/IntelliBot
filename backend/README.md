@@ -6,23 +6,28 @@ C++17 + cpp-httplib + nlohmann/json；SQLite 保存账号、页面会话和用�
 
 从仓库根目录启动完整本地服务：
 
-```bash
+```powershell
 python run.py
 ```
 
-只需启动后端时，在仓库根目录执行：
+只启动后端时，先准备项目，再直接运行后端程序：
 
-```bash
-bash scripts/run_web.sh
+```powershell
+python run.py --bootstrap-only
+.\backend-build\intellibot_backend.exe `
+  --port 8080 `
+  --web-root frontend `
+  --db-path data\intellibot.db `
+  --ai-url http://127.0.0.1:8091
 ```
 
 另一个终端运行测试：
 
-```bash
-ctest --test-dir backend-build --output-on-failure
+```powershell
+.\.venv\Scripts\ctest.exe --test-dir backend-build --output-on-failure
 ```
 
-启动后打开 <http://localhost:8080/ui/IntelliBot.html>。默认数据库为 `~/intellibot_ws/data/intellibot.db`；`PORT`、`BUILD_DIR`、`DB_PATH` 可覆盖。直接启动程序时可用 `--port`、`--web-root`、`--db-path`、`--ai-url` 指定配置。
+启动后打开 <http://localhost:8080/ui/IntelliBot.html>。通过 `run.py` 启动时数据库位于项目内 `data/intellibot.db`；直接启动程序时可使用 `--port`、`--web-root`、`--db-path`、`--ai-url` 指定配置。
 
 ## 接口
 

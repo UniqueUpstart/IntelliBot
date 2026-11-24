@@ -1,0 +1,6 @@
+-r backend/ai/requirements.txt
+
+# Installed into .venv so the project does not depend on separately installed
+# CMake or Ninja.
+cmake>=3.24,<4
+ninja>=1.11,<2

@@ -4,6 +4,10 @@
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+  echo "检测到 WSL。请在 Windows PowerShell 中运行：python run.py" >&2
+  exit 2
+fi
 
 # 依次找：环境变量 > 仓库内构建目录
 if [ -n "${INTELLIBOT_BIN:-}" ]; then
@@ -13,7 +17,7 @@ elif [ -x "$project_dir/backend-build/intellibot_backend" ]; then
 elif [ -x "$project_dir/backend-build/intellibot_backend.exe" ]; then
   bin="$project_dir/backend-build/intellibot_backend.exe"
 else
-  echo "找不到 intellibot_backend，先跑 bash scripts/fetch_deps.sh && bash scripts/build_backend.sh" >&2
+  echo "找不到 intellibot_backend，先运行：python run.py --bootstrap-only" >&2
   exit 2
 fi
 
