@@ -336,31 +336,97 @@ def find_git() -> Path:
     raise BootstrapError("找不到 Git。请安装 Git for Windows，并确保 git.exe 可用")
 
 
-def clone_with_fallback(name: str, dest: Path, gitee: str, github: str) -> None:
+def remove_tree(path: Path) -> None:
+    """Remove a generated directory, retrying transient Windows file locks."""
+    last_error: OSError | None = None
+    for delay in (0.0, 0.1, 0.25, 0.5):
+        if delay:
+            time.sleep(delay)
+        try:
+            shutil.rmtree(path)
+            return
+        except FileNotFoundError:
+            return
+        except OSError as error:
+            last_error = error
+    raise BootstrapError(f"无法清理目录 {path}：{last_error}")
+
+
+def dependency_ready(root: Path, marker: Path) -> bool:
+    return (root / marker).is_file()
+
+
+def install_dependency_tree(source: Path, dest: Path) -> None:
+    """Move a cloned dependency into place, with a copy fallback for Windows."""
+    if dest.exists():
+        raise BootstrapError(f"依赖目录已存在：{dest}")
+
+    last_error: OSError | None = None
+    for delay in (0.0, 0.1, 0.25, 0.5):
+        if delay:
+            time.sleep(delay)
+        try:
+            os.replace(source, dest)
+            return
+        except OSError as error:
+            last_error = error
+
+    try:
+        shutil.copytree(source, dest, symlinks=True)
+    except OSError as error:
+        if dest.exists():
+            remove_tree(dest)
+        raise BootstrapError(
+            f"依赖已下载，但无法安装到 {dest}（{last_error}；复制也失败：{error}）"
+        ) from error
+
+    try:
+        remove_tree(source)
+    except BootstrapError:
+        status("提示", f"依赖已安装，但临时目录尚未清理：{source}")
+
+
+def clone_with_fallback(
+    name: str,
+    dest: Path,
+    marker: Path,
+    gitee: str,
+    github: str,
+) -> None:
     git = find_git()
     mirror = os.environ.get("DEPS_MIRROR", "gitee").lower()
     urls = [github, gitee] if mirror == "github" else [gitee, github]
     temporary = dest.with_name(dest.name + ".bootstrap")
-    if temporary.exists():
-        shutil.rmtree(temporary)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    last_error: BootstrapError | None = None
-    for url in urls:
-        try:
-            run_checked(
-                [git, "clone", "--depth", "1", url, temporary],
-                description=f"下载 {name} 到项目 third_party",
-                status_label="依赖",
-            )
-            temporary.replace(dest)
-            return
-        except BootstrapError as error:
-            last_error = error
-            if temporary.exists():
-                shutil.rmtree(temporary)
-            status("提示", f"{name} 镜像下载失败，尝试备用地址")
-    raise BootstrapError(f"无法下载 {name}：{last_error}")
+    if dependency_ready(temporary, marker):
+        status("依赖", f"复用已完整下载的 {name}")
+    else:
+        if temporary.exists():
+            remove_tree(temporary)
+        last_error: BootstrapError | None = None
+        for url in urls:
+            try:
+                run_checked(
+                    [git, "clone", "--depth", "1", url, temporary],
+                    description=f"下载 {name} 到项目 third_party",
+                    status_label="依赖",
+                )
+                if not dependency_ready(temporary, marker):
+                    raise BootstrapError(f"{name} 下载完成后缺少关键文件：{marker}")
+                break
+            except BootstrapError as error:
+                last_error = error
+                if temporary.exists():
+                    remove_tree(temporary)
+                status("提示", f"{name} 镜像下载失败，尝试备用地址")
+        else:
+            raise BootstrapError(f"无法下载 {name}：{last_error}")
+
+    try:
+        install_dependency_tree(temporary, dest)
+    except OSError as error:
+        raise BootstrapError(f"无法安装依赖 {name}：{error}") from error
 
 
 def ensure_third_party() -> None:
@@ -382,6 +448,7 @@ def ensure_third_party() -> None:
         clone_with_fallback(
             dependency["name"],
             dest,
+            dependency["marker"],
             dependency["gitee"],
             dependency["github"],
         )
@@ -859,7 +926,7 @@ def main() -> int:
             )
         python = ensure_python_environment()
         backend = ensure_backend(rebuild=args.rebuild)
-    except BootstrapError as error:
+    except (BootstrapError, OSError) as error:
         print(f"\n准备失败：{error}", file=sys.stderr)
         return 1
 
