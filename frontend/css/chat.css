@@ -1,5 +1,5 @@
 /* ── 右栏编辑页 + 两条雾带显隐 ───────────────────────────────
-   聊天页已经移到左栏（.rail__view--chat），右栏是手势 / 表情 / 快捷指令 / 编辑四页，
+   聊天页已经移到左栏（.rail__view--chat），右栏是手势 / 表情 / 指令 / 编辑四页，
    这里只剩 Edit 页与雾带的取舍规则 */
 
 /* 编辑页在右栏那块面板里，没有滚动内容要托，顶上那条雾带也用不上 */
@@ -8,7 +8,7 @@
    没有可滚的距离，它就只剩压在空白上的一块灰。data-scroll 由 sticky.js 量完写入
    （scrollHeight 与 clientHeight 比较），切视图、增卡、面板开合都会重算 */
 #panel-shortcuts:has(> [data-panel-body][data-scroll="off"]) > .frost--top{display:none}
-/* 快捷指令页搬到右栏后同一条判据也跟着过去：卡片不够一屏时右栏顶上那条也收掉，
+/* 指令页搬到右栏后同一条判据也跟着过去：卡片不够一屏时右栏顶上那条也收掉，
    手势 / 表情两页不受影响（它们本来就要一条雾带压住滚动的卡面） */
 #panel-tools:has([data-panel-body][data-view="shortcuts"][data-scroll="off"]) > .frost--top{display:none}
 /* 聊天页的滚动发生在内部记录流里，外层 panel__body 本身不可滚，
@@ -66,11 +66,11 @@
   color:var(--text-secondary);
 }
 
-/* 三枚类型平分一行。静止态与顶栏胶囊一致：本体透明、没有描边，只有 text-reduced 的字；
+/* 两枚类型平分一行（只有 Action / Dialog 两种）。静止态与顶栏胶囊一致：本体透明、没有描边，只有 text-reduced 的字；
    底色挂在 ::before 上，hover 与选中都从圆心涨满，字同一拍反白；按住时 --press 由
    press.js 逐帧写，底片等比内收再 elastic 弹回。填充色取该组的系列色（--itc），
    与左栏图标钮、卡片 hover 同一个色源，没设的落回主题色 */
-.edit__types{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
+.edit__types{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px}
 .edit__type{
   appearance:none; -webkit-appearance:none;
   height:40px; padding:0;
@@ -94,6 +94,7 @@
 .edit__type::before, .edit__reset::before, .edit__add::before{
   content:''; position:absolute; inset:0; z-index:-1;
   border-radius:inherit; background:var(--itc, var(--theme));
+  corner-shape:inherit;
   pointer-events:none;                 /* 放大后不改命中区域，免得边缘反复 over/out 闪 */
   scale:0;
   transform-origin:50% 50%;
@@ -235,7 +236,7 @@
   .rail.is-open .rail__surface{overflow:visible}
   .rail.is-open .rail__panel{
     position:fixed;bottom:76px;display:flex;width:calc(100vw - 24px);
-    height:min(58vh,420px);border:0;border-radius:20px;background:var(--panel);
+    height:min(58vh,420px);border:0;border-radius:20px;corner-shape:superellipse(1.1);background:var(--panel);
     opacity:1;box-shadow:0 12px 36px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.5))
   }
   .rail--left.is-open .rail__panel{left:0}
@@ -284,7 +285,7 @@
   /* 默认 1/4 页宽、一行高；脚本按内容把这两条覆盖成像素值 */
   width:25vw; height:48px;
   padding:14px 16px;
-  border:0; border-radius:24px;   /* 24 = 48 的一半，单行时是胶囊；长到多行仍是同一道圆角 */
+  border:0; border-radius:24px; corner-shape:superellipse(1.1); /* 24 = 48 的一半，单行时是胶囊；长到多行仍是同一道圆角 */
   background:var(--card-solid); color:var(--text-secondary);
   caret-color:var(--theme);
   font-family:inherit; font-weight:var(--fw); font-size:var(--fs-16); letter-spacing:.2px;
@@ -334,6 +335,7 @@
   padding:10px;
   overflow:hidden;
   border-radius:18px;
+  corner-shape:superellipse(1.1);
   background:var(--card-solid);
   box-shadow:0 8px 30px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * 1.5));
 }
@@ -400,6 +402,7 @@
   max-width:88%;
   padding:9px 12px;
   border-radius:14px 14px 14px 4px;
+  corner-shape:superellipse(1.1);
   background:var(--bg);
   color:var(--text-secondary);
   font-size:var(--fs-14);
@@ -410,6 +413,7 @@
 .assistant-chat__message--user{
   align-self:flex-end;
   border-radius:14px 14px 4px 14px;
+  corner-shape:superellipse(1.1);
   background:var(--theme);
   color:#fff;
 }
@@ -606,6 +610,7 @@
   position:absolute; top:0; right:0;
   width:32px; height:32px;
   border-radius:16px;
+  corner-shape:superellipse(1.1);
   background:var(--panel);
   /* 柔光与 .group / .rail__surface 同一套；--sh / --sh-a 由 pop 补间 */
   --sh:16px;
@@ -624,6 +629,7 @@
      与展开的账号面板同一套内边距（左右 4、行间 4、底 4） */
   height:108px;
   border-radius:16px;
+  corner-shape:superellipse(1.1);
 }
 /* 触发钮压在表面层上：收起时它就是那颗圆钮的中心，展开后仍是右上角那枚
    关闭入口。齿轮本身不再带底片 —— 收起时已经有圆钮的表面层兜着，展开后
@@ -779,6 +785,7 @@
   padding:11px 14px 12px;
   border:1px solid color-mix(in srgb,var(--border) 72%,transparent);
   border-radius:19px 19px 19px 7px;
+  corner-shape:superellipse(1.1);
   background:
     linear-gradient(145deg,color-mix(in srgb,var(--card-solid) 96%,#fff),color-mix(in srgb,var(--bg) 82%,var(--card-solid)));
   box-shadow:
@@ -811,6 +818,7 @@
 }
 .assistant-chat__message--user{
   border-radius:19px 19px 7px 19px;
+  corner-shape:superellipse(1.1);
   border-color:color-mix(in srgb,var(--theme) 52%,var(--border));
   background:
     linear-gradient(145deg,color-mix(in srgb,var(--theme) 58%,var(--card-solid)),color-mix(in srgb,var(--theme) 34%,var(--bg)));
@@ -862,6 +870,7 @@
     flex-wrap:wrap;
     justify-content:flex-start;
     border-radius:22px;
+    corner-shape:superellipse(1.1);
   }
   .composer__starters button{flex:1 1 auto;text-align:center}
 }
@@ -902,6 +911,7 @@
   overflow:visible;
   border:0;
   border-radius:24px;
+  corner-shape:superellipse(1.1);
   background:var(--card-solid);
   box-shadow:
     0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
@@ -925,6 +935,7 @@
   inset:-1px;
   z-index:3;
   border-radius:inherit;
+  corner-shape:inherit;
   padding:1.4px;
   background:conic-gradient(from var(--recording-angle),
     transparent 0deg,
@@ -1034,6 +1045,7 @@
   inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   scale:0;
@@ -1106,6 +1118,7 @@
   inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   scale:0;
@@ -1201,6 +1214,10 @@
      写成定值 16（正好等于 32 的半高，形状与纯胶囊一致）之后，圆角只在 16 与 24
      之间挪，全程单向前进，不再跟高度抢夹取 */
   border-radius:16px;
+  /* 收起态它是贴着输入条的胶囊，16 正好是半高，端头得是正圆弧。
+     1.1 这道曲率在 16 半径上只把端头收进去 0.37，和旁边 999 的输入框
+     并排放看不出差；写成 squircle（2.0）端头会被压平，那才露馅 */
+  corner-shape:superellipse(1.1);
   background:#fff;
   /* 列表挂在这块底板里、由它裁切：展开途中底板还没长够时，露出来的只是
      已经排好版的那一段，不会有一条列表先探到面板外头去 */
@@ -1287,6 +1304,7 @@
   position:absolute;
   inset:0;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   scale:0;
@@ -1438,6 +1456,7 @@
   inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   scale:0;
@@ -1617,6 +1636,7 @@
   inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   scale:0;
@@ -1666,6 +1686,7 @@
   border:0;
   /* 靠中轴那侧的下角压成直角：助手在左、用户在右 */
   border-radius:24px 24px 24px 0;
+  corner-shape:superellipse(1.1);
   background:#fff;
   box-shadow:0 2px 8px rgba(var(--shadow),calc(var(--sh-a) * var(--sh-k) * .08));
   /* 两侧都用主色文字：浅底上是深墨，深色模式下随 --text-primary 翻亮，
@@ -1710,6 +1731,7 @@
 }
 .assistant-chat__message--user{
   border-radius:24px 24px 0 24px;
+  corner-shape:superellipse(1.1);
   /* 自己的话直接用主题色铺满，字色跟着主色文字走 —— 浅色模式是深墨，
      深色模式翻成亮字，与页面上其它主色底的表面对齐 */
   background:var(--theme);
@@ -1836,6 +1858,7 @@
   max-width:min(38%,320px);
   border:0;
   border-radius:24px;
+  corner-shape:superellipse(1.1);
   padding:12px;
   background:var(--card-solid);
   box-shadow:none;
@@ -1924,7 +1947,9 @@
   border-bottom-right-radius:0;
   /* 右半的对齐线是右缘，转轴跟着换到 100% */
   transform-origin:100% 50%;
-  background:color-mix(in srgb,var(--theme) 32%,var(--card-solid));
+  /* 自己说的话用整片主题色，和机器人那侧的白底拉开：这一侧是「发声」，
+     不再是浅淡的着色块。字仍取主文字色，主题色浅，反白会糊 */
+  background:var(--theme);
   color:var(--text-primary);
 }
 /* 栏与弹窗打开时让位：左栏对话流本身就能看全部历史，舞台这一列不必叠着。
@@ -2013,3 +2038,282 @@ body:has(.modal[aria-hidden="false"]) .stage-chat{visibility:hidden}
 /* 记录区把这条输入的高度让出来，最后一条不会被压在底下：
    48 输入 + 16 底距 + 8 呼吸 */
 .rail__view--chat .assistant-chat__log{padding-bottom:72px}
+
+/* ── 积木栈：编辑页的流程编排 ───────────────────────────────
+   形状上只留 Scratch 最要紧的两条识别特征：顶上那块圆肩的帽子（开始），
+   和循环肚子左边那道竖线 —— 一眼看得出哪些积木是套在里面的。
+   颜色仍按系列色分：动作走绿、表情走蓝、等待走粉、循环走主题色，
+   只上到左耳、标签和描边上，卡面还是那支 --card，深浅两套主题都不用另配 */
+/* 编辑页是 488 宽（面板 520 减两侧内边距），一行积木铺满会显得空，
+   所以把调色板挪到右边做一列、积木栈自己吃剩下的宽度 ——
+   左边长积木、右边点按钮，手不用在两个区域之间来回扫。
+   统计那行横跨两列，给整块收口 */
+.prog{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 128px;
+  grid-template-areas:"stack palette" "meta meta";
+  gap:12px 16px;
+  align-items:start;
+  min-width:0;
+}
+.prog__stack{grid-area:stack; display:flex; flex-direction:column; gap:6px; min-width:0}
+
+/* 帽子：上圆下方，绿色实底。不可删、不可选，只是告诉你「脚本从这里开始」 */
+.prog__hat{
+  align-self:flex-start;
+  padding:5px 14px 4px;
+  border-radius:12px 12px 5px 5px;
+  corner-shape:superellipse(1.1);
+  background:var(--series-green-light);
+  color:var(--text-invert);
+  font-size:var(--fs-12); line-height:1.2; letter-spacing:.4px;
+}
+
+.prog__list{display:flex; flex-direction:column; gap:6px; min-width:0}
+
+/* 一块积木：左耳一小段系列色，标签跟着它上色，右边是控件与删除 */
+.prog__b{
+  --bk:var(--series-green-light);
+  position:relative;
+  display:flex; align-items:center; gap:6px;
+  min-height:32px; padding:4px 6px 4px 0;
+  border-radius:10px;
+  corner-shape:superellipse(1.1);
+  background:var(--card);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--bk) 26%, transparent);
+  cursor:pointer;
+  transition:box-shadow .12s linear;
+}
+.prog__b::before{
+  content:''; position:absolute; left:0; top:8px; bottom:8px;
+  width:3px; border-radius:0 3px 3px 0;
+  corner-shape:superellipse(1.1);
+  background:var(--bk);
+}
+.prog__b[data-kind="mood"]{--bk:var(--series-blue-light)}
+.prog__b[data-kind="wait"]{--bk:var(--series-pink-light)}
+.prog__b[data-kind="repeat"]{--bk:var(--theme-dark)}
+/* 选中的那一块：描边换成实色，外面再罩一圈淡光。
+   下一块积木就落在这里 —— 落点由 .prog__caret 那根短线指着 */
+.prog__b.is-sel{
+  box-shadow:
+    inset 0 0 0 1px var(--bk),
+    0 0 0 3px color-mix(in srgb, var(--bk) 16%, transparent);
+}
+.prog__b:focus-visible{outline:2px solid var(--bk); outline-offset:2px}
+
+.prog__tag{
+  flex:0 0 auto;
+  padding-left:10px;
+  font-size:var(--fs-12); line-height:1; letter-spacing:.2px;
+  color:var(--bk);
+}
+.prog__pick{
+  flex:1 1 auto; min-width:0;
+  height:24px; padding:0 2px;
+  border:0; border-radius:6px;
+  corner-shape:superellipse(1.1);
+  background:transparent;
+  color:var(--text-primary);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-12); letter-spacing:.2px;
+  cursor:pointer;
+}
+.prog__pick:focus{outline:1px solid var(--bk); outline-offset:0}
+.prog__num{
+  flex:0 0 auto;
+  width:44px; height:24px; padding:0 4px;
+  border:0; border-radius:6px;
+  corner-shape:superellipse(1.1);
+  background:color-mix(in srgb, var(--bk) 14%, transparent);
+  color:var(--text-primary);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-12);
+  text-align:center;
+  cursor:pointer;
+}
+.prog__num:focus{outline:1px solid var(--bk); outline-offset:0}
+.prog__num::-webkit-outer-spin-button,
+.prog__num::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.prog__unit{
+  flex:0 0 auto;
+  font-size:var(--fs-12); line-height:1;
+  color:var(--text-reduced);
+}
+.prog__del{
+  flex:0 0 auto;
+  width:20px; height:20px; padding:0;
+  border:0; border-radius:999px;
+  display:grid; place-items:center;
+  background:transparent; color:var(--text-muted);
+  cursor:pointer;
+  transition:color .12s linear, background-color .12s linear;
+}
+.prog__del svg{width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round}
+.prog__del:hover{background:color-mix(in srgb, var(--warning) 14%, transparent); color:var(--warning)}
+
+/* 循环肚子：左边一道竖线，往里收 10 —— 套一层看得出，套两层也还读得清 */
+.prog__body{
+  display:flex; flex-direction:column; gap:6px;
+  margin:6px 0 0 12px; padding-left:10px;
+  border-left:1px dashed color-mix(in srgb, var(--theme-dark) 45%, transparent);
+}
+.prog__void{
+  padding:2px 0 2px 2px;
+  font-size:var(--fs-12); color:var(--text-muted);
+}
+
+/* 落点：一根主题色短线加一个圆头，插在「下一块要进来的位置」 */
+.prog__caret{
+  position:relative;
+  height:2px; margin:0 6px 0 14px;
+  border-radius:2px;
+  corner-shape:superellipse(1.1);
+  background:var(--theme-dark);
+}
+.prog__caret::before{
+  content:''; position:absolute; left:-7px; top:-3px;
+  width:8px; height:8px; border-radius:999px;
+  background:var(--theme-dark);
+}
+.prog__empty{
+  margin:0; padding:2px 0 2px 2px;
+  font-size:var(--fs-12); color:var(--text-muted);
+}
+
+/* 落点出口：虚线一行，点在它身上就把落点交回最外层末尾。
+   is-on 表示「现在落点就在末尾」，这时这行只是一块状态提示，点它不动 */
+.prog__tail{
+  appearance:none; -webkit-appearance:none;
+  width:100%; height:28px;
+  border:1px dashed color-mix(in srgb, var(--text-muted) 55%, transparent);
+  border-radius:10px;
+  corner-shape:superellipse(1.1);
+  background:transparent; color:var(--text-muted);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-12); letter-spacing:.2px;
+  cursor:pointer;
+  transition:color .12s linear, border-color .12s linear;
+}
+.prog__tail:hover{color:var(--text-secondary); border-color:color-mix(in srgb, var(--theme-dark) 60%, transparent)}
+.prog__tail.is-on{
+  border-color:color-mix(in srgb, var(--theme-dark) 45%, transparent);
+  color:var(--text-secondary);
+}
+
+/* 调色板：四枚胶囊竖成一列。点一下就把那块积木接到选中位置后面 */
+.prog__palette{grid-area:palette; display:grid; grid-template-columns:minmax(0,1fr); gap:6px}
+.prog__add{
+  --bk:var(--series-green-light);
+  appearance:none; -webkit-appearance:none;
+  display:flex; align-items:center; justify-content:center; gap:4px;
+  height:30px; padding:0 8px;
+  border:0; border-radius:999px;
+  background:var(--card); color:var(--text-reduced);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-12); letter-spacing:.2px;
+  cursor:pointer;
+  transition:background-color .12s linear, color .12s linear;
+}
+.prog__add svg{
+  width:12px; height:12px; flex:0 0 auto;
+  fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round;
+}
+.prog__add[data-kind="mood"]{--bk:var(--series-blue-light)}
+.prog__add[data-kind="wait"]{--bk:var(--series-pink-light)}
+.prog__add[data-kind="repeat"]{--bk:var(--theme-dark)}
+.prog__add:hover{background:var(--bk); color:var(--text-invert)}
+.prog__add:focus-visible{outline:2px solid var(--bk); outline-offset:2px}
+
+/* 底下那行统计：块数 + 预计时长；报错时同一行变成警示色 */
+.prog__meta{
+  grid-area:meta;
+  margin:0;
+  font-size:var(--fs-12); line-height:1.4;
+  color:var(--text-muted);
+  transition:color .12s linear;
+}
+.prog__meta.is-warn{color:var(--warning)}
+
+/* 简介留空时那一行不留空位：自定义卡允许只填名字 */
+.sc__intro:empty{display:none}
+
+/* 深色下系列色当字色偏沉，往亮字方向提一档；帽子与选中的描边不动 */
+:root[data-theme="dark"] .prog__tag,
+:root[data-theme="dark"] .prog__b[data-kind="repeat"] .prog__tag{
+  color:color-mix(in srgb, var(--bk) 62%, var(--text-primary));
+}
+
+/* 编辑页按类型换下半页：Action 给积木栈，Dialog 只留一句提问 */
+.edit[data-edit-kind="dialog"] [data-edit-program]{display:none}
+.edit[data-edit-kind="action"] [data-edit-ask]{display:none}
+
+/* 提问框：形状照 .edit__input，只是多行 —— 半径从 999 收到 16，
+   内边距按行高给 10，右下角留出拖拽手柄的位置 */
+.edit__area{
+  appearance:none; -webkit-appearance:none;
+  width:100%; min-height:72px; padding:10px 14px;
+  border:0; border-radius:16px;
+  corner-shape:superellipse(1.1);
+  background:var(--card); color:var(--text-primary);
+  caret-color:var(--theme);
+  font-family:inherit; font-weight:var(--fw); font-size:var(--fs-14); letter-spacing:.2px;
+  line-height:1.5;
+  resize:vertical;
+  outline:none;
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px rgb(from var(--theme) r g b / 0);
+  transition:box-shadow .2s cubic-bezier(.16,.84,.3,1);
+}
+.edit__area::placeholder{color:var(--text-muted)}
+.edit__area:focus{
+  box-shadow:
+    0 0 var(--sh) rgba(var(--shadow), calc(var(--sh-a) * var(--sh-k))),
+    inset 0 0 0 1px var(--theme);
+}
+
+/* 自定义卡右上角的两枚小钮：重编与删除。
+   常态不存在，指针压上去 / 卡片正在播 / 焦点落在卡里才长出来 ——
+   它们和右下那枚播放箭头同一套配色（反白底、系列色图标）。
+   选择器要写成 .sc > span.sc__tools：cards.css 里那条 .sc > span:not(.sc__go)
+   把它当普通文字行处理（position:relative、z-index:1），
+   特异性比单个类高，只写 .sc__tools 是压不住那两条的 */
+.sc > span.sc__tools{
+  position:absolute; top:8px; right:8px; z-index:2;
+  display:flex; gap:4px;
+  opacity:0; pointer-events:none;
+  transition:opacity .1s linear;
+}
+.sc:is(:hover, .is-on, .is-lit, :focus-within) .sc__tools{opacity:1; pointer-events:auto}
+.sc__tool{
+  width:22px; height:22px; padding:0;
+  border:0; border-radius:999px;
+  display:grid; place-items:center;
+  background:var(--text-invert); color:var(--sc);
+  cursor:pointer;
+  transition:background-color .12s linear, color .12s linear;
+}
+.sc__tool svg{width:12px; height:12px; display:block; fill:currentColor}
+.sc__tool:hover{background:var(--sc); color:var(--text-invert)}
+/* 删除上了膛：整枚变警示色，再点一下才真的删 */
+.sc__tool.is-armed{background:var(--warning); color:var(--text-invert)}
+:root[data-theme="dark"] .sc__tool{background:var(--sc); color:var(--text-primary)}
+:root[data-theme="dark"] .sc__tool:hover{background:var(--text-primary); color:var(--sc)}
+:root[data-theme="dark"] .sc__tool.is-armed{background:var(--warning); color:var(--text-invert)}
+
+/* 触屏上没有悬停：两枚小钮常驻，不然重编与删除在手机端根本点不到。
+   代价是卡面右上角一直占着 52px —— 自定义卡的编号和名字都在左边，够用 */
+@media (hover:none){
+  .sc__tools{opacity:1; pointer-events:auto}
+}
+
+/* 窄屏（底部抽屉）不再分两列：积木占满一行，调色板回到下方两列 */
+@media (max-width:640px){
+  .prog{grid-template-columns:minmax(0,1fr); grid-template-areas:"stack" "palette" "meta"}
+  .prog__palette{grid-template-columns:repeat(2, minmax(0,1fr))}
+}
+/* 动作块右端那枚时长：13 号、次级色，和等待/循环的「秒」「次」同一档，
+   只是多带一位小数 —— 动作时长本来就不是整数 */
+.prog__dur{
+  flex:0 0 auto;
+  font-size:var(--fs-12); line-height:1;
+  color:var(--text-muted);
+  font-variant-numeric:tabular-nums;
+}

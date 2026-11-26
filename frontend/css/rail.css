@@ -42,6 +42,7 @@
   width:100%; height:100%;
   background:var(--panel);
   border-radius:var(--rail-r);
+  corner-shape:superellipse(1.1);
   /* 投影见上方 .group / .rail__surface / .user__surface 的共用定义（--sh）。
      不再画描边后，padding box 就是栏体外沿，overflow:clip 默认的 0 裁切面正好落在
      轮廓上，雾带贴边不会漏。hidden 那行留给不认 clip 的浏览器兜底 */
@@ -121,7 +122,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 [data-panel-body][data-view="chat"] > :not([data-rail-view="chat"]){display:none}
 
 /* 有页标题的视图：面板自身不留上内边距，这段留白交给固定头那一层。
-   左栏 persona / 快捷指令页的标题仍留在流里（也仍是 sticky），所以这两页
+   左栏 persona / 指令页的标题仍留在流里（也仍是 sticky），所以这两页
    照旧写 0；右栏三页的标题已经移到滚动区外，内容从标题下沿 56 起 ——
    16 标题上沿 + 24 行高 + 16 与首张卡片的间距 */
 [data-panel-body][data-view="persona"],
@@ -267,6 +268,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   position:relative; isolation:isolate;
   aspect-ratio:1;
   border-radius:16px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   overflow:hidden;
   /* 描边常驻透明，亮起只换颜色。用 inset 的 box-shadow 而不是 border ——
@@ -277,6 +279,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .rail__card::before{
   content:''; position:absolute; inset:0; z-index:0;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   opacity:0;
   transform:translateZ(0);
@@ -469,6 +472,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   content:'';
   position:absolute; inset:0;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;
   transform:scale(calc(1 - var(--press, 0) * var(--press-k)));
@@ -555,7 +559,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 }
 
 /* 右栏面板：手势 / 表情页的上内边距留给标题与雾带（20），标题就在这条内边距上吸住；
-   快捷指令页是从左栏搬来的卡片，首尾留白与标题吸附都按卡片那套走 32 */
+   指令页是从左栏搬来的卡片，首尾留白与标题吸附都按卡片那套走 32 */
 #panel-tools .panel__body{
   --pad-y:20px;
   padding-bottom:var(--panel-pad);
@@ -622,7 +626,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .rail__items{overflow-y:auto; scrollbar-width:none}
 .rail__items::-webkit-scrollbar{width:0; height:0}
 /* 两栏的图标钮同尺寸（--btn 48）：左栏只剩角色与对话流两枚，右栏四枚
-   （手势 / 表情 / 快捷指令 / 编辑），都用默认那一档，不再为装不装得下单独缩小。
+   （手势 / 表情 / 指令 / 编辑），都用默认那一档，不再为装不装得下单独缩小。
    编辑钮单独吊到列底：列已经撑满栏体，margin-top:auto 把剩下的高度全吃掉 */
 .item--edit{margin-top:auto}
 
@@ -643,6 +647,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
 .item__btn::before{
   content:''; position:absolute; inset:0;
   border-radius:inherit;
+  corner-shape:inherit;
   /* 颜色常驻、不参与过渡：可见性完全交给 scale。
      若这里留 transparent，出场那一帧颜色会先瞬间跳回透明，
      随后 0.1s 的收缩就发生在一块看不见的色块上，等于没有原路返回。
@@ -679,7 +684,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   opacity:0;
   transition:color .1s cubic-bezier(.7,0,.84,.16), opacity .12s linear;
 }
-/* 图标钮的强调色。快捷指令页里三组卡片各用系列色，但圆钮本身不归属某一组，
+/* 图标钮的强调色。指令页里三组卡片各用系列色，但圆钮本身不归属某一组，
    与展开后卡片里的 theme 选中底是同一套颜色，所以四枚都取全站的 --theme；
    没写 --itc 的按钮也回落到它 */
 .item[data-panel="Gestures"],
@@ -730,7 +735,7 @@ body:has(.rail--right.is-open) .rail__toggle[data-rail="right"]{
   /* 标题文字上沿到面板顶端的距离。标题盒的顶边贴着面板顶（top:0），
      这段距离由标题自身的 padding-top 撑出来 —— 盒顶与 sticky 的吸附线重合，
      滚动时标题不会先被内容带着走一段再钉住。
-     右栏与左栏标题都读这一个值；左栏快捷指令页的组间距会减掉它来保持原来的视觉节奏。
+     右栏与左栏标题都读这一个值；左栏指令页的组间距会减掉它来保持原来的视觉节奏。
      取 16：与面板四周的 --panel-pad 同档，标题、右上角按钮、下方内容的左右留白
      读的是同一根线，页头不再比正文多缩进 4px
      写死成 px 而不是 calc：尾部脚本按 px 读数值 */

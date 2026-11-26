@@ -1,4 +1,4 @@
-/* 把快捷指令卡片（右栏 Shortcuts 页）拖到机器人身上。
+/* 把指令卡片（右栏 Shortcuts 页）拖到机器人身上。
    指针按下满 5px 才算拖（不到就还是点击，交给 rails.js 播动作）；
    拖起来时把卡片克隆一份挂到 body 上做影子，原卡从栏里收起来（visibility: hidden，
    位置照旧占着，不放一张半透明的底在那里）。
@@ -292,8 +292,10 @@
     var over = hitAt(e.clientX, e.clientY);
     var api = window.robot3d;
     /* 街舞那张挂在 data-action-motion 上（它在 rails.js 里走另一套绑定），
-       两个属性都要认，否则接住之后仪式走完没有动作可播 */
-    var motionId = card.dataset.motion || card.dataset.actionMotion || '';
+       自定义流程卡挂在 data-ritual-motion 上（流程的第一个动作，见 js/shortcuts.js），
+       三个属性都要认，否则接住之后仪式走完没有动作可播 */
+    var motionId = card.dataset.motion || card.dataset.actionMotion
+      || card.dataset.ritualMotion || '';
     var picked = over && api && typeof api.pickUpCard === 'function'
       ? api.pickUpCard(motionId, readCard(state.node))
       : false;
@@ -369,14 +371,21 @@
       state.node.classList.remove('is-picked', 'is-over');
       var back = state.card;
       /* 对话卡没有动作可播，把卡上的 data-dialog 传出去，
-         由 js/dialog_card.js 替用户开口问这一句。动作卡这里是空的 */
+         由 js/dialog_card.js 替用户开口问这一句。动作卡这里是空的。
+         自定义卡（编辑页编出来的）挂的是 data-program，交回 js/shortcuts.js：
+         对话卡发它那句话，动作卡把积木栈整段跑一遍 */
       var dialog = back.getAttribute('data-dialog') || '';
+      var program = back.getAttribute('data-program') || '';
       stop();
       /* stop() 里刚把 is-dragging 摘掉、原卡重新露出来，紧跟着弹这一下 */
       popBack(back);
       if (dialog) {
         window.dispatchEvent(new CustomEvent('primebotx-dialog-card', {
           detail: {id: dialog},
+        }));
+      } else if (program) {
+        window.dispatchEvent(new CustomEvent('primebotx-program-card', {
+          detail: {id: program},
         }));
       }
     }

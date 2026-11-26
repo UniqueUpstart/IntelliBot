@@ -136,6 +136,7 @@
   content:''; position:absolute; inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;   /* 放大后不改变命中区域 */
   scale:0;
@@ -212,6 +213,7 @@
   content:''; position:absolute; inset:0;
   z-index:-1;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   pointer-events:none;   /* 涨开后不改变命中区域 */
   scale:0;

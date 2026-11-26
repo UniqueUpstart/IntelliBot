@@ -66,7 +66,7 @@
         展开动画里卡片跟着面板一起伸缩，和右栏的输入框是同一套跟随方式，
         不再是「卡片定宽、面板拉开遮住」的抽屉感；
         hover 填该组系列色、文字全部反白 ---- */
-/* 视图切换：快捷指令合集一页把三组全铺出来，不再按类型分页。
+/* 视图切换：指令合集一页把三组全铺出来，不再按类型分页。
    每组的标题同时也是吸顶的那一枚，内容滚起来才有东西压到雾带上 */
 .panel__body[data-view="shortcuts"] .sc-group + .sc-group{
   /* 组标题的盒顶要在 0 上吸顶，20 的留白挪进了标题的 padding-top，
@@ -115,6 +115,7 @@
   height:150px;
   padding:8px;
   border-radius:24px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   overflow:hidden;     /* 填充层按圆角裁，边缘不外溢 */
   display:flex; flex-direction:column; align-items:flex-start;
@@ -138,6 +139,7 @@
 .sc::before{
   content:''; position:absolute; inset:0; z-index:0;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--sc);
   opacity:0;
   transform:translateZ(0);   /* 常驻自己一层，避免 hover 进出时临时提层/落层闪一下 */
@@ -171,7 +173,7 @@
   transform:translateX(1px);   /* 尖头视觉重心偏左，右移一点才是圆内居中 */
 }
 /* 悬停才落色：底取反白（与卡片文字反白同一支），箭头回到该组的系列色；
-   .is-on 是快捷指令正在播动作的那张卡，整套配色与悬停一致，播完撤掉 */
+   .is-on 是指令正在播动作的那张卡，整套配色与悬停一致，播完撤掉 */
 .sc:is(:hover, .is-on, .is-lit) .sc__go{opacity:1; background:var(--text-invert); color:var(--sc)}
 .sc__id{
   margin-top:2px;                /* 文字块比卡片内边距再下移 2 */
@@ -279,6 +281,7 @@
   display:flex; flex-direction:column;  /* 标题区在上、页脚贴底，中间是列表 */
   gap:16px;                            /* 标题区 / 列表 / 按钮区之间各隔 16 */
   border-radius:var(--rail-r);
+  corner-shape:superellipse(1.1);
   /* 自带一个叠层：外挂的两块底板挂在面板外侧，收放时要能沉到面板下面去，
      而负 z-index 的子项只在自成叠层的父级里待得住，否则会跑到弹窗遮罩后面。
      这里用 z-index:0 而不是 isolation —— 叠层要得，背板根不能要：
@@ -304,6 +307,7 @@
 .modal__panel::before{
   content:''; position:absolute; inset:0; z-index:-1;
   border-radius:inherit; pointer-events:none;
+  corner-shape:inherit;
   background:rgb(from var(--panel) r g b / 1);
 }
 
@@ -318,6 +322,7 @@
 .modal__glow{
   position:absolute; inset:0; z-index:-3;
   border-radius:inherit; pointer-events:none;
+  corner-shape:inherit;
   box-shadow:0 0 16px rgba(var(--shadow), calc(.1 * var(--sh-k)));
 }
 .modal__glow--up{

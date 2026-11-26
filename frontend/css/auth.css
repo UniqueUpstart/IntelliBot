@@ -65,6 +65,7 @@
   display:grid; grid-template-columns:2fr 1fr;
   padding:0;                  /* 内边距交给右列，留白那半要顶到卡片边 */
   border-radius:var(--rail-r);
+  corner-shape:superellipse(1.1);
   background:rgb(from var(--panel) r g b / 1);
   box-shadow:0 0 32px rgba(var(--shadow), calc(.12 * var(--sh-k)));
   overflow:hidden;            /* 两列的直角别越出圆角 */

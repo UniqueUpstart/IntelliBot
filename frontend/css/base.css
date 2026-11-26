@@ -200,6 +200,19 @@ body.is-card-drag{user-select:none; -webkit-user-select:none}
    输入框、气泡、面板正文都算。要改浓淡只调 75% 这个数 */
 ::selection{background:color-mix(in srgb, var(--hint) 75%, transparent); color:var(--text-invert)}
 ::-moz-selection{background:color-mix(in srgb, var(--hint) 75%, transparent); color:var(--text-invert)}
+
+/* 圆角一律走连续曲率：每条写了 border-radius 的规则后面跟一句
+   corner-shape: superellipse(1.1)。圆角与直边的接缝处曲率不再突变，
+   弧是顺着直线走开的，没有弧撞上直线那一下。
+   为什么不是 squircle 关键字：那是 2.0 档，同一半径下会把角收得太紧
+   （24 半径的对角边界从 8.5 缩到 6.1，肉眼就是角变小了）；1.1 档在常用
+   半径上只差 0.3–0.6px，角的大小看上去和纯圆弧一致。要更明显的连续感，
+   改这个 1.1，代价是角同步变小：1.2 约小 1px，2.0 小 2.4px（24 半径）。
+   两条例外：正圆（border-radius:50%）与胶囊（999px / calc(高/2)）
+   留 round —— 它们的端头本来就是整段圆弧，上曲率只会把端头压平。
+   子层用 border-radius:inherit 贴着父层轮廓的（遮罩、底片、发丝边），
+   同样要写 corner-shape:inherit，否则父层拐角变了、子层还是旧曲率，
+   拐角会漏出一像素。 */
 html,body{height:100%}
 body{
   margin:0;

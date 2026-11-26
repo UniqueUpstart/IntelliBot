@@ -83,7 +83,7 @@ gsap.registerPlugin(ScrollTrigger);
         if (titles.length) ScrollTrigger.refresh();
       }).observe(body, { attributes: true, attributeFilter: ['data-view'] });
 
-      /* 卡片是脚本后来才填进来的（手势 / 表情格、新增的快捷指令卡），
+      /* 卡片是脚本后来才填进来的（手势 / 表情格、新增的指令卡），
          内容高度当场就变，同样不能等防抖。雾带那条判定必须跟上，
          否则空页面会先挂着两条灰带、等下一次 resize 才收 */
       new MutationObserver(fit).observe(body, { childList: true, subtree: true });

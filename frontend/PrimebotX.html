@@ -19,19 +19,19 @@
   } catch (e) {}
 })();
 </script>
-<script src="js/i18n.js?v=48"></script>
-  <link rel="stylesheet" href="css/base.css?v=21">
-  <link rel="stylesheet" href="css/topbar.css?v=21">
-  <link rel="stylesheet" href="css/rail.css?v=57">
-  <link rel="stylesheet" href="css/workspace.css?v=37">
-  <link rel="stylesheet" href="css/cards.css?v=32">
-  <link rel="stylesheet" href="css/modal.css?v=39">
-  <link rel="stylesheet" href="css/chat.css?v=144">
+<script src="js/i18n.js?v=50"></script>
+  <link rel="stylesheet" href="css/base.css?v=23">
+  <link rel="stylesheet" href="css/topbar.css?v=23">
+  <link rel="stylesheet" href="css/rail.css?v=59">
+  <link rel="stylesheet" href="css/workspace.css?v=39">
+  <link rel="stylesheet" href="css/cards.css?v=34">
+  <link rel="stylesheet" href="css/modal.css?v=41">
+  <link rel="stylesheet" href="css/chat.css?v=148">
   <!-- 旧的 Q1 管理联调浮层样式已随硬件连接一并移除 -->
   <link rel="stylesheet" href="css/robot.css?v=4">
-<link rel="stylesheet" href="css/viewtool.css?v=34">
-<link rel="stylesheet" href="css/auth.css?v=25">
-<link rel="stylesheet" href="css/mobile.css?v=2">
+<link rel="stylesheet" href="css/viewtool.css?v=36">
+<link rel="stylesheet" href="css/auth.css?v=27">
+<link rel="stylesheet" href="css/mobile.css?v=4">
 </head>
 <!-- writingsuggestions="false"：关掉浏览器自己的写作建议与内联 Compose。
      不关的话 Edge / Chrome 会在可编辑框里挂一枚蓝色圆点，点开是它的 AI 改写面板，
@@ -116,7 +116,7 @@
 <main class="stage" aria-hidden="true"><canvas class="bgfx" id="bgfx"></canvas></main>
 
 <!-- ===================== 左侧：Persona / Chat =====================
-     快捷指令与编辑已整块搬到右栏，这一栏只剩角色与对话流两页 -->
+     指令与编辑已整块搬到右栏，这一栏只剩角色与对话流两页 -->
 <aside class="rail rail--left" id="rail-shortcuts" aria-label="Workspace">
   <div class="rail__surface">
   <div class="rail__bar">
@@ -503,7 +503,7 @@
 <!-- ===================== 右侧：Gestures / Emotions / Shortcuts =====================
      前两页由卡片填满：手势页铺 10 张（卡面是机器人做这个动作的缩略图，模型没就绪时
      先显示名字）、表情页铺 16 张，一行四张，卡片节点由 js/rails.js 先占位，内容分别由
-     js/homepage_motions.js、js/faces.js 填。后两页是从左栏搬来的快捷指令合集与它的编辑页：
+     js/homepage_motions.js、js/faces.js 填。后两页是从左栏搬来的指令合集与它的编辑页：
      合集把 Action / Dialog 两组放在同一页，不再按类型分页 -->
 <aside class="rail rail--right" id="rail-tools" aria-label="Tools">
   <div class="rail__surface">
@@ -584,7 +584,7 @@
         <div class="rail__grid" data-rail-grid="emotions"></div>
       </div>
 
-      <!-- 快捷指令合集：三组卡片一次全出。点卡片播动作（js/rails.js 尾部那段绑定），
+      <!-- 指令合集：三组卡片一次全出。点卡片播动作（js/rails.js 尾部那段绑定），
            拖到机器人身上由 js/card_pickup.js 接住；新增的卡片追加到对应组末尾 -->
       <div class="rail__view rail__view--shortcuts" data-rail-view="shortcuts">
         <section class="sc-group sc-group--action">
@@ -618,6 +618,27 @@
         </section>
 
       </div>
+
+      <!-- 自定义卡片的骨架。克隆它、不克隆页面上第一张现成卡 ——
+           现成卡带 data-motion，克隆出来的新卡一点就替别人播动作。
+           右上两枚小钮只在悬停 / 聚焦时长出来：重编与删除（删除点两次） -->
+      <template id="sc-card">
+        <div class="sc">
+          <span class="sc__id">01</span>
+          <span class="sc__brief"></span>
+          <span class="sc__intro"></span>
+          <span class="sc__time"></span>
+          <span class="sc__tools">
+            <button class="sc__tool" type="button" data-sc-tool="edit" aria-label="Edit">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+            <button class="sc__tool" type="button" data-sc-tool="delete" aria-label="Delete">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Z"/></svg>
+            </button>
+          </span>
+          <span class="sc__go" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M23.78,16.54c.3-.3.3-.79,0-1.09l-4.35-4.35c-.3-.3-.79-.79-1.09-1.09l-4.35-4.35c-.3-.3-.89-.54-1.31-.54h-3.9c-.42,0-.77.35-.77.77v3.9c0,.42.24,1.01,.54,1.31l4.35,4.35c.3,.3,.3,.79,0,1.09l-4.35,4.35c-.3,.3-.54,.89-.54,1.31v3.9c0,.42,.35,.77,.77,.77h3.9c.42,0,1.01-.24,1.31-.54l4.35-4.35c.3-.3,.79-.79,1.09-1.09l4.35-4.35Z"/></svg></span>
+        </div>
+      </template>
 
       <!-- 偏好页：机器人外观。一页只看这一件事 —— 一组自适应方卡，
            选中的那枚涨满主题色；导入钮搬到了上面的 Costume 标题行右端，
@@ -710,10 +731,13 @@
       </div>
 
       <!-- 编辑页：右栏 Edit 钮把本面板切到 data-view="edit" 时出现。
-           先选类型（对应上面三组卡片），再填名字与简介；提交后追加到该组末尾，
-           编号自动续，绑定与持久化见 js/rails.js 的卡片那段 -->
+           名字与简介照旧；类型决定下半页是什么 ——
+           Action 给一块 Scratch 式积木栈（开始是固定的帽子块，往下是动作 / 表情 /
+           等待 / 循环四类块，点调色板追加，选中某块则新块接在它后面、选中循环就进它里面），
+           Dialog 只留一句提问。提交后追加到对应组末尾，编号自动续；
+           积木的渲染、执行与持久化都在 js/shortcuts.js -->
       <div class="rail__view rail__view--edit" data-rail-view="edit">
-        <div class="edit" data-edit-only>
+        <div class="edit" data-edit-only data-edit-kind="action">
           <div class="edit__fields">
             <div class="edit__field">
               <span class="edit__lab" data-i18n="rail.left.type">Type</span>
@@ -737,6 +761,42 @@
               <span class="edit__lab" data-i18n="rail.left.intro">Intro</span>
               <input class="edit__input" data-edit-brief type="text" placeholder="Enter…"
                      maxlength="40" autocomplete="off" data-i18n-placeholder="rail.left.intro.ph">
+            </label>
+
+            <!-- 积木栈：开始那块由脚本一起画，这里只留一个空壳当挂载点。
+                 栈是纵向流、可以一直长，滚动交给外面的 .edit__fields -->
+            <div class="edit__field" data-edit-program>
+              <span class="edit__lab" data-i18n="rail.left.program">Program</span>
+              <div class="prog">
+                <div class="prog__stack" data-prog-stack></div>
+                <div class="prog__palette" role="group" aria-label="Blocks"
+                     data-i18n-aria="rail.left.blocks">
+                  <button class="prog__add" type="button" data-prog-add="motion" data-kind="motion">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    <span data-i18n="rail.left.block.motion">Motion</span>
+                  </button>
+                  <button class="prog__add" type="button" data-prog-add="mood" data-kind="mood">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    <span data-i18n="rail.left.block.mood">Face</span>
+                  </button>
+                  <button class="prog__add" type="button" data-prog-add="wait" data-kind="wait">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    <span data-i18n="rail.left.block.wait">Wait</span>
+                  </button>
+                  <button class="prog__add" type="button" data-prog-add="repeat" data-kind="repeat">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    <span data-i18n="rail.left.block.repeat">Repeat</span>
+                  </button>
+                </div>
+                <p class="prog__meta" data-prog-meta aria-live="polite"></p>
+              </div>
+            </div>
+
+            <!-- 对话卡只有一句话：点卡片就是把这句发进对话框 -->
+            <label class="edit__field" data-edit-ask>
+              <span class="edit__lab" data-i18n="rail.left.prompt">Prompt</span>
+              <textarea class="edit__area" data-edit-prompt rows="3" maxlength="240"
+                        placeholder="Enter…" data-i18n-placeholder="rail.left.prompt.ph"></textarea>
             </label>
           </div>
           <div class="edit__acts">
@@ -792,10 +852,13 @@
   </button>
 </nav>
 
-<script src="js/rails.js?v=22"></script>
+<script src="js/rails.js?v=23"></script>
+
+<!-- 自定义指令：编辑页的积木栈、卡片渲染、持久化与执行都在这里 -->
+<script src="js/shortcuts.js?v=1"></script>
 
 <!-- 把卡片拖到机器人身上：拾起 → 思考 → 点头 → 卡片消失 → 播动作 -->
-<script src="js/card_pickup.js?v=17"></script>
+<script src="js/card_pickup.js?v=18"></script>
 
 <!-- 头像：点头像弹出默认头像与本地图片的选择区，选择结果存 localStorage -->
 <script src="js/avatar.js?v=7"></script>
@@ -1000,11 +1063,11 @@
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">03</span>处理的信息类型</div>
-          <p class="doc__text">本服务保存你主动创建的用户名、昵称、密码哈希和登录会话，并可按账号保存近期对话、压缩后的个性头像、内置机器人外观、界面偏好、自定义 AI 角色与快捷指令。本服务不收集联系方式、设备标识符、精确位置或生物识别信息，也不通过 Cookie、像素标签等技术进行跨站追踪。API Key 与导入模型文件不进入账号状态。</p>
+          <p class="doc__text">本服务保存你主动创建的用户名、昵称、密码哈希和登录会话，并可按账号保存近期对话、压缩后的个性头像、内置机器人外观、界面偏好、自定义 AI 角色与指令。本服务不收集联系方式、设备标识符、精确位置或生物识别信息，也不通过 Cookie、像素标签等技术进行跨站追踪。API Key 与导入模型文件不进入账号状态。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">04</span>处理目的与依据</div>
-          <p class="doc__text">上述信息用于验证登录身份，并在你再次登录时还原近期对话、界面、角色、快捷指令和机器人外观。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务以生成回复；本服务不会基于这些信息开展用户画像、广告投放或模型训练。</p>
+          <p class="doc__text">上述信息用于验证登录身份，并在你再次登录时还原近期对话、界面、角色、指令和机器人外观。使用 AI 对话时，消息和当前角色设定会发送到你自行配置的模型服务以生成回复；本服务不会基于这些信息开展用户画像、广告投放或模型训练。</p>
         </section>
         <section class="doc__sec">
           <div class="doc__name"><span class="doc__no">05</span>头像信息的处理</div>

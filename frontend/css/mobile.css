@@ -52,6 +52,7 @@
     gap:2px;
     padding:5px;
     border-radius:24px;
+    corner-shape:superellipse(1.1);
     background:var(--panel);
     box-shadow:0 0 20px rgba(var(--shadow),calc(.13 * var(--sh-k)));
     -webkit-backdrop-filter:blur(var(--blur));
@@ -64,6 +65,7 @@
     padding:5px 2px 4px;
     border:0;
     border-radius:19px;
+    corner-shape:superellipse(1.1);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -142,7 +144,7 @@
     transition:opacity .2s ease,translate .24s var(--ease),visibility 0s;
   }
   .rail.is-hidden{opacity:0!important;pointer-events:none!important}
-  .rail__surface{display:block;border-radius:28px}
+  .rail__surface{display:block;border-radius:28px;corner-shape:superellipse(1.1)}
   .rail__bar,.rail__toggle{display:none!important}
   .rail__panel,
   .rail.is-open .rail__panel{
@@ -172,13 +174,13 @@
     max-width:none;
     bottom:calc(max(8px,var(--mobile-safe-bottom)) + var(--mobile-dock-h) + 8px);
   }
-  .composer__surface{border-radius:22px}
+  .composer__surface{border-radius:22px;corner-shape:superellipse(1.1)}
   .composer__input{width:100%!important;max-width:100%;font-size:16px}
   .composer__model{
     --model-panel-w:min(228px,calc(100vw - 112px));
   }
   .composer__model-trigger{max-width:132px}
-  .composer__model.is-open > .composer__model-surface{border-radius:18px}
+  .composer__model.is-open > .composer__model-surface{border-radius:18px;corner-shape:superellipse(1.1)}
   .model-menu__list{max-height:min(176px,26dvh)}
   .model-menu .pill{font-size:13px}
   body:has(.rail.is-open) .composer{
@@ -197,6 +199,7 @@
     max-width:42%;
     padding:10px;
     border-radius:18px;
+    corner-shape:superellipse(1.1);
     font-size:13px;
   }
 

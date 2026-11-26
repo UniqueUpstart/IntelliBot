@@ -20,6 +20,7 @@
   margin-left:calc(var(--rail-w) / 2 - 20px);
   width:40px; height:40px; display:grid; place-items:center;
   border-radius:10px;
+  corner-shape:superellipse(1.1);
   /* 只是标志，不是入口：整块不吃指针，也就没有 hover、点下去也没有跳转。
      覆盖上面 .topbar > * 的 pointer-events:auto（同为 0,1,0，这条在后面） */
   pointer-events:none;
@@ -77,6 +78,7 @@
 .pill::before{
   content:''; position:absolute; inset:0;
   border-radius:inherit;
+  corner-shape:inherit;
   background:var(--theme);
   border:0;
   pointer-events:none;   /* 放大后不改变命中区域，否则边缘会反复 over/out 造成闪烁 */

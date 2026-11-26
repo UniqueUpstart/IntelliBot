@@ -114,6 +114,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   padding:16px;
   border:0;
   border-radius:24px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   color:var(--text-secondary);
   font:inherit;
@@ -174,6 +175,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   padding:16px;
   border:0;
   border-radius:24px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   color:var(--text-secondary);
   font:inherit;
@@ -558,6 +560,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   gap:9px;
   padding:28px;
   border-radius:20px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   color:var(--text-muted);
   text-align:center;
@@ -581,6 +584,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   max-width:88%;
   padding:10px 13px;
   border-radius:15px 15px 15px 4px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   color:var(--text-secondary);
   font-size:var(--fs-14);
@@ -591,6 +595,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
 .chat-flow__message--user{
   align-self:flex-end;
   border-radius:15px 15px 4px 15px;
+  corner-shape:superellipse(1.1);
   background:var(--theme);
   color:var(--text-invert);
 }
@@ -632,6 +637,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   padding:8px;
   border:0;
   border-radius:16px;
+  corner-shape:superellipse(1.1);
   background:var(--card);
   color:var(--text-secondary);
   font:inherit;
@@ -673,6 +679,7 @@ html[lang="zh-CN"] .sc-group__title{line-height:1}
   top:1px;left:50%;
   width:2px;height:19px;
   border-radius:2px;
+  corner-shape:superellipse(1.1);
   background:currentColor;
   transform-origin:50% 0;
 }
