@@ -54,7 +54,7 @@ ctest --test-dir backend-build --output-on-failure
 
 ## 前端接入
 
-登录令牌保存在 `localStorage`，401 时清理并返回登录入口。账号状态以白名单保存近期对话、压缩后的头像、内置外观选择、界面偏好、自定义角色与快捷指令；API Key、头像原文件和导入模型文件不会进入账号状态。
+登录令牌保存在 `localStorage`，401 时清理并返回登录入口。账号状态以白名单保存近期对话、压缩后的头像、内置外观选择、界面偏好、自定义角色与指令；API Key、头像原文件和导入模型文件不会进入账号状态。
 
 每次页面加载创建新的 `session_id`，不共享页面状态；每个登录最多保留 20 个页面会话。动作请求示例为 `{"action_id":"raise_hand"}`。浏览器动作只返回播放信息，前端调用 `window.robot3d.playClip(clip, loop)` 执行；`robot-playback` 事件报告播放状态。
 

@@ -40,6 +40,13 @@ add_executable(primebotx_backend src/main.cpp src/web_system.cpp src/ai_proxy.cp
 target_include_directories(primebotx_backend PRIVATE include ${SODIUM_INCLUDE_DIR})
 target_link_libraries(primebotx_backend PRIVATE SQLite::SQLite3 ${SODIUM_LIBRARY})
 target_link_libraries(primebotx_backend PRIVATE Threads::Threads nlohmann_json::nlohmann_json ${HTTPLIB_TARGET})
+# third_party/prebuilt 里放的是 libsodium 静态库。Windows 下 sodium.h 在没有
+# SODIUM_STATIC 时把 SODIUM_EXPORT 展开成 __declspec(dllimport)，静态链接就会
+# 满屏 LNK2019 找不到 __imp_crypto_*。库里没有配套 dll 时按静态链接处理
+get_filename_component(SODIUM_LIB_DIR "${SODIUM_LIBRARY}" DIRECTORY)
+if(MSVC AND NOT EXISTS "${SODIUM_LIB_DIR}/libsodium.dll")
+  target_compile_definitions(primebotx_backend PRIVATE SODIUM_STATIC)
+endif()
 # MSVC 由 httplib.h 里的 #pragma comment 自动链接；MinGW 需要显式加 Winsock
 if(WIN32 AND NOT MSVC)
   target_link_libraries(primebotx_backend PRIVATE ws2_32)
